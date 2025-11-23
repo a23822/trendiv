@@ -1,0 +1,131 @@
+<mjml>
+  <mj-head>
+    <mj-title>Trendiv Weekly</mj-title>
+    <mj-preview>이번 주 개발 트렌드 요약: {{oneLineSummary}}</mj-preview>
+    <mj-attributes>
+      <mj-all
+        font-family="'Helvetica Neue', Helvetica, Arial, sans-serif"
+      ></mj-all>
+      <mj-text
+        font-weight="400"
+        font-size="16px"
+        color="#e0e0e0"
+        line-height="24px"
+      ></mj-text>
+      <mj-section padding="0px"></mj-section>
+    </mj-attributes>
+    <mj-style>
+      .link-nostyle { color: inherit; text-decoration: none }
+      .hover-effect:hover { opacity: 0.8; }
+    </mj-style>
+  </mj-head>
+  <mj-body background-color="#121212">
+    <mj-section padding="40px 0 20px 0">
+      <mj-column>
+        <mj-text
+          align="center"
+          font-size="32px"
+          color="#4cc9f0"
+          font-weight="bold"
+          letter-spacing="2px"
+        >
+          Trendiv
+        </mj-text>
+        <mj-text
+          align="center"
+          font-size="14px"
+          color="#888888"
+          text-transform="uppercase"
+        >
+          Developer's Weekly Insight
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section padding="20px 20px">
+      <mj-column border-bottom="1px solid #333">
+        <mj-text align="right" font-size="12px" color="#666">
+          📅 {{date}}
+        </mj-text>
+        <mj-text color="#cccccc" padding-bottom="30px">
+          안녕하세요, 동료 개발자님! 👋<br />
+          이번 주 글로벌 웹 생태계에서 가장 핫했던 이슈 <b>{{count}}가지</b>를
+          엄선했습니다.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-raw> {{#each articles}} </mj-raw>
+
+    <mj-section padding="20px">
+      <mj-column background-color="#1e1e1e" border-radius="8px" padding="20px">
+        <mj-text font-size="12px" font-weight="bold">
+          <span
+            style="
+              background-color: #333;
+              color: #4cc9f0;
+              padding: 4px 8px;
+              border-radius: 4px;
+              margin-right: 8px;
+            "
+            >SCORE {{score}}/10</span
+          >
+          {{#each tags}}
+          <span style="color: #888; margin-right: 5px">#{{this}}</span>
+          {{/each}}
+        </mj-text>
+
+        <mj-text
+          font-size="20px"
+          font-weight="bold"
+          color="#ffffff"
+          padding-top="10px"
+        >
+          <a
+            href="{{originalLink}}"
+            style="color: #ffffff; text-decoration: none"
+            >{{title}}</a
+          >
+        </mj-text>
+
+        <mj-text color="#bbbbbb" padding-top="10px">
+          {{oneLineSummary}}
+        </mj-text>
+
+        <mj-text font-size="12px" color="#666666" padding-top="15px">
+          🛠 Stack: {{#each techStack}}{{this}}{{#unless @last}},
+          {{/unless}}{{/each}}
+        </mj-text>
+
+        <mj-button
+          background-color="#4895ef"
+          color="white"
+          href="{{originalLink}}"
+          align="left"
+          padding-top="20px"
+          border-radius="6px"
+        >
+          원문 읽기 →
+        </mj-button>
+      </mj-column>
+    </mj-section>
+
+    <mj-section>
+      <mj-column>
+        <mj-spacer height="20px" />
+      </mj-column>
+    </mj-section>
+
+    <mj-raw> {{/each}} </mj-raw>
+
+    <mj-section padding="40px 0">
+      <mj-column>
+        <mj-text align="center" font-size="12px" color="#555555">
+          © 2025 Trendiv Team.<br />
+          더 이상 메일을 받고 싶지 않으시다면
+          <a href="#" style="color: #777">구독 취소</a>를 눌러주세요.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>

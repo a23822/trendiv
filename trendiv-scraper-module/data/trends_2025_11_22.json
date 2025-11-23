@@ -1,0 +1,695 @@
+[
+  {
+    "title": "Red Alert 2 in web browser",
+    "link": "https://chronodivide.com/",
+    "date": "2025-11-20T12:21:15.000Z",
+    "summary": "Article URL: https://chronodivide.com/\nComments URL: https://news.ycombinator.com/item?id=45991853\nPoints: 471\n# Comments: 146",
+    "source": "Hacker News (Web)"
+  },
+  {
+    "title": "Static Web Hosting on the Intel N150",
+    "link": "https://it-notes.dragas.net/2025/11/19/static-web-hosting-intel-n150-freebsd-smartos-netbsd-openbsd-linux/",
+    "date": "2025-11-19T17:22:46.000Z",
+    "summary": "Article URL: https://it-notes.dragas.net/2025/11/19/static-web-hosting-intel-n150-freebsd-smartos-netbsd-openbsd-linux/\nComments URL: https://news.ycombinator.com/item?id=45982162\nPoints: 189\n# Commen...",
+    "source": "Hacker News (Web)"
+  },
+  {
+    "title": "Google is killing the open web, part 2",
+    "link": "https://wok.oblomov.eu/tecnologia/google-killing-open-web-2/",
+    "date": "2025-11-17T15:41:08.000Z",
+    "summary": "Article URL: https://wok.oblomov.eu/tecnologia/google-killing-open-web-2/\nComments URL: https://news.ycombinator.com/item?id=45954560\nPoints: 412\n# Comments: 355",
+    "source": "Hacker News (Web)"
+  },
+  {
+    "title": "Sketch: A guided tour of Copenhagen",
+    "link": "https://css-tricks.com/sketch-a-guided-tour-of-copenhagen/",
+    "date": "2025-11-21T18:53:05.000Z",
+    "summary": "Sketch probably didn't \"have\" to redesign its UI to line up with macOS Tahoe, but a big part of its appeal is the fact that it feels like it totally belongs to the Mac.\nSketch: A guided tour of Copenh...",
+    "source": "CSS-Tricks"
+  },
+  {
+    "title": "Should We Even Have :closed?",
+    "link": "https://css-tricks.com/should-we-even-have-closed/",
+    "date": "2025-11-20T15:10:26.000Z",
+    "summary": "Is there really a difference between using :not(:open) and :closed? As always, it depends. Sunkanmi Fafowora explains why :closed is currently not a thing.\nShould We Even Have :closed? originally publ...",
+    "source": "CSS-Tricks"
+  },
+  {
+    "title": "The “Most Hated” CSS Feature: asin(), acos(), atan() and atan2()",
+    "link": "https://css-tricks.com/the-most-hated-css-feature-asin-acos-atan-and-atan2/",
+    "date": "2025-11-17T14:47:54.000Z",
+    "summary": "If we have a ratio that represents the sine, cosine or tangent of an angle, how can we get the original angle? This is where inverse trigonometric functions come in!\nThe “Most Hated” CSS Feature: asin...",
+    "source": "CSS-Tricks"
+  },
+  {
+    "title": "Keyframes Tokens: Standardizing Animation Across Projects",
+    "link": "https://smashingmagazine.com/2025/11/keyframes-tokens-standardizing-animation-across-projects/",
+    "date": "2025-11-21T08:00:00.000Z",
+    "summary": "Animations can be one of the most joyful parts of building interfaces, but without structure, they can also become one of the biggest sources of frustration. By consolidating and standardizing keyfram...",
+    "source": "Smashing Magazine"
+  },
+  {
+    "title": "From Chaos To Clarity: Simplifying Server Management With AI And Automation",
+    "link": "https://smashingmagazine.com/2025/11/simplifying-server-management-ai-automation/",
+    "date": "2025-11-18T10:00:00.000Z",
+    "summary": "Server chaos doesn’t have to be the norm. AI-ready infrastructure and automation can bring clarity, performance, and focus back to your web work.",
+    "source": "Smashing Magazine"
+  },
+  {
+    "title": "App Store Award finalists announced",
+    "link": "https://developer.apple.com/news/?id=2d301eoy",
+    "date": "2025-11-19T09:00:55.000Z",
+    "summary": "Every year, the App Store Awards celebrate exceptional apps and games that improve people’s lives while showcasing the highest levels of technical innovation, user experience, design, and positive cul...",
+    "source": "Apple Developer News"
+  },
+  {
+    "title": "Issue 736",
+    "link": "https://iosdevweekly.com/issues/736/",
+    "date": "2025-11-21T00:00:00.000Z",
+    "summary": "Can LLMs generate not only content and data, but user interfaces, too? 🤔",
+    "source": "iOS Dev Weekly"
+  },
+  {
+    "title": "Embedded Swift Improvements Coming in Swift 6.3",
+    "link": "https://swift.org/blog/embedded-swift-improvements-coming-in-swift-6.3/",
+    "date": "2025-11-17T12:00:00.000Z",
+    "summary": "Embedded Swift is a subset of Swift that’s designed for low resource usage, making it capable of running on constrained environments like microcontrollers. Using a special compilation mode, Embedded S...",
+    "source": "Swift.org"
+  },
+  {
+    "title": "Apple Mail messages disappeared after IMAP deletion + local move failure (no disk space) – emlx files still exist but appear empty",
+    "link": "https://stackoverflow.com/questions/79826949/apple-mail-messages-disappeared-after-imap-deletion-local-move-failure-no-dis",
+    "date": "2025-11-21T21:10:14.000Z",
+    "summary": "\n            <p>I am trying to recover my Apple Mail inbox on macOS Yosemite (Mail v8) after a series of events caused all messages to disappear from the application, even though the raw files are sti...",
+    "source": "StackOverflow (iOS/Swift)"
+  },
+  {
+    "title": "Incorrect display of the TabBar when selecting a tab with scroll view inside",
+    "link": "https://stackoverflow.com/questions/79826569/incorrect-display-of-the-tabbar-when-selecting-a-tab-with-scroll-view-inside",
+    "date": "2025-11-21T13:52:17.000Z",
+    "summary": "\n            <p>I'm trying to implement a tab bar on iOS 26 like the Music or Health apps on iPhone.</p>\n<p>On a white background this is not noticeable, but when changing the background color to dark...",
+    "source": "StackOverflow (iOS/Swift)"
+  },
+  {
+    "title": "How to test Future Publisher with unit tests?",
+    "link": "https://stackoverflow.com/questions/79826530/how-to-test-future-publisher-with-unit-tests",
+    "date": "2025-11-21T13:14:01.000Z",
+    "summary": "\n            <p>This is my simple class I need to test:</p>\n<pre><code>class Example: ObservableObject {\n    @Published var isError = false\n    var cancellable: AnyCancellable?\n    private let failure...",
+    "source": "StackOverflow (iOS/Swift)"
+  },
+  {
+    "title": "Number equivalents for Apple's StoreKit errors",
+    "link": "https://stackoverflow.com/questions/79826500/number-equivalents-for-apples-storekit-errors",
+    "date": "2025-11-21T12:28:55.000Z",
+    "summary": "\n            <p>Where do I find the actual numbers that match Apple's billing StoreKit errors?</p>\n<p>For example, I know that if I get a 2, that's paymentcancelled, but I don't know what the other nu...",
+    "source": "StackOverflow (iOS/Swift)"
+  },
+  {
+    "title": "How to use custom version of swift in Xcode? [duplicate]",
+    "link": "https://stackoverflow.com/questions/79826411/how-to-use-custom-version-of-swift-in-xcode",
+    "date": "2025-11-21T10:43:17.000Z",
+    "summary": "\n            <p>I am using Mac 14 and the highest version of Xcode that I can install is 16.2<br />\nAnd it comes with the bundled swift component - 6.0.3 version.</p>\n<p>But my project requires swift ...",
+    "source": "StackOverflow (iOS/Swift)"
+  },
+  {
+    "title": "iOS 26: UIScrollView topEdgeEffect not applied",
+    "link": "https://stackoverflow.com/questions/79825968/ios-26-uiscrollview-topedgeeffect-not-applied",
+    "date": "2025-11-20T21:20:11.000Z",
+    "summary": "\n            <p>I am trying to use the <code>topEdgeEffect</code> API in iOS 26, but even setting the effect style to &quot;.soft&quot; does not work:</p>\n<pre class=\"lang-swift prettyprint-override\">...",
+    "source": "StackOverflow (iOS/Swift)"
+  },
+  {
+    "title": "iOS App Crashes on Launch After Upgrading React Native to 0.77.3 - New Architecture Incompatibility",
+    "link": "https://stackoverflow.com/questions/79825956/ios-app-crashes-on-launch-after-upgrading-react-native-to-0-77-3-new-architect",
+    "date": "2025-11-20T20:56:06.000Z",
+    "summary": "\n            <p>I'm encountering a critical issue after upgrading my React Native app to version 0.77.3. The iOS app builds successfully in Xcode but crashes immediately upon launch. The crash appears...",
+    "source": "StackOverflow (iOS/Swift)"
+  },
+  {
+    "title": "website has white section on top (near notch) and bottom of Safari iOS 26.1 [closed]",
+    "link": "https://stackoverflow.com/questions/79825950/website-has-white-section-on-top-near-notch-and-bottom-of-safari-ios-26-1",
+    "date": "2025-11-20T20:43:23.000Z",
+    "summary": "\n            <p>I've recently updated my os to iOS26.1 and noticed that my website appears to have a white section above the header -- the white section is essentially where the iPhone notch is (sorry...",
+    "source": "StackOverflow (iOS/Swift)"
+  },
+  {
+    "title": "SwiftData update causes render with initial data overwriting changes",
+    "link": "https://stackoverflow.com/questions/79825863/swiftdata-update-causes-render-with-initial-data-overwriting-changes",
+    "date": "2025-11-20T18:50:17.000Z",
+    "summary": "\n            <p>I'm working on a SwiftUI app using SwiftData, and I'm <em>very</em> new to both frameworks, and swift in general to be honest. I'm trying to create a webview that embeds a monaco edito...",
+    "source": "StackOverflow (iOS/Swift)"
+  },
+  {
+    "title": "How to update React Native default port?",
+    "link": "https://stackoverflow.com/questions/79825755/how-to-update-react-native-default-port",
+    "date": "2025-11-20T16:51:22.000Z",
+    "summary": "\n            <p>I’m trying to run a React Native app with Metro on a port other than the default <code>8081</code> (e.g. <code>10000</code>).</p>\n<p>I’ve followed the official React Native docs here:<...",
+    "source": "StackOverflow (iOS/Swift)"
+  },
+  {
+    "title": "Difference in Double representation between Kotlin and Swift",
+    "link": "https://stackoverflow.com/questions/79825753/difference-in-double-representation-between-kotlin-and-swift",
+    "date": "2025-11-20T16:50:38.000Z",
+    "summary": "\n            <p>In Kotlin, if you do <code>println(String.format(&quot;%.17f&quot;, 10.45))</code>, you will see 10.45000000000000000 in the output.</p>\n<p>In Swift, if you do <code>print(String(forma...",
+    "source": "StackOverflow (iOS/Swift)"
+  },
+  {
+    "title": "How to implement long press (minimum duration) for iOS widget buttons?",
+    "link": "https://stackoverflow.com/questions/79825663/how-to-implement-long-press-minimum-duration-for-ios-widget-buttons",
+    "date": "2025-11-20T15:13:08.000Z",
+    "summary": "\n            <p>I've seen apps that have interactive widget buttons where a short tap does nothing, but holding the button for at least 1 second executes the action. This can be configured per button ...",
+    "source": "StackOverflow (iOS/Swift)"
+  },
+  {
+    "title": "Swift can’t load resource folder at runtime (“No such file or directory”) even though files are added to Xcode [duplicate]",
+    "link": "https://stackoverflow.com/questions/79825591/swift-can-t-load-resource-folder-at-runtime-no-such-file-or-directory-even-t",
+    "date": "2025-11-20T13:53:58.000Z",
+    "summary": "\n            <p>I'm building a macOS app in SwiftUI and I'm trying to load a folder called Wallpapers that I added to my Xcode project.\nThe folder contains subfolders (categories) and each category co...",
+    "source": "StackOverflow (iOS/Swift)"
+  },
+  {
+    "title": "Custom UITabBar badge color ignored when switching to Map tab in iOS 18+",
+    "link": "https://stackoverflow.com/questions/79825582/custom-uitabbar-badge-color-ignored-when-switching-to-map-tab-in-ios-18",
+    "date": "2025-11-20T13:41:53.000Z",
+    "summary": "\n            <p>I found a reproducible issue in iOS 18+. When a SwiftUI TabView contains a Map (MKMapView), any custom UITabBarAppearance badge color is ignored while that tab is active. As soon as yo...",
+    "source": "StackOverflow (iOS/Swift)"
+  },
+  {
+    "title": "How to create a SwiftUI Menu with multiple Pickers without extra dividers?",
+    "link": "https://stackoverflow.com/questions/79825411/how-to-create-a-swiftui-menu-with-multiple-pickers-without-extra-dividers",
+    "date": "2025-11-20T10:51:11.000Z",
+    "summary": "\n            <p>I'm trying to create a SwiftUI <code>Menu</code> containing two <code>Picker</code>  to control content and sort. However, I cannot replicate menu appearance shown in my reference scre...",
+    "source": "StackOverflow (iOS/Swift)"
+  },
+  {
+    "title": "SwiftUI @FocusState doesn’t focus a desired TextField",
+    "link": "https://stackoverflow.com/questions/79825395/swiftui-focusstate-doesn-t-focus-a-desired-textfield",
+    "date": "2025-11-20T10:34:01.000Z",
+    "summary": "\n            <p>I have a <code>SwiftUI</code> view with multiple TextFields and a <code>@FocusState</code> bound to my view model. I want the first field to automatically get focus whenever the view a...",
+    "source": "StackOverflow (iOS/Swift)"
+  },
+  {
+    "title": "Flutter Google Sign-In shows only white screen after tapping the button (iOS) even though Firebase & Google Cloud configs are correct",
+    "link": "https://stackoverflow.com/questions/79825295/flutter-google-sign-in-shows-only-white-screen-after-tapping-the-button-ios-ev",
+    "date": "2025-11-20T08:51:43.000Z",
+    "summary": "\n            <p>I’m using Google Sign-In in my Flutter app. Everything works perfectly on <strong>Android</strong>, but on <strong>iOS</strong> the app shows a completely <strong>white screen</strong>...",
+    "source": "StackOverflow (iOS/Swift)"
+  },
+  {
+    "title": "How to present app-wide alerts/sheets above existing sheets in SwiftUI (central presenter like UIKit)?",
+    "link": "https://stackoverflow.com/questions/79825256/how-to-present-app-wide-alerts-sheets-above-existing-sheets-in-swiftui-central",
+    "date": "2025-11-20T08:15:09.000Z",
+    "summary": "\n            <p><strong>TL;DR</strong>: my app has some global alerts and modals (e.g. hints about trial limits, the in-app purchase screens, etc.) which should be available through out the app. In UI...",
+    "source": "StackOverflow (iOS/Swift)"
+  },
+  {
+    "title": "iOS26 AVSampleBufferDisplayLayer crash",
+    "link": "https://stackoverflow.com/questions/79825195/ios26-avsamplebufferdisplaylayer-crash",
+    "date": "2025-11-20T07:13:19.000Z",
+    "summary": "\n            <pre><code>libobjc.A.dylib _objc_retain_x0  16\nAVKit -[AVSampleBufferDisplayLayer(AVPictureInPictureSuppport) avkit_sampleBufferDisplayLayerPlayerController]  36\nAVKit -[AVSampleBufferDis...",
+    "source": "StackOverflow (iOS/Swift)"
+  },
+  {
+    "title": "XCode StoreKit helper application failure - Purchase Fails with NSCocoaErrorDomain Code=4099 and ASDErrorDomain Code=5115",
+    "link": "https://stackoverflow.com/questions/79825184/xcode-storekit-helper-application-failure-purchase-fails-with-nscocoaerrordoma",
+    "date": "2025-11-20T06:59:14.000Z",
+    "summary": "\n            <p><em>XCode version = 26 &amp;&amp; macOS version = 26</em></p>\n<p><em>Running the app from XCode (not in release mode)</em></p>\n<p>I want to implement in app purchases for my macOS appl...",
+    "source": "StackOverflow (iOS/Swift)"
+  },
+  {
+    "title": "Xcode simulator black screen problem when a specific model was closed - React native expo",
+    "link": "https://stackoverflow.com/questions/79825178/xcode-simulator-black-screen-problem-when-a-specific-model-was-closed-react-na",
+    "date": "2025-11-20T06:50:36.000Z",
+    "summary": "\n            <p><strong>Problem</strong><br />\nAfter a successful request, when the modal is closed with <code>setVisible(false)</code>, a black screen appears <a href=\"https://i.sstatic.net/nz1LfkPN....",
+    "source": "StackOverflow (iOS/Swift)"
+  },
+  {
+    "title": "Check if specific date is at least tomorrow in Swift",
+    "link": "https://stackoverflow.com/questions/79825145/check-if-specific-date-is-at-least-tomorrow-in-swift",
+    "date": "2025-11-20T06:01:53.000Z",
+    "summary": "\n            <p>What is the best way to properly check if a date is at least tomorrow?</p>\n<p>So far I was able to come up with this solution, but I'm not 100% sure it's correct:</p>\n<pre class=\"lang-...",
+    "source": "StackOverflow (iOS/Swift)"
+  },
+  {
+    "title": "iOS EXC_BAD_ACCESS when launching HyperVerge KYC camera from React Native Expo app (Android works)",
+    "link": "https://stackoverflow.com/questions/79825104/ios-exc-bad-access-when-launching-hyperverge-kyc-camera-from-react-native-expo-a",
+    "date": "2025-11-20T05:02:50.000Z",
+    "summary": "\n            <p>I’m integrating <strong>HyperVerge</strong> as my KYC provider in a <strong>React Native + Expo</strong> app.</p>\n<p>On <strong>Android</strong> everything works fine. On <strong>iOS</...",
+    "source": "StackOverflow (iOS/Swift)"
+  },
+  {
+    "title": "Pre-Selecting Values for a MultiDatePicker",
+    "link": "https://stackoverflow.com/questions/79825060/pre-selecting-values-for-a-multidatepicker",
+    "date": "2025-11-20T03:11:15.000Z",
+    "summary": "\n            <h2><strong>Premise</strong></h2>\n<hr />\n<p>I have a MultiDatePicker bounded to a closed range of the current month. In addition, I have a datePicker representing a &quot;Start Date&quot;...",
+    "source": "StackOverflow (iOS/Swift)"
+  },
+  {
+    "title": "IOS setup in flutter firebase [closed]",
+    "link": "https://stackoverflow.com/questions/79824880/ios-setup-in-flutter-firebase",
+    "date": "2025-11-19T20:01:53.000Z",
+    "summary": "\n            <p>Launching lib/main.dart on iPhone 15 in debug mode...</p>\n<p>Xcode build done.                                           26.1s</p>\n<p>Failed to build iOS app</p>\n<p>Swift Compiler Erro...",
+    "source": "StackOverflow (iOS/Swift)"
+  },
+  {
+    "title": "How to dynamically update an existing AVComposition when users add a new custom video clip?",
+    "link": "https://stackoverflow.com/questions/79824782/how-to-dynamically-update-an-existing-avcomposition-when-users-add-a-new-custom",
+    "date": "2025-11-19T17:44:41.000Z",
+    "summary": "\n            <p>I’m building a macOS video editor that uses <code>AVComposition</code> and <code>AVVideoComposition</code>.\nInitially, my renderer creates a composition with some default video/audio t...",
+    "source": "StackOverflow (iOS/Swift)"
+  },
+  {
+    "title": "How to achieve a frosted glass label effect like iOS 26 system",
+    "link": "https://stackoverflow.com/questions/79824673/how-to-achieve-a-frosted-glass-label-effect-like-ios-26-system",
+    "date": "2025-11-19T15:55:28.000Z",
+    "summary": "\n            <p><a href=\"https://i.sstatic.net/mtjOqfDs.jpg\" rel=\"nofollow noreferrer\"><img src=\"https://i.sstatic.net/mtjOqfDs.jpg\" alt=\"enter image description here\" /></a></p>\n<p>I want to create a...",
+    "source": "StackOverflow (iOS/Swift)"
+  },
+  {
+    "title": "How to transform http over wifi-aware in iOS 26",
+    "link": "https://stackoverflow.com/questions/79824511/how-to-transform-http-over-wifi-aware-in-ios-26",
+    "date": "2025-11-19T13:38:48.000Z",
+    "summary": "\n            <p>wifi-aware has been introduced in iOS 26, but it seems that We can only use NetworkConnection to send data to the endpoint. I want to know that how we can send http over NetworkConnect...",
+    "source": "StackOverflow (iOS/Swift)"
+  },
+  {
+    "title": "Expo app wont build for simulators after upgrading, what could be the issue?",
+    "link": "https://stackoverflow.com/questions/79824319/expo-app-wont-build-for-simulators-after-upgrading-what-could-be-the-issue",
+    "date": "2025-11-19T10:24:58.000Z",
+    "summary": "\n            <p>So i upgraded my expo app from 52 to 54 and now it wont build for simulators at all. I have tried, reinstalling, deleting all build files, clearing expo cache etc.\n<strong>It builds fo...",
+    "source": "StackOverflow (iOS/Swift)"
+  },
+  {
+    "title": "Flutter iOS WebView doesn’t trigger password-reset request when opened from second WebView (Android works fine)",
+    "link": "https://stackoverflow.com/questions/79824271/flutter-ios-webview-doesn-t-trigger-password-reset-request-when-opened-from-seco",
+    "date": "2025-11-19T09:31:47.000Z",
+    "summary": "\n            <p>I’m working on a Flutter app that integrates an external authentication system provided by another company. The login and password-reset flows are handled entirely inside a WebView (th...",
+    "source": "StackOverflow (iOS/Swift)"
+  },
+  {
+    "title": "Fully Optimized: Wrapping up Performance Spotlight Week",
+    "link": "http://android-developers.googleblog.com/2025/11/fully-optimized-wrapping-up-performance.html",
+    "date": "2025-11-21T17:00:00.000Z",
+    "summary": "Posted by Ben Weiss, Senior Developer Relations Engineer and Sara Hamilton, Product Manager\n\n\n\n\n\n\n\n\n\nWe spent the past week diving deep into sharing best practices and guidance that helps to make Andr...",
+    "source": "Android Developers Blog"
+  },
+  {
+    "title": "Leveling Guide for your Performance Journey",
+    "link": "http://android-developers.googleblog.com/2025/11/leveling-guide-for-your-performance.html",
+    "date": "2025-11-20T17:00:00.000Z",
+    "summary": "Posted by Alice Yuan - Senior Developer Relations Engineer\n\n\n\nWelcome to day 4 of Performance Spotlight Week. Now that you've learned about some of the awesome tools and best practices we've introduce...",
+    "source": "Android Developers Blog"
+  },
+  {
+    "title": "Jetpack Navigation 3 is stable",
+    "link": "http://android-developers.googleblog.com/2025/11/jetpack-navigation-3-is-stable.html",
+    "date": "2025-11-19T20:02:00.000Z",
+    "summary": "Posted by Don Turner - Developer Relations Engineer\n\n\n\n\n\n\nJetpack Navigation 3 version 1.0 is stable 🎉. Go ahead and use it in your production apps today. JetBrains are already using it in their Kotl...",
+    "source": "Android Developers Blog"
+  },
+  {
+    "title": "Stronger threat detection, simpler integration: Protect your growth with the Play Integrity API",
+    "link": "http://android-developers.googleblog.com/2025/10/stronger-threat-detection-simpler.html",
+    "date": "2025-11-19T18:11:00.000Z",
+    "summary": "Posted by Dom Elliott – Group Product Manager, Google Play and Eric Lynch - Senior Product Manager, Android Security\n\n\n\n\n\nIn the mobile ecosystem, abuse can threaten your revenue, growth, and user tru...",
+    "source": "Android Developers Blog"
+  },
+  {
+    "title": "Deeper Performance Considerations",
+    "link": "http://android-developers.googleblog.com/2025/11/deeper-performance-considerations.html",
+    "date": "2025-11-19T17:00:00.000Z",
+    "summary": "Posted by Ben Weiss - Senior Developer Relations Engineer,\n                        Breana Tate - Developer Relations Engineer,\n                        Jossi Wolf - Software Engineer on Compose\n       ...",
+    "source": "Android Developers Blog"
+  },
+  {
+    "title": "How Uber is reducing manual logins by 4 million per year with the Restore Credentials API",
+    "link": "http://android-developers.googleblog.com/2025/11/how-uber-is-reducing-manual-logins-by-4.html",
+    "date": "2025-11-18T22:00:00.000Z",
+    "summary": "Posted by Niharika Arora - Senior Developer Relations Engineer at Google, Thomás Oliveira Horta - Android Engineer at Uber\n\n\n\n\nUber is the world’s largest ridesharing company, getting millions of peop...",
+    "source": "Android Developers Blog"
+  },
+  {
+    "title": "Configure and troubleshoot R8 Keep Rules",
+    "link": "http://android-developers.googleblog.com/2025/11/configure-and-troubleshoot-r8-keep-rules.html",
+    "date": "2025-11-18T17:00:00.000Z",
+    "summary": "Posted by Ajesh R Pai - Developer Relations Engineer & Ben Weiss - Senior Developer Relations Engineer\n\n\n\n\n\nIn modern Android development, shipping a small, fast, and secure application is a fundament...",
+    "source": "Android Developers Blog"
+  },
+  {
+    "title": "Gemini 3 is now available for AI assistance in Android Studio",
+    "link": "http://android-developers.googleblog.com/2025/11/gemini-3-is-now-available-for-ai.html",
+    "date": "2025-11-18T16:06:00.000Z",
+    "summary": "Posted by Tor Norbye - Senior Director of Engineering\n\n\n\n\n\n\n\nThe Gemini 3 Pro model, released today and engineered for better coding and agentic experiences, is now available for AI assistance in the ...",
+    "source": "Android Developers Blog"
+  },
+  {
+    "title": "How Reddit used the R8 optimizer for high impact performance improvements",
+    "link": "http://android-developers.googleblog.com/2025/11/how-reddit-used-r8-optimizer-for-high.html",
+    "date": "2025-11-17T18:01:00.000Z",
+    "summary": "Posted by Ben Weiss - Senior Developer Relations Engineer\n\n\n\n\n\nIn today's world of mobile applications, a seamless user experience is not just a feature—it's a necessity. Slow load times, unresponsive...",
+    "source": "Android Developers Blog"
+  },
+  {
+    "title": "Use R8 to shrink, optimize, and fast-track your app",
+    "link": "http://android-developers.googleblog.com/2025/11/use-r8-to-shrink-optimize-and-fast.html",
+    "date": "2025-11-17T17:00:00.001Z",
+    "summary": "Posted by Ben Weiss - Senior Developer Relations Engineer\n\n\n\n\n\nWelcome to day one of Android Performance Spotlight Week!\nWe're kicking things off with the single most impactful, low-effort change you ...",
+    "source": "Android Developers Blog"
+  },
+  {
+    "title": "Get your app on the fast track with Android Performance Spotlight Week!",
+    "link": "http://android-developers.googleblog.com/2025/11/get-your-app-on-fast-track-with-android.html",
+    "date": "2025-11-17T17:00:00.000Z",
+    "summary": "Posted by Ben Weiss - Senior Developer Relations Engineer, Performance Paladin\n  \n\n\n\n\nWhen working on new features, app performance often takes a back seat. However, while it's not always top of mind ...",
+    "source": "Android Developers Blog"
+  },
+  {
+    "title": "Android Weekly Issue #701",
+    "link": "https://androidweekly.net/issues/issue-701/rss.xml",
+    "date": "2025-11-16T10:49:15.000Z",
+    "summary": "Articles & Tutorials\n\n\n\n\n\n\n\n\n\n\n\n\n\nSponsored\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nCode 10x faster. Tell Firebender to create full screens, ship features, or fix bugs - and watch it do the work for you. It's been battle test...",
+    "source": "Android Weekly"
+  },
+  {
+    "title": "Helping Decision‑Makers Say Yes to Kotlin",
+    "link": "https://blog.jetbrains.com/kotlin/2025/11/helping-decision-makers-say-yes-to-kotlin/",
+    "date": "2025-11-18T12:11:19.000Z",
+    "summary": "Guest post by Urs Peter, Senior Software Engineer and JetBrains-certified Kotlin Trainer. For readers who’d like a more structured way to build Kotlin skills, Urs also leads the Kotlin Upskill Program...",
+    "source": "Kotlin Blog"
+  },
+  {
+    "title": "I used Gemini 3 Pro in Android Studio and...",
+    "link": "https://www.reddit.com/r/androiddev/comments/1p19o7n/i_used_gemini_3_pro_in_android_studio_and/",
+    "date": "2025-11-19T14:50:29.000Z",
+    "summary": "So at work we're being told to utilise AI more and I was a bit skeptical at first but managed to get a good balance with what I do and what the Agent does. Today I gave Gemini 3 Pro a go with Firebend...",
+    "source": "Reddit r/androiddev"
+  },
+  {
+    "title": "Android Developers Blog: Jetpack Navigation 3 is stable",
+    "link": "https://www.reddit.com/r/androiddev/comments/1p1tqqw/android_developers_blog_jetpack_navigation_3_is/",
+    "date": "2025-11-20T04:19:50.000Z",
+    "summary": "Anyone using Nav3 yet? Any early impressions?\n    submitted by    /u/hollowchron  \n [link]   [comments]",
+    "source": "Reddit r/androiddev"
+  },
+  {
+    "title": "I just finished building the entire onboarding experience",
+    "link": "https://www.reddit.com/r/androiddev/comments/1oz0lt3/i_just_finished_building_the_entire_onboarding/",
+    "date": "2025-11-16T23:26:52.000Z",
+    "summary": "Hey everyone! 👋\n I’ve been working on an AI-powered budgeting app, and I just finished designing and building the onboarding + first-use experience. Before moving forward, I’d love to get some honest...",
+    "source": "Reddit r/androiddev"
+  },
+  {
+    "title": "How to prepare for a Senior Android Software Engineer role at a Fintech company?",
+    "link": "https://www.reddit.com/r/androiddev/comments/1ozj08u/how_to_prepare_for_a_senior_android_software/",
+    "date": "2025-11-17T15:19:49.000Z",
+    "summary": "Hey there,\n I'm applying for a Senior Android Software Engineer role at a Fintech company. I have worked in Media and Health sector before but never in Fintech.\n I'm wondering how can I prepare for te...",
+    "source": "Reddit r/androiddev"
+  },
+  {
+    "title": "Google releases its ‘Google Sans Flex’ font to anyone (including developers)",
+    "link": "https://www.reddit.com/r/androiddev/comments/1p25eut/google_releases_its_google_sans_flex_font_to/",
+    "date": "2025-11-20T15:03:12.000Z",
+    "summary": "submitted by    /u/StatusWntFixObsolete  \n [link]   [comments]",
+    "source": "Reddit r/androiddev"
+  },
+  {
+    "title": "Do users really get scared off when they see a sign up screen during onboarding?",
+    "link": "https://www.reddit.com/r/androiddev/comments/1oygykh/do_users_really_get_scared_off_when_they_see_a/",
+    "date": "2025-11-16T08:59:03.000Z",
+    "summary": "Hey everyone, I’m building my first Android app and I’ve just finished putting together my onboarding and account creation flow. Right now the sequence looks like this:\n onboarding (a few intro screen...",
+    "source": "Reddit r/androiddev"
+  },
+  {
+    "title": "I built a Magisk Module to quickly reset device identifiers and appear new",
+    "link": "https://www.reddit.com/r/androiddev/comments/1p01rj8/i_built_a_magisk_module_to_quickly_reset_device/",
+    "date": "2025-11-18T03:47:20.000Z",
+    "summary": "So for context, I had a problem where the app I was testing on needed a 'new' phone each time. Resetting the phone took like 10 minutes if not more each time, so I came up with an alternative which sp...",
+    "source": "Reddit r/androiddev"
+  },
+  {
+    "title": "I got tired of setting regional prices manually for my Android apps, so I built a Chrome extension that automates that process with one click",
+    "link": "https://www.reddit.com/r/androiddev/comments/1p16zyu/i_got_tired_of_setting_regional_prices_manually/",
+    "date": "2025-11-19T12:57:48.000Z",
+    "summary": "A few of you might remember I posted here while building this. The idea came from my own frustration with updating regional prices for IAPs/subs — Apple and Google give us basically nothing to work wi...",
+    "source": "Reddit r/androiddev"
+  },
+  {
+    "title": "After getting frustrated with slow updates, I made a clone of adb-idea plugin for Android Studio that we all love",
+    "link": "https://www.reddit.com/r/androiddev/comments/1p1zxab/after_getting_frustrated_with_slow_updates_i_made/",
+    "date": "2025-11-20T10:38:02.000Z",
+    "summary": "So all of you must have used this life-saving plugin called adb-idea (https://github.com/pbreault/adb-idea), which lets you run basic adb commands via a pop-up (via a shortcut) or a tool menu.\n Comman...",
+    "source": "Reddit r/androiddev"
+  },
+  {
+    "title": "Android Studio Otter | 2025.2.1 Patch 1 now available",
+    "link": "https://www.reddit.com/r/androiddev/comments/1ozn9b1/android_studio_otter_202521_patch_1_now_available/",
+    "date": "2025-11-17T17:58:47.000Z",
+    "summary": "submitted by    /u/androidtoolsbot  \n [link]   [comments]",
+    "source": "Reddit r/androiddev"
+  },
+  {
+    "title": "Google started Android Performance Spotlight Week",
+    "link": "https://www.reddit.com/r/androiddev/comments/1ozm43z/google_started_android_performance_spotlight_week/",
+    "date": "2025-11-17T17:16:50.000Z",
+    "summary": "submitted by    /u/AppTractor  \n [link]   [comments]",
+    "source": "Reddit r/androiddev"
+  },
+  {
+    "title": "Released Pegma — a simple, free, open-source Peg Solitaire game",
+    "link": "https://www.reddit.com/r/androiddev/comments/1p1zxht/released_pegma_a_simple_free_opensource_peg/",
+    "date": "2025-11-20T10:38:26.000Z",
+    "summary": "Hi everyone,\n I recently released Pegma, my open-source implementation of the classic Peg Solitaire puzzle. The app contains no ads or in-app purchases — it’s purely a small, open-source project I wan...",
+    "source": "Reddit r/androiddev"
+  },
+  {
+    "title": "It's Performance Spotlight Week",
+    "link": "https://www.reddit.com/r/androiddev/comments/1p25yr4/its_performance_spotlight_week/",
+    "date": "2025-11-20T15:24:57.000Z",
+    "summary": "Hey everyone,\n We are currently running Performance Spotlight Week, and we wanted to share some specific insights on how you can improve your app's performance gains.\n R8 Full Mode & Reddit’s Performa...",
+    "source": "Reddit r/androiddev"
+  },
+  {
+    "title": "Are there AD SDKs that are compose first?",
+    "link": "https://www.reddit.com/r/androiddev/comments/1p2ssq7/are_there_ad_sdks_that_are_compose_first/",
+    "date": "2025-11-21T07:55:31.000Z",
+    "summary": "Hi,\n Are there any AD SDKs such as AdMob, that are natively written for or support compose?\n Currently I am using AdMob SDK for ads and it's just awful for compose. I literally copy-pasted their offic...",
+    "source": "Reddit r/androiddev"
+  },
+  {
+    "title": "Built a faster, more flexible GitHub Action for Firebase App Distribution",
+    "link": "https://www.reddit.com/r/androiddev/comments/1oynyuj/built_a_faster_more_flexible_github_action_for/",
+    "date": "2025-11-16T15:04:55.000Z",
+    "summary": "I wrote a custom GitHub Action to deploy artifacts to Firebase App Distribution. You may ask why, since there's a well-known action for this already.\n Well, mine solves two things:\n  \nPerformance: It ...",
+    "source": "Reddit r/androiddev"
+  },
+  {
+    "title": "[Scammer Warning] \"Horizon Group\"",
+    "link": "https://www.reddit.com/r/androiddev/comments/1p29fc2/scammer_warning_horizon_group/",
+    "date": "2025-11-20T17:35:10.000Z",
+    "summary": "Obvious Scam is scam. They have over \"experienced developers\" but not enoug for 12 testers for their own apps xD\n Guess virtuell mashines do not count :-P\n Well everyone please add these scammers to y...",
+    "source": "Reddit r/androiddev"
+  },
+  {
+    "title": "android studio on windows arm64 suggests downloading arm64 version for windows",
+    "link": "https://www.reddit.com/r/androiddev/comments/1p1keqk/android_studio_on_windows_arm64_suggests/",
+    "date": "2025-11-19T21:27:12.000Z",
+    "summary": "https://preview.redd.it/h2ntyla26a2g1.png?width=1086&format=png&auto=webp&s=3c4c6d1d0774a55ceec8ee0b5aae20873a56c7fb\n hi guys \n i see this message in android studio (Prism emulation) on my snapdragon ...",
+    "source": "Reddit r/androiddev"
+  },
+  {
+    "title": "Which smartphone for testing ? Pixel 8 (300€) vs Nothing Phone 3a (250€)",
+    "link": "https://www.reddit.com/r/androiddev/comments/1oy3gwa/which_smartphone_for_testing_pixel_8_300_vs/",
+    "date": "2025-11-15T21:29:39.000Z",
+    "summary": "Hi everyone,\n I'm working on a react native (expo) app and i would like to get a new phone for dev purposes only.\n Already got a A13 but it's damn laggy so it's not very usable.\n Which one should i pi...",
+    "source": "Reddit r/androiddev"
+  },
+  {
+    "title": "My app was suspended for \"Deceptive Behavior\". Appeal & escalation returned identical canned message 3 times. What do I do now?",
+    "link": "https://www.reddit.com/r/androiddev/comments/1p2425h/my_app_was_suspended_for_deceptive_behavior/",
+    "date": "2025-11-20T14:07:16.000Z",
+    "summary": "I published a small AI-powered meal-tracking app called Portium in August. Very simple: log a meal (photo or text), it suggests likely foods and approximates macros.\n In mid-Ocotober, I woke up to an ...",
+    "source": "Reddit r/androiddev"
+  },
+  {
+    "title": "Is there a way to make an Android app run fully offline without losing important features?",
+    "link": "https://www.reddit.com/r/androiddev/comments/1oyk3fm/is_there_a_way_to_make_an_android_app_run_fully/",
+    "date": "2025-11-16T12:06:28.000Z",
+    "summary": "I’m building a small personal Android project and I want it to work completely offline while still handling things like notifications, data saving, and background checks.\n For those who have done it b...",
+    "source": "Reddit r/androiddev"
+  },
+  {
+    "title": "What should be my next step to grow as an Android developer? Feeling something is missing.",
+    "link": "https://www.reddit.com/r/androiddev/comments/1ozm6nq/what_should_be_my_next_step_to_grow_as_an_android/",
+    "date": "2025-11-17T17:19:26.000Z",
+    "summary": "I’m currently an Android intern with about 3 months of experience. I’ve built multiple new features at work. I’m confident that I can build a full-time career in Android development.\n I’m performing w...",
+    "source": "Reddit r/androiddev"
+  },
+  {
+    "title": "Mobile Developers Week 2025, Abu Dhabi",
+    "link": "https://www.reddit.com/r/androiddev/comments/1ozawdl/mobile_developers_week_2025_abu_dhabi/",
+    "date": "2025-11-17T08:21:06.000Z",
+    "summary": "Mobile Developers Week 2025 will take place 13–15 December in Abu Dhabi, bringing together the region’s leading minds in mobile development and innovation.\n For the first time in the Middle East, droi...",
+    "source": "Reddit r/androiddev"
+  },
+  {
+    "title": "MockK: Under the cover",
+    "link": "https://www.reddit.com/r/androiddev/comments/1ozfjga/mockk_under_the_cover/",
+    "date": "2025-11-17T12:56:04.000Z",
+    "summary": "submitted by    /u/jintinlin  \n [link]   [comments]",
+    "source": "Reddit r/androiddev"
+  },
+  {
+    "title": "I built PDF Ninja, a comprehensive Android PDF toolkit, Looking for feedback on the UI and flexible monetization strategy.",
+    "link": "https://www.reddit.com/r/androiddev/comments/1p0nnb7/i_built_pdf_ninja_a_comprehensive_android_pdf/",
+    "date": "2025-11-18T20:55:44.000Z",
+    "summary": "submitted by    /u/WatchSudden5484  \n [link]   [comments]",
+    "source": "Reddit r/androiddev"
+  },
+  {
+    "title": "Best paid tools for android/ios development",
+    "link": "https://www.reddit.com/r/androiddev/comments/1p0mmrw/best_paid_tools_for_androidios_development/",
+    "date": "2025-11-18T20:16:12.000Z",
+    "summary": "Hi, \n I'm creating a budget for a small team of 6 devs. \n I've got the Github Actions, DataDog and Claude budgeted. \n Everybody has a pretty good macbook already. \n What other tools (software, hardwar...",
+    "source": "Reddit r/androiddev"
+  },
+  {
+    "title": "This self-hosted tool is proof that sometimes the best open-source apps are the simplest",
+    "link": "https://www.xda-developers.com/self-hosted-tool-proof-that-best-open-source-apps-are-the-simplest/",
+    "date": "2025-11-21T23:00:18.000Z",
+    "summary": "Single-purpose tools can be incredibly powerful in a world of feature creep.",
+    "source": "XDA Developers"
+  },
+  {
+    "title": "Pretty much everything important on Windows 11 has broken, says Microsoft",
+    "link": "https://www.xda-developers.com/pretty-much-everything-important-windows-11-has-broken/",
+    "date": "2025-11-21T22:32:35.000Z",
+    "summary": "Not good news for the Redmond giant.",
+    "source": "XDA Developers"
+  },
+  {
+    "title": "How I use NotebookLM for productive study sessions (without falling into the summarization trap)",
+    "link": "https://www.xda-developers.com/notebooklm-study-workflow/",
+    "date": "2025-11-21T22:30:17.000Z",
+    "summary": "I stopped treating NotebookLM like a summarizer and started using it as a thinking partner—and my study sessions transformed",
+    "source": "XDA Developers"
+  },
+  {
+    "title": "5 ways I'm using a Raspberry Pi to improve my smart TV experience",
+    "link": "https://www.xda-developers.com/using-raspberry-pi-improve-smart-tv-experience/",
+    "date": "2025-11-21T22:00:17.000Z",
+    "summary": "A Raspberry Pi can make any smart TV faster, cleaner, and more flexible with a few simple upgrades.",
+    "source": "XDA Developers"
+  },
+  {
+    "title": "I turned an old laptop into the perfect Linux box for my home lab",
+    "link": "https://www.xda-developers.com/i-turned-an-old-laptop-into-the-perfect-linux-box-for-my-home-lab/",
+    "date": "2025-11-21T21:30:17.000Z",
+    "summary": "Name a better duo than home labs and sad, abandoned devices",
+    "source": "XDA Developers"
+  },
+  {
+    "title": "Stop reinstalling drivers by hand, Windows can back up and restore them with one command",
+    "link": "https://www.xda-developers.com/stop-reinstalling-drivers-by-hand-windows-can-back-up-restore-them-with-one-command/",
+    "date": "2025-11-21T21:00:18.000Z",
+    "summary": "Reinstalling Windows can feel like a waste of time, but installing all your drivers in one go is a great way to make the process much easier.",
+    "source": "XDA Developers"
+  },
+  {
+    "title": "Arc Raiders' new map is an absolute mess, and I can't stop playing it",
+    "link": "https://www.xda-developers.com/arc-raiders-new-stella-montis-map-is-a-glorious-mess/",
+    "date": "2025-11-21T20:30:17.000Z",
+    "summary": "\n                                            \n                                        ",
+    "source": "XDA Developers"
+  },
+  {
+    "title": "5 things you shouldn’t 3D print at home, even though you can",
+    "link": "https://www.xda-developers.com/things-shouldnt-3d-print-home/",
+    "date": "2025-11-21T20:00:17.000Z",
+    "summary": "Some 3D prints look harmless, but hidden risks can turn them into unsafe or unreliable choices.",
+    "source": "XDA Developers"
+  },
+  {
+    "title": "This operating system saved my wife's old Surface Go, and it's not what you think",
+    "link": "https://www.xda-developers.com/this-operating-system-saved-wifes-old-surface-go-its-not-what-you-think/",
+    "date": "2025-11-21T19:29:50.000Z",
+    "summary": "FydeOS revived an old Surface Go 2 and made it great for day-to-day use, so you may not want to throw out that old tablet of yours.",
+    "source": "XDA Developers"
+  },
+  {
+    "title": "Microsoft has released yet another update for Notepad, and it's barely recognisable anymore",
+    "link": "https://www.xda-developers.com/microsoft-released-yet-another-update-for-notepad-barely-recognisable-anymore/",
+    "date": "2025-11-21T19:21:49.000Z",
+    "summary": "The line between Notepad and Word blurs a little more.",
+    "source": "XDA Developers"
+  },
+  {
+    "title": "Self-driving infrastructure",
+    "link": "https://vercel.com/blog/self-driving-infrastructure",
+    "date": "2025-11-21T13:00:00.000Z",
+    "summary": "AI has transformed how we write code. The next transformation is how we run it.\nAt Vercel, we’re building self-driving infrastructure that autonomously manages production operations, improves applicat...",
+    "source": "Vercel Blog"
+  },
+  {
+    "title": "Vercel Agent investigations now included in Observability Plus",
+    "link": "https://vercel.com/changelog/vercel-agent-investigations-now-included-in-observability-plus",
+    "date": "2025-11-21T13:00:00.000Z",
+    "summary": "are now included in Observability Plus, adding 10 investigations to every billing cycle at no extra cost to your subscription. Vercel Agent investigations\nInvestigations help teams diagnose and resolv...",
+    "source": "Vercel Blog"
+  },
+  {
+    "title": "Grok 4.1 Fast models now available on Vercel AI Gateway",
+    "link": "https://vercel.com/changelog/grok-4-1-fast-models-now-available-on-vercel-ai-gateway",
+    "date": "2025-11-20T13:00:00.000Z",
+    "summary": "You can now access xAI's latest models, Grok 4.1 Fast Reasoning and Grok 4.1 Fast Non-Reasoning, via Vercel's  with no other provider accounts required. These models have a 2M context window and are d...",
+    "source": "Vercel Blog"
+  },
+  {
+    "title": "You can now invalidate the CDN cache by providing a source image",
+    "link": "https://vercel.com/changelog/you-can-now-invalidate-the-cdn-cache-by-providing-a-source-image",
+    "date": "2025-11-20T13:00:00.000Z",
+    "summary": "Vercel  dynamically transforms source images to reduce file size while maintaining high quality on the visitor's browser.Image Optimization\nYou can now invalidate the CDN cache by providing a source i...",
+    "source": "Vercel Blog"
+  },
+  {
+    "title": "Improved analytics experience now available on the Vercel Firewall",
+    "link": "https://vercel.com/changelog/improved-analytics-experience-now-available-on-the-vercel-firewall",
+    "date": "2025-11-20T13:00:00.000Z",
+    "summary": "We have launched improvements to the Vercel Firewall UI, simplifying your application security monitoring and analysis. Vercel Firewall includes the System firewall and DDoS mitigations, Web Applicati...",
+    "source": "Vercel Blog"
+  },
+  {
+    "title": "Nano Banana Pro (Gemini 3 Pro Image) now available in the AI Gateway",
+    "link": "https://vercel.com/changelog/nano-banana-pro-gemini-3-pro-image-now-available-in-the-ai-gateway",
+    "date": "2025-11-20T13:00:00.000Z",
+    "summary": "You can now access Google's cutting edge image model, Nano Banana Pro (Gemini 3 Pro Image), via Vercel's  with no other provider accounts required.AI Gateway\nNano Banana Pro (Gemini 3 Pro Image) is de...",
+    "source": "Vercel Blog"
+  },
+  {
+    "title": "Vercel collaborates with Google for Gemini 3 Pro Preview launch",
+    "link": "https://vercel.com/blog/vercel-collaborates-with-google-for-gemini-3-pro-launch",
+    "date": "2025-11-18T13:00:00.000Z",
+    "summary": "The Gemini 3 Pro Preview model, released today, is now available through the  and on . Thanks to Google, Vercel has been testing Gemini 3 Pro Preview across v0, Next.js, AI SDK, and Vercel Sandbox ove...",
+    "source": "Vercel Blog"
+  },
+  {
+    "title": "Gemini 3 Pro now available in Vercel AI Gateway",
+    "link": "https://vercel.com/changelog/gemini-3-pro-now-available-in-vercel-ai-gateway",
+    "date": "2025-11-18T13:00:00.000Z",
+    "summary": "You can now access Google's latest model, Gemini 3 Pro, via Vercel's  with no other provider accounts required.AI Gateway\nGemini 3 Pro excels at challenging tasks involving reasoning or agentic workfl...",
+    "source": "Vercel Blog"
+  },
+  {
+    "title": "Vercel now supports Build Commands for FastAPI and Flask",
+    "link": "https://vercel.com/changelog/vercel-now-supports-build-commands-for-fastapi-and-flask",
+    "date": "2025-11-17T13:00:00.000Z",
+    "summary": "You can now can easily deploy FastAPI and Flask with custom Build Commands, expanding support for Python projects on Vercel.\nIn addition to defining a  in the project Settings dashboard, you can also ...",
+    "source": "Vercel Blog"
+  },
+  {
+    "title": "Elysia can now be automatically deployed on Vercel",
+    "link": "https://vercel.com/changelog/support-for-elysia",
+    "date": "2025-11-17T13:00:00.000Z",
+    "summary": ", a popular ergonomic TypeScript framework with end-to-end type safety, can now be deployed instantly on Vercel.Elysia\nWhen deployed, Vercel will now automatically identify your app is running Elysia ...",
+    "source": "Vercel Blog"
+  }
+]
