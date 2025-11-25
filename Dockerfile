@@ -1,31 +1,39 @@
-# 1. 베이스 이미지: Node.js 20버전이 깔린 리눅스를 씁니다.
-# (Playwright를 쓰려면 브라우저 호환성이 좋은 이미지가 필요합니다)
-FROM mcr.microsoft.com/playwright:v1.41.0-jammy
+# 1. 베이스 이미지 선택 (이미 브라우저가 다 설치된 요리 도구 세트)
+FROM mcr.microsoft.com/playwright:v1.56.1-jammy
 
-# 2. 작업 폴더 설정: 컨테이너 내부의 /app 폴더에서 일하겠다.
+# 2. 작업 폴더 생성 (주방 도마 깔기)
 WORKDIR /app
 
-# 3. 패키지 관리자(pnpm) 설치
+# 3. pnpm 설치 (요리 도구 준비)
+# Node.js 표준 패키지 매니저 대신 우리는 pnpm을 씁니다.
 RUN npm install -g pnpm
 
-# 4. 프로젝트 파일 복사 (내 컴퓨터 -> 도커 컨테이너)
-# (모든 모듈을 다 복사해야 서로 import가 가능합니다)
+# 4. 프로젝트 설정 파일 복사 (재료 목록 확인)
+# 소스 코드를 다 넣기 전에, '어떤 라이브러리가 필요한지' 먼저 확인합니다.
+# (이 순서가 중요한 이유는 도커의 캐싱 기능을 이용해 빌드 속도를 높이기 위함입니다)
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+
+# 5. 모든 모듈의 의존성 설치 (장보기)
+# 모노레포 전체의 패키지를 한 번에 설치합니다.
+# --frozen-lockfile: 버전이 맘대로 바뀌지 않게 락파일 그대로 설치
+COPY trendiv-pipeline-controller/package.json ./trendiv-pipeline-controller/
+COPY trendiv-scraper-module/package.json ./trendiv-scraper-module/
+COPY trendiv-analysis-module/package.json ./trendiv-analysis-module/
+COPY trendiv-result-module/package.json ./trendiv-result-module/
+COPY trendiv-code-reviewer-module/package.json ./trendiv-code-reviewer-module/
+
+# 의존성 설치
+RUN pnpm install --frozen-lockfile
+
+# 6. 전체 소스 코드 복사 (재료 손질)
+# 이제 진짜 코드를 다 집어넣습니다.
 COPY . .
 
-# 5. 의존성 설치 (각 폴더 들어가서 설치)
-RUN cd trendiv-pipeline-controller && pnpm install
-RUN cd trendiv-scraper-module && pnpm install
-RUN cd trendiv-analysis-module && pnpm install
-RUN cd trendiv-result-module && pnpm install
+# 7. 포트 열기 (서빙 구멍 뚫기)
+# Pipeline Controller (3000), Code Reviewer (3004)
+EXPOSE 3000 3004
 
-# 6. Playwright 브라우저 설치 (스크래퍼, 분석 모듈용)
-RUN npx playwright install chromium
-RUN npx playwright install-deps
-
-# 7. 실행 명령어 (컨트롤러를 실행하면 됨)
-# 작업 디렉토리를 컨트롤러로 이동
+# 8. 실행 명령어 (요리 내가기)
+# 기본적으로 파이프라인 컨트롤러를 실행합니다.
 WORKDIR /app/trendiv-pipeline-controller
-
-# 서버 실행 (포트 3000)
-EXPOSE 3000
-CMD ["npx", "ts-node", "src/index.ts"]
+CMD ["pnpm", "start"]

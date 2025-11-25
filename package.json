@@ -1,0 +1,12 @@
+{
+  "name": "trendiv-monorepo",
+  "private": true,
+  "description": "Trendiv Root Package",
+  "scripts": {
+    "install:all": "pnpm install",
+    "start:backend": "pnpm --filter trendiv-pipeline-controller start"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}

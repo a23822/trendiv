@@ -5,7 +5,7 @@ import * as fs from "fs/promises";
 import * as path from "path";
 import simpleGit from "simple-git";
 
-dotenv.config();
+dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
 // ----------------------------------------------------
 // 타입 정의
@@ -19,7 +19,7 @@ interface KnowledgeEntry {
 type KnowledgeBase = KnowledgeEntry[];
 
 const app = express();
-const PORT: number = parseInt(process.env.PORT || "3004", 10);
+const PORT: number = parseInt(process.env.REVIEWER_PORT || "3004", 10);
 app.use(express.json({ limit: "5mb" })); // HTML 코드가 클 수 있으므로 limit 설정
 
 const KNOWLEDGE_BASE_PATH = path.join(__dirname, "knowledge-base.json");

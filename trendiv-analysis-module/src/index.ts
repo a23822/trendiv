@@ -5,7 +5,7 @@ import dotenv from 'dotenv';
 import { chromium, Browser } from 'playwright';
 
 // 1. 환경 변수 로드
-dotenv.config();
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 // 2. Gemini 설정
 const apiKey = process.env.GEMINI_API_KEY;
@@ -74,6 +74,36 @@ async function fetchArticleContent(
   }
 }
 
+// 재시도 로직
+async function generateContentWithRetry(
+  prompt: string,
+  maxRetries = 3,
+): Promise<any> {
+  let delay = 2000; // 2초 대기부터 시작
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await model.generateContent(prompt);
+    } catch (error: any) {
+      // 503(서버 과부하)이거나 429(요청 너무 많음)일 때만 재시도
+      const isRetryable =
+        error.message.includes('503') ||
+        error.message.includes('overloaded') ||
+        error.message.includes('429');
+
+      if (isRetryable && attempt < maxRetries) {
+        console.warn(
+          `      ⚠️ Gemini 과부하(503). ${delay / 1000}초 후 재시도합니다... (${attempt}/${maxRetries})`,
+        );
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        delay *= 2; // 대기 시간 2배로 늘림 (2초 -> 4초 -> 8초)
+        continue;
+      }
+      throw error; // 재시도 횟수 초과하거나 다른 에러면 포기
+    }
+  }
+}
+
 // 🧠 분석 함수
 async function analyzeArticle(
   browser: Browser,
@@ -117,7 +147,7 @@ async function analyzeArticle(
   `;
 
   try {
-    const result = await model.generateContent(prompt);
+    const result = await generateContentWithRetry(prompt);
     const response = await result.response;
     let text = response
       .text()
@@ -129,17 +159,12 @@ async function analyzeArticle(
 
     const data = JSON.parse(text) as AnalyzedReport;
 
-    // 0점이면 가차 없이 버림 (return null)
-    if (data.score === 0) {
-      console.log(
-        `🗑️ [탈락] 주제 불일치 (${data.reason}): ${item.title.substring(0, 20)}...`,
-      );
-      return null;
-    }
-
-    return data;
-  } catch (error) {
-    console.error(`❌ 분석 에러 (${item.title}):`, error);
+    return data.score > 0 ? data : null;
+  } catch (e: any) {
+    // 에러 로그만 살짝 수정
+    console.error(
+      `❌ 분석 최종 실패 (${item.title}): ${e.message.substring(0, 50)}...`,
+    );
     return null;
   }
 }
@@ -197,4 +222,36 @@ if (require.main === module) {
       if (browser) await browser.close();
     }
   })();
+}
+
+export async function runAnalysis(trends: TrendItem[]): Promise<any[]> {
+  console.log(`🧠 [Analysis] Start analyzing ${trends.length} items...`);
+
+  if (!apiKey) {
+    console.error('❌ GEMINI_API_KEY Missing!');
+    return [];
+  }
+
+  const browser = await chromium.launch({ headless: true });
+  const reports = [];
+
+  try {
+    // 비용 절약을 위해 최대 5개만 분석 (테스트용)
+    const targetItems = trends.slice(0, 5);
+
+    for (const item of targetItems) {
+      console.log(`   -> Analyzing: ${item.title.substring(0, 20)}...`);
+      const analysis = await analyzeArticle(browser, item);
+      if (analysis) {
+        // 원본 데이터와 분석 결과를 합쳐서 반환
+        reports.push({ ...analysis, originalLink: item.link, date: item.date });
+      }
+      // Rate Limit 방지용 딜레이
+      await new Promise((r) => setTimeout(r, 2000));
+    }
+  } finally {
+    await browser.close();
+  }
+
+  return reports;
 }

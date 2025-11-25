@@ -2,7 +2,7 @@
   "name": "trendiv-pipeline-controller",
   "version": "1.0.0",
   "description": "AI Web Trend Newsletter Backend",
-  "main": "index.js",
+  "main": "src/index.js",
   "scripts": {
     "start": "ts-node src/index.ts",
     "build": "tsc",
@@ -17,7 +17,11 @@
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
-    "node-cron": "^4.2.1"
+    "node-cron": "^4.2.1",
+    "resend": "^6.5.2",
+    "trendiv-analysis-module": "workspace:*",
+    "trendiv-result-module": "workspace:*",
+    "trendiv-scraper-module": "workspace:*"
   },
   "devDependencies": {
     "@types/axios": "^0.14.4",

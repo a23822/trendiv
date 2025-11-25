@@ -1,5 +1,3 @@
-import fs from 'fs';
-import path from 'path';
 import { TARGETS } from './config/targets';
 import { RssScraper } from './scrapers/RssScraper';
 import { HtmlScraper } from './scrapers/HtmlScraper';
@@ -8,7 +6,8 @@ import { TrendItem } from './scrapers/interface';
 const rssScraper = new RssScraper();
 const htmlScraper = new HtmlScraper();
 
-// 📅 [신규 기능] 날짜 필터링 함수 (기본값: 최근 7일)
+// 📅 날짜 필터링 함수
+// 기본값: 최근 N일 이내의 글만 통과시킴
 function filterRecentTrends(trends: TrendItem[], days = 7): TrendItem[] {
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - days); // 오늘로부터 N일 전
@@ -20,6 +19,7 @@ function filterRecentTrends(trends: TrendItem[], days = 7): TrendItem[] {
   });
 }
 
+// ✅ Controller가 호출하는 메인 함수
 export async function scrapeAll(): Promise<TrendItem[]> {
   console.log('🚀 Trendiv Scraper 가동...');
 
@@ -41,49 +41,10 @@ export async function scrapeAll(): Promise<TrendItem[]> {
   const allResults: TrendItem[] = [];
   results.forEach((r) => allResults.push(...r));
 
-  console.log(`📦 전체 수집량: ${allResults.length}개`);
-  return allResults;
-}
+  console.log(`📦 전체 수집량 (필터 전): ${allResults.length}개`);
 
-if (require.main === module) {
-  (async () => {
-    try {
-      // 1. 전체 수집
-      const rawTrends = await scrapeAll();
+  const recentResults = filterRecentTrends(allResults, 7);
 
-      // 2. [핵심] 최근 7일 데이터만 필터링 (다이어트!)
-      const recentTrends = filterRecentTrends(rawTrends, 7);
-      console.log(`✨ 필터링 후: ${recentTrends.length}개 (최근 7일)`);
-
-      if (recentTrends.length === 0) {
-        console.log('😅 최근 7일간 올라온 새 글이 없습니다.');
-      }
-
-      // 3. 저장
-      const dataDir = path.join(__dirname, '../data');
-      if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir);
-
-      const now = new Date();
-      const yyyy = now.getFullYear();
-      const mm = String(now.getMonth() + 1).padStart(2, '0');
-      const dd = String(now.getDate()).padStart(2, '0');
-      const fileName = `trends_${yyyy}_${mm}_${dd}.json`;
-
-      const filePath = path.join(dataDir, fileName);
-
-      // 필터링된 가벼운 데이터만 저장
-      fs.writeFileSync(
-        filePath,
-        JSON.stringify(recentTrends, null, 2),
-        'utf-8',
-      );
-
-      console.log(`💾 저장 완료: ${filePath}`);
-    } catch (e) {
-      console.error('❌ 오류:', e);
-    } finally {
-      console.log('👋 작업 종료.');
-      process.exit(0);
-    }
-  })();
+  console.log(`✨ 필터링 후 (최근 7일): ${recentResults.length}개`);
+  return recentResults;
 }
