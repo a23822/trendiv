@@ -9,6 +9,8 @@ const htmlScraper = new HtmlScraper();
 // 📅 날짜 필터링 함수
 // 기본값: 최근 N일 이내의 글만 통과시킴
 function filterRecentTrends(trends: TrendItem[], days = 7): TrendItem[] {
+  if (days <= 0) return trends;
+
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - days); // 오늘로부터 N일 전
 
@@ -19,9 +21,10 @@ function filterRecentTrends(trends: TrendItem[], days = 7): TrendItem[] {
   });
 }
 
-// ✅ Controller가 호출하는 메인 함수
-export async function scrapeAll(): Promise<TrendItem[]> {
-  console.log('🚀 Trendiv Scraper 가동...');
+export async function scrapeAll(days: number = 7): Promise<TrendItem[]> {
+  console.log(
+    `🚀 Trendiv Scraper 가동... (최근 ${days > 0 ? days + '일' : '전체'} 수집)`,
+  );
 
   const tasks = TARGETS.map(async (target) => {
     try {
@@ -41,10 +44,11 @@ export async function scrapeAll(): Promise<TrendItem[]> {
   const allResults: TrendItem[] = [];
   results.forEach((r) => allResults.push(...r));
 
-  console.log(`📦 전체 수집량 (필터 전): ${allResults.length}개`);
+  console.log(`📦 전체 수집량: ${allResults.length}개`);
 
-  const recentResults = filterRecentTrends(allResults, 7);
+  // 설정된 기간만큼 필터링
+  const finalResults = filterRecentTrends(allResults, days);
 
-  console.log(`✨ 필터링 후 (최근 7일): ${recentResults.length}개`);
-  return recentResults;
+  console.log(`✨ 필터링 적용 후: ${finalResults.length}개`);
+  return finalResults;
 }

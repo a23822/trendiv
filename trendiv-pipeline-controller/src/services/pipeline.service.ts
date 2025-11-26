@@ -18,78 +18,73 @@ export const runPipeline = async () => {
     const supabaseKey = process.env.SUPABASE_KEY;
 
     if (!supabaseUrl || !supabaseKey || !supabaseUrl.startsWith("http")) {
-      throw new Error(
-        "❌ 유효한 SUPABASE_URL 또는 SUPABASE_KEY가 없습니다. .env를 확인하세요."
-      );
+      throw new Error("❌ 유효한 SUPABASE_URL/KEY가 없습니다.");
     }
 
     const supabase: SupabaseClient = createClient(supabaseUrl, supabaseKey);
-
     const resend = process.env.RESEND_API_KEY
       ? new Resend(process.env.RESEND_API_KEY)
       : null;
 
     // ---------------------------------------------------------
-    // 1️⃣ 수집 및 원본 저장 (Scraping & Save Raw)
+    // 1️⃣ 수집 & 원본 저장 (Scrape & Save RAW)
     // ---------------------------------------------------------
     console.log("   1. 🕷️  Running Scraper...");
-    const rawData = await runScraper();
-    console.log(`      -> Raw scraped data: ${rawData.length} items.`);
+
+    // 초기 구축 시엔 365일, 운영 시엔 7일치 수집 (DB 확인)
+    const { count } = await supabase
+      .from("trend")
+      .select("*", { count: "exact", head: true });
+    const fetchDays = count === 0 ? 365 : 7;
+
+    const rawData = await runScraper(fetchDays);
 
     if (rawData.length > 0) {
-      // 데이터 정제 (Type Mismatch 해결) 및 초기 상태 설정
-      const dbRawData = rawData
-        .filter((item) => item.title && item.link) // 제목 없으면 탈락
-        .map((item) => ({
-          title: item.title!,
-          link: item.link!,
-          date: item.date || new Date().toISOString(),
-          summary: item.summary || "",
-          source: "scraped",
-          status: "RAW",
-          score: 0, // 기본 점수
-        }));
+      const dbRawData = rawData.map((item) => ({
+        title: item.title,
+        link: item.link,
+        date: item.date || new Date().toISOString(),
+        summary: item.summary || "",
+        source: "scraped",
+        status: "RAW",
+        score: 0,
+      }));
 
-      // 원본 데이터 저장 (이미 있으면 무시하거나 업데이트)
+      // 이미 있는 건 건너뛰고(ignoreDuplicates), 새것만 저장
       const { error } = await supabase
         .from("trend")
         .upsert(dbRawData, { onConflict: "link", ignoreDuplicates: true });
 
-      if (error) console.error("      ⚠️ 원본 저장 중 에러:", error.message);
-      else console.log(`      -> Saved ${dbRawData.length} raw items to DB.`);
-    } else {
-      console.log("      ⚠️ No new articles found from scraper.");
+      if (error) console.error("      ⚠️ 원본 저장 실패:", error.message);
+      else console.log(`      -> Saved raw items to DB.`);
     }
 
     // ---------------------------------------------------------
-    // 2️⃣ 미분석 데이터 로드 (Fetch RAW Data)
+    // 2️⃣ 미분석 데이터 로드 (Fetch Target Items)
     // ---------------------------------------------------------
-    console.log("   2. 🔍  Fetching 'RAW' or 'FAILED' items from DB...");
+    console.log("   2. 🔍  Fetching 'RAW' items to analyze...");
 
-    // DB에서 아직 분석 안 된('RAW')거나 실패했던('FAILED') 것들을 가져옵니다.
+    // 아직 분석 안 된('RAW')거나 실패한('FAILED') 데이터 10개만 가져오기
     const { data: targetItems, error: fetchError } = await supabase
       .from("trend")
       .select("*")
       .in("status", ["RAW", "FAILED"])
-      .limit(10); // 한 번에 10개씩만 처리 (API 과부하 방지)
+      .limit(10); // 한 번에 10개씩만 처리 (과부하 방지)
 
     if (fetchError) throw fetchError;
 
     if (!targetItems || targetItems.length === 0) {
-      console.log(
-        "      ✅ 모든 데이터가 이미 분석되었습니다. (No items to analyze)"
-      );
-      return { success: true, message: "No items to analyze" };
+      console.log("      ✅ 모든 데이터 분석 완료! (No RAW items left)");
+      return { success: true, message: "All analyzed" };
     }
 
     console.log(`      -> Found ${targetItems.length} items to analyze.`);
 
     // ---------------------------------------------------------
-    // 3️⃣ 분석 (AI Analysis)
+    // 3️⃣ 분석 수행 (Analyze)
     // ---------------------------------------------------------
-    console.log("   3. 🧠  Running AI Analysis...");
-
     const cleanData = targetItems.map((item) => ({
+      id: item.id,
       title: item.title,
       link: item.link,
       date: item.date,
@@ -97,23 +92,20 @@ export const runPipeline = async () => {
       source: item.source,
     }));
 
-    // Gemini 503 에러 대비: 분석 결과가 비어있어도 죽지 않도록 처리
     let analysisResults: any[] = [];
     try {
+      // 분석 수행 (503 에러가 나도 여기서 재시도 로직이 방어함)
       analysisResults = await runAnalysis(cleanData);
     } catch (e) {
-      console.error("      ⚠️ AI Analysis partially failed or overloaded:", e);
-      // 여기서 멈추지 않고, 분석된 게 하나라도 있으면 계속 진행
+      console.error("      ⚠️ Analysis incomplete:", e);
     }
-    console.log(`      -> Analyzed ${analysisResults.length} insights.`);
 
     // ---------------------------------------------------------
-    // 4️⃣ 결과 업데이트 (Update Results)
+    // 4️⃣ 결과 업데이트 (Update DB)
     // ---------------------------------------------------------
-    console.log("   4. 💾  Updating Analysis Results in DB...");
+    console.log(`   4. 💾  Saving ${analysisResults.length} analyzed items...`);
 
     let successCount = 0;
-    // 성공적으로 분석된 항목들만 DB에 업데이트 (상태를 'ANALYZED'로 변경)
     for (const result of analysisResults) {
       const { error } = await supabase
         .from("trend")
@@ -123,73 +115,43 @@ export const runPipeline = async () => {
           score: result.score,
           reason: result.reason,
           keyPoints: result.keyPoints,
-          status: "ANALYZED", // 👈 분석 완료 상태로 변경!
+          status: "ANALYZED",
           source: "AI_Analysis",
         })
-        .eq("link", result.originalLink); // 링크로 대상을 찾아서 업데이트
+        .eq("id", result.id);
 
       if (!error) successCount++;
     }
-    console.log(`      -> Successfully updated ${successCount} items.`);
 
     // ---------------------------------------------------------
-    // 5️⃣ 결과 생성 (Generate HTML)
+    // 5️⃣ 이메일 발송 (유효한 것만)
     // ---------------------------------------------------------
-    console.log("   5. 🎨  Generating Newsletter HTML...");
-
-    // 점수가 0보다 큰 유효한 트렌드만 필터링 (메일 발송용)
     const validTrends = analysisResults.filter((item: any) => item.score > 0);
 
-    // 이메일 본문용 데이터 객체 생성
-    const emailPayload = {
-      date: new Date().toISOString().split("T")[0],
-      count: validTrends.length,
-      articles: validTrends,
-    };
-
-    const newsletterHtml = await generateNewsletterHtml(emailPayload);
-
-    // =========================================================
-    // 6️⃣ 이메일 발송 (Sending Email)
-    // =========================================================
-    console.log("   6. 📧  Sending Email via Resend...");
-
-    let emailResult = null;
     if (validTrends.length > 0) {
-      if (!resend) {
-        console.log("      ⚠️ RESEND_API_KEY missing. Skipping email send.");
-      } else {
-        const recipient =
-          process.env.TEST_EMAIL_RECIPIENT || "onboarding@resend.dev";
+      console.log("   5. 📧  Sending Email...");
+      const emailPayload = {
+        date: new Date().toISOString().split("T")[0],
+        count: validTrends.length,
+        articles: validTrends,
+      };
+      const newsletterHtml = await generateNewsletterHtml(emailPayload);
 
-        const { data, error } = await resend.emails.send({
+      if (resend) {
+        await resend.emails.send({
           from: "Trendiv <onboarding@resend.dev>",
-          to: [recipient],
-          subject: `🔥 Trendiv 분석 완료 (${successCount}건 성공)`,
+          to: ["onboarding@resend.dev"],
+          subject: `🔥 Trendiv 분석 알림 (${successCount}건 처리)`,
           html: newsletterHtml,
         });
-
-        if (error) {
-          console.error("      ❌ Email sending failed:", error);
-        } else {
-          console.log(`      ✅ Email sent to ${recipient}! ID: ${data?.id}`);
-          emailResult = data;
-        }
       }
-    } else {
-      console.log("      ⚠️ No valid trends (Score > 0) to email this time.");
     }
 
     const duration = ((Date.now() - startTime) / 1000).toFixed(2);
-    console.log(`🎉 [Pipeline] All Done! (Time: ${duration}s)`);
-
-    return {
-      success: true,
-      count: successCount,
-      emailSent: !!emailResult,
-    };
+    console.log(`🎉 [Pipeline] Batch Done! (${duration}s)`);
+    return { success: true, count: successCount };
   } catch (error) {
-    console.error("❌ [Pipeline] Error occurred:", error);
+    console.error("❌ [Pipeline] Critical Error:", error);
     return { success: false, error };
   }
 };
