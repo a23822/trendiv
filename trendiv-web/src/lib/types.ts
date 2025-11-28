@@ -9,4 +9,5 @@ export interface Trend {
 	date: string;
 	source: string;
 	keyPoints?: string[];
+	reason?: string;
 }

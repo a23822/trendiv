@@ -14,16 +14,15 @@ dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Supabase 설정 확인
+// Supabase 설정
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
-  console.error("❌ .env 파일에 SUPABASE_URL과 SUPABASE_KEY가 없습니다!");
+  console.error("❌ .env 파일 확인 필요!");
   process.exit(1);
 }
 
-// 전역 클라이언트 (구독 등 간단한 작업용)
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 app.use(cors());
@@ -33,12 +32,64 @@ app.get("/", (req: Request, res: Response) => {
   res.send("🚀 Web Dev Trend AI Pipeline is Running!");
 });
 
+// 트렌드 목록 조회 (검색 & 필터 & 페이지네이션)
+app.get("/api/trends", async (req: Request, res: Response) => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
+
+    // 검색어와 태그 필터 파라미터 받기
+    const searchKeyword = (req.query.searchKeyword as string) || "";
+    const tagFilter = (req.query.tagFilter as string) || "";
+
+    // 범위 계산 (1페이지: 0~19, 2페이지: 20~39)
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
+    // 1. 기본 쿼리 (점수가 0보다 큰 것만)
+    let query = supabase
+      .from("trend")
+      .select("*", { count: "exact" })
+      .gt("score", 0)
+      .order("date", { ascending: false });
+
+    // 2. 검색어 필터 (제목 또는 요약에 포함)
+    if (searchKeyword) {
+      query = query.or(
+        `title.ilike.%${searchKeyword}%,summary.ilike.%${searchKeyword}%`
+      );
+    }
+
+    // 3. 태그 필터 (배열에 포함)
+    if (tagFilter) {
+      query = query.contains("tags", [tagFilter]);
+    }
+
+    // 4. 페이지네이션 및 실행
+    const { data, error, count } = await query.range(from, to);
+
+    if (error) throw error;
+
+    res.status(200).json({
+      success: true,
+      data: data,
+      page: page,
+      total: count,
+    });
+  } catch (error: any) {
+    console.error("❌ 트렌드 조회 실패:", error);
+    res.status(500).json({ error: "데이터 로드 실패" });
+  }
+});
+
+// 수동 실행 API
 app.post("/api/pipeline/run", async (req: Request, res: Response) => {
   console.log("👆 [Manual] Pipeline execution requested");
   const result = await runPipeline();
   res.json(result);
 });
 
+// 구독 API
 app.post("/api/subscribe", async (req: Request, res: Response) => {
   try {
     const { email } = req.body;
@@ -52,55 +103,7 @@ app.post("/api/subscribe", async (req: Request, res: Response) => {
     if (error) throw error;
     res.status(200).json({ success: true, data });
   } catch (error: any) {
-    console.error("❌ 구독 실패:", error.message);
-    res.status(500).json({ error: "서버 내부 오류" });
-  }
-});
-
-// 트렌드 목록 조회 API
-app.get("/api/trends", async (req: Request, res: Response) => {
-  try {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 20;
-    const from = (page - 1) * limit;
-    const to = from + limit - 1;
-
-    console.log(`🔍 [API] 조회 요청: Page ${page} (${from}~${to})`);
-
-    let query = supabase
-      .from("trend")
-      .select("*", { count: "exact" })
-      .order("date", { ascending: false })
-      .range(from, to);
-
-    // 2. 점수 필터링 적용 (옵션)
-    query = query.gt("score", 0);
-
-    const { data, error, count } = await query;
-
-    if (error) {
-      console.error(
-        "❌ [Supabase Error Detail]:",
-        JSON.stringify(error, null, 2)
-      );
-      throw error;
-    }
-
-    console.log(
-      `✅ [API] 조회 성공: ${data?.length}개 가져옴 (Total: ${count})`
-    );
-
-    res.status(200).json({
-      success: true,
-      data: data,
-      page: page,
-      total: count,
-    });
-  } catch (error: any) {
-    console.error("❌ 트렌드 조회 최종 실패:", error);
-    res
-      .status(500)
-      .json({ error: "데이터를 가져오지 못했습니다.", details: error.message });
+    res.status(500).json({ error: "구독 실패" });
   }
 });
 
