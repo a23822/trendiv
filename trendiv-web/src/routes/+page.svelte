@@ -3,9 +3,7 @@
   import { fade, fly } from 'svelte/transition';
   import type { PageData } from './$types';
   import type { Trend } from '$lib/types';
-  // 환경 변수 임포트
-  import { env } from '$env/dynamic/public';
-
+  import { PUBLIC_API_URL } from '$env/static/public';
   export let data: PageData;
 
   // 뉴스 데이터 상태
@@ -30,7 +28,7 @@
   let subStatus = '';
   let isSubmitting = false;
 
-  const API_URL = env.PUBLIC_API_URL || 'http://localhost:3000';
+  const API_URL = PUBLIC_API_URL || 'http://localhost:3000';
 
   // ✅ [추가] SSR 실패 시 클라이언트에서 재시도 (심폐소생술)
   onMount(() => {

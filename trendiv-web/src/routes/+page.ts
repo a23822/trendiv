@@ -1,12 +1,13 @@
 import type { PageLoad } from './$types';
 import type { Trend } from '$lib/types';
-import { env } from '$env/dynamic/public';
+import { PUBLIC_API_URL } from '$env/static/public';
 
 export const load: PageLoad = async ({ fetch }) => {
 	try {
 		// 1. 백엔드 API 호출 (도커로 띄운 서버)
 		// limit=20: 최신 20개만 가져오기
-		const res = await fetch(`${env.PUBLIC_API_URL}/api/trends?limit=20`);
+		const apiUrl = PUBLIC_API_URL || 'http://localhost:3000';
+		const res = await fetch(`${apiUrl}/api/trends?limit=20`);
 
 		if (!res.ok) {
 			throw new Error(`API Error: ${res.status}`);
