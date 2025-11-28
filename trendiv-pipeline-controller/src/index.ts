@@ -25,7 +25,14 @@ if (!supabaseUrl || !supabaseKey) {
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-app.use(cors());
+const corsOrigin = process.env.FRONTEND_URL || "*";
+
+app.use(
+  cors({
+    origin: corsOrigin,
+    credentials: true,
+  })
+);
 app.use(express.json());
 
 app.get("/", (req: Request, res: Response) => {
