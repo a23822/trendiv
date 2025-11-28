@@ -1,55 +1,43 @@
-# ✅ Trendiv 프로젝트 로드맵 (2025 Updated)
+# ✅ Trendiv 프로젝트 로드맵 (Current Status)
 
 ## 🚀 Phase 1: 핵심 파이프라인 구축 (완료)
 
-- [x] **프로젝트 리브랜딩:** Mama -> Trendiv로 명칭 및 구조 변경 완료 (Monorepo).
-- [x] **데이터베이스 구축:** Supabase 연동 및 `Trend` 테이블 스키마 정의.
-- [x] **프론트엔드 개발:** SvelteKit 기반 구독 폼 구현 및 API 연동.
-- [x] **하이브리드 스크래퍼 구현 (`trendiv-scraper-module`):**
-  - [x] RSS Parser 연동 (WebKit, CSS-Tricks, Android Dev 등).
-  - [x] Playwright 연동 (RSS 없는 사이트 및 차단 우회용).
-  - [x] Axios 헤더 조작을 통한 406 에러 해결 (Android Weekly).
-  - [x] 데이터 날짜 필터링 (최근 7일) 및 JSON 저장.
-- [x] **AI 분석 엔진 구현 (`trendiv-analysis-module`):**
-  - [x] Google Gemini 2.5 Flash 연동 (무료 티어 최적화).
-  - [x] Playwright 기반 본문(Context) 추출 기능 (Deep Dive).
-  - [x] **프롬프트 엔지니어링:** '비평가 모드' 도입 (0점 필터링, HTML/CSS/A11y 강조).
-  - [x] **AI 윤리:** AI 출력 결과에 대한 인간 검토용 로그 및 0점 처리 로직 구현.
-- [x] **결과물 생성기 구현 (`trendiv-result-module`):**
-  - [x] MJML 활용 다크 모드 뉴스레터 템플릿 디자인.
-  - [x] 분석 데이터(JSON) -> HTML 이메일 변환 로직 작성.
+- [x] **프로젝트 구조:** Monorepo 설정 및 공통 모듈화.
+- [x] **데이터베이스:** Supabase 연동 (`Trend`, `Subscriber` 테이블).
+- [x] **수집 엔진:** RSS + Playwright 하이브리드 크롤러 구현.
+- [x] **AI 분석:** Gemini 2.5 Flash 연동 및 프롬프트 엔지니어링 (HTML/CSS/A11y 강조).
+- [x] **결과 생성:** MJML 기반 뉴스레터 HTML 생성기 구현.
 
-## 🛠️ Phase 2: 통합 및 자동화 (진행 중)
+## 🛠️ Phase 2: 통합 및 자동화 (완료)
 
-- [ ] **파이프라인 통합 고도화 (`trendiv-pipeline-controller`):**
-  - [x] 수집 -> 분석 -> 저장 흐름 제어 API 작성.
-  - [ ] **`node-cron` 스케줄링:** 주간(월요일)/일간(핫토픽) 옵션화 및 환경 변수 토글 구현.
-  - [ ] **에러 핸들링:** Winston 로그 시스템 도입 및 재시도(Retry) 로직에 지수 백오프(Exponential Backoff) 적용.
-- [ ] **이메일 발송 시스템 연동:**
-  - [ ] **Resend API 연동:** Nodemailer 대신 2025 트렌드인 Resend 사용하여 전송 안정성 확보.
-  - [ ] **A/B 테스트:** 제목/콘텐츠 변형 생성 후 오픈율 테스트 로직 구상.
-- [ ] **도커라이징 및 배포:**
-  - [x] `Dockerfile` 및 `.dockerignore` 작성.
-  - [ ] **멀티스테이지 빌드:** pnpm 캐싱을 활용한 빌드 속도 최적화 및 이미지 경량화.
-  - [ ] Fly.io 또는 AWS Lightsail 배포 및 Health Check 엔드포인트(`/healthz`) 추가.
+- [x] **파이프라인 통합 API:** 수집-분석-저장 흐름 제어 및 상태 관리 (`RAW` -> `ANALYZED`).
+- [x] **스케줄링:** `node-cron` 적용 (매주 월요일 자동 실행).
+- [x] **안정성 강화:**
+  - [x] Gemini 503 에러 대응을 위한 **지수 백오프(Exponential Backoff)** 재시도 로직.
+  - [x] **상태 기반 처리:** 실패 시 `RAW` 상태 보존 및 다음 실행 시 재처리(Retry) 메커니즘.
+  - [x] **중복 방지:** URL/ID 기반 `upsert` 로직 및 `ignoreDuplicates` 옵션 적용.
+- [x] **이메일 발송:** Resend API 연동 및 발송 로직 구현.
+- [x] **백엔드 배포:** Dockerizing 완료 및 **Google Cloud Run** 배포 완료.
 
-## 🔮 Phase 3: 서비스 고도화 (확장)
+## 🔮 Phase 3: 웹 서비스 고도화 (완료)
 
-- [ ] **웹 아카이브 페이지 (`trendiv-web`):**
-  - [ ] **구독자 전용:** Lucia Auth 등을 활용한 로그인 및 비공개 아카이브 접근.
-  - [ ] **검색 및 필터:** Supabase Full-text Search 연동, 태그별(iOS, React 등) 필터링.
-- [ ] **다양한 채널 확장 (Omni-channel):**
-  - [ ] **Telegram/Discord 봇:** 요약된 뉴스를 챗봇 형식으로 푸시 알림.
-  - [ ] **Web Push:** Service Worker를 활용한 브라우저 알림 (PWA 고려).
-- [ ] **데이터 관리 및 보안:**
-  - [ ] **Garbage Collection:** cron으로 90일 지난 데이터 자동 삭제 및 S3 백업.
-  - [ ] **보안 강화:** Rate Limiting (API 남용 방지) 및 API Key 로테이션 전략 수립.
+- [x] **웹 아카이브 페이지 (`trendiv-web`):**
+  - [x] Tailwind CSS 기반 반응형 UI/UX 디자인.
+  - [x] **무한 스크롤(Infinite Scroll):** Pagination API 연동.
+  - [x] **검색 및 필터:** 키워드 검색 및 태그(#CSS, #React 등) 필터링 기능.
+  - [x] **상세 모달:** AI 분석 결과(핵심 요약, 선정 이유)를 보여주는 모달 구현.
+  - [x] **웹 접근성(A11y):** 시맨틱 태그 및 키보드 네비게이션 준수.
+- [x] **프론트엔드 배포:** Cloudflare Adapter 적용 및 **Cloudflare Pages** 배포 완료.
 
-## 📈 Phase 4: 성장 및 모니터링 (New)
+## 📈 Phase 4: 운영 및 확장 (Next Step)
 
-- [ ] **구독자 성장 자동화:** AI 에이전트를 활용한 소셜(X, LinkedIn) 공유 콘텐츠 자동 생성.
-- [ ] **분석 대시보드:** Supabase + Chart.js로 오픈율/클릭율 시각화 페이지 구축.
-
-```
-
-```
+- [ ] **보안 및 인증:**
+  - [ ] 관리자(Admin) 대시보드 로그인 (Lucia Auth).
+  - [ ] API Rate Limiting 도입 (Upstash Redis 고려).
+- [ ] **데이터 관리:**
+  - [ ] **Garbage Collection:** 90일 지난 데이터 자동 아카이빙/삭제 스케줄러.
+  - [ ] 벡터 검색(Vector Search): Supabase pgvector를 활용한 AI 시맨틱 검색 도입.
+- [ ] **채널 확장 (Omni-channel):**
+  - [ ] Telegram/Slack 봇 연동하여 알림 발송.
+- [ ] **모니터링:**
+  - [ ] Sentry 도입으로 실시간 에러 추적.
