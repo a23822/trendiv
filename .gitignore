@@ -15,6 +15,7 @@ pnpm-debug.log*
 .env.*
 !.env.example
 *.pem
+env.yaml
 
 # ------------------------------------------------
 # 🏗️ 빌드 결과물 (Build Outputs)
