@@ -139,8 +139,8 @@ export const runPipeline = async () => {
 
       if (resend) {
         await resend.emails.send({
-          from: "Trendiv <onboarding@resend.dev>",
-          to: ["onboarding@resend.dev"],
+          from: "Trendiv <chanwoochae@trendiv.org>",
+          to: ["chanwoochae@trendiv.org"], //테스트용
           subject: `🔥 Trendiv 분석 알림 (${successCount}건 처리)`,
           html: newsletterHtml,
         });
