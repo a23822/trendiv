@@ -1,42 +1,81 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { fade, fly } from 'svelte/transition';
+  import { createClient } from '@supabase/supabase-js';
   import type { PageData } from './$types';
   import type { Trend } from '$lib/types';
   import { PUBLIC_API_URL } from '$env/static/public';
+  
+  // ✅ 환경 변수에서 키 가져오기 (import 방식 주의)
+  import { env } from '$env/dynamic/public';
+
   export let data: PageData;
 
-  // 뉴스 데이터 상태
+  // --- [Supabase Auth 초기화] ---
+  // 프론트엔드에서는 반드시 ANON KEY를 써야 합니다.
+  const supabaseUrl = env.PUBLIC_SUPABASE_URL || '';
+  const supabaseAnonKey = env.PUBLIC_SUPABASE_ANON_KEY || '';
+  const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+  // --- [상태 변수] ---
+  let user: any = null; // 로그인한 사용자 정보
   let trends: Trend[] = data.trends || [];
   let page = 1;
   let isLoadingMore = false;
   let hasMore = true;
-
-  // 🔍 검색 & 필터 상태
   let searchKeyword = "";
   let selectedTag = "";
   let isSearching = false;
-
-  // 🖼️ 상세 모달 상태
   let selectedTrend: Trend | null = null;
-
-  // 추천 태그 목록
   const popularTags = ["CSS", "HTML", "React", "Accessibility", "iOS", "Performance"];
 
-  // 구독 관련 상태
+  // 구독 관련
   let email = '';
   let subStatus = '';
   let isSubmitting = false;
+  const API_URL = PUBLIC_API_URL || 'http://127.0.0.1:3000';
 
-  const API_URL = PUBLIC_API_URL || 'http://localhost:3000';
-
-  // ✅ [추가] SSR 실패 시 클라이언트에서 재시도 (심폐소생술)
+  // --- [초기화 및 로그인 감지] ---
   onMount(() => {
-    if (trends.length === 0) {
-      console.log("⚠️ 초기 데이터 없음. 클라이언트에서 다시 불러옵니다...");
-      fetchTrends(true);
-    }
+    // 1. 비동기 작업은 내부 함수로 분리해서 실행
+    const initSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      user = session?.user ?? null;
+      
+      // 초기 데이터 없을 때 재로드
+      if (trends.length === 0) fetchTrends(true);
+    };
+    
+    initSession(); // 비동기 함수 실행 (await 안 함)
+
+    // 2. 동기 작업: 구독 리스너 등록
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      user = session?.user ?? null;
+      if (user) {
+        email = user.email || ''; 
+      }
+    });
+
+    // 3. 클린업 함수 반환
+    return () => subscription.unsubscribe();
   });
+
+  // --- [구글 로그인 함수] ---
+  async function signInWithGoogle() {
+    await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin // 로그인 후 현재 페이지로 돌아옴
+      }
+    });
+  }
+
+  // --- [로그아웃 함수] ---
+  async function signOut() {
+    await supabase.auth.signOut();
+    email = ''; // 이메일 초기화
+    subStatus = '';
+  }
 
   // --- [데이터 로드 로직] ---
   async function fetchTrends(reset = false) {
@@ -44,13 +83,8 @@
     if (reset) isSearching = true;
     else isLoadingMore = true;
 
-    if (reset) {
-      page = 1;
-      trends = [];
-      hasMore = true;
-    } else {
-      page += 1;
-    }
+    if (reset) { page = 1; trends = []; hasMore = true; } 
+    else { page += 1; }
 
     try {
       const params = new URLSearchParams({
@@ -59,49 +93,30 @@
         searchKeyword: searchKeyword,
         tagFilter: selectedTag
       });
-
       const res = await fetch(`${API_URL}/api/trends?${params}`);
       const result = await res.json();
 
       if (result.success) {
-        if (reset) {
-          trends = result.data;
-        } else {
-          // 중복 제거 후 추가
-          const newItems = result.data.filter((newTrend: Trend) => 
-            !trends.some(existing => existing.id === newTrend.id)
-          );
+        if (reset) trends = result.data;
+        else {
+          const newItems = result.data.filter((newTrend: Trend) => !trends.some(ex => ex.id === newTrend.id));
           trends = [...trends, ...newItems];
         }
         if (trends.length >= result.total) hasMore = false;
       }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      isLoadingMore = false;
-      isSearching = false;
-    }
+    } catch (e) { console.error(e); } 
+    finally { isLoadingMore = false; isSearching = false; }
   }
 
-  // 검색 & 태그 핸들러
+  // --- [핸들러 함수들] ---
   function handleSearch() { selectedTag = ""; fetchTrends(true); }
   function handleTagClick(tag: string) {
     selectedTag = selectedTag === tag ? "" : tag;
     searchKeyword = "";
     fetchTrends(true);
   }
-
-  // 모달 핸들러
-  function openModal(trend: Trend) {
-    selectedTrend = trend;
-    document.body.style.overflow = 'hidden';
-  }
-  function closeModal() {
-    selectedTrend = null;
-    document.body.style.overflow = '';
-  }
-
-  // 무한 스크롤
+  function openModal(trend: Trend) { selectedTrend = trend; document.body.style.overflow = 'hidden'; }
+  function closeModal() { selectedTrend = null; document.body.style.overflow = ''; }
   function infiniteScroll(node: HTMLElement) {
     const observer = new IntersectionObserver((entries) => {
       if (entries[0].isIntersecting && hasMore && !isSearching) fetchTrends(false);
@@ -110,22 +125,27 @@
     return { destroy() { observer.disconnect(); } };
   }
 
-  // 구독 로직
+  // --- [구독 로직] ---
   async function subscribe() {
-    if (!email) return;
+    // 로그인했으면 user.email, 아니면 입력된 email 사용
+    const targetEmail = user?.email || email;
+    
+    if (!targetEmail) return;
+    
     isSubmitting = true;
     subStatus = '등록 중...';
     try {
       const res = await fetch(`${API_URL}/api/subscribe`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
+        body: JSON.stringify({ email: targetEmail })
       });
       if (res.ok) {
-        subStatus = '✅ 구독 완료!';
-        email = '';
+        subStatus = `✅ ${user ? '구독이 완료되었습니다!' : '구독 완료! 메일함을 확인하세요.'}`;
+        if (!user) email = '';
       } else {
-        subStatus = '⚠️ 오류가 발생했습니다.';
+        const err = await res.json();
+        subStatus = `⚠️ ${err.error || '오류가 발생했습니다.'}`;
       }
     } catch {
       subStatus = '❌ 서버 연결 실패';
@@ -150,18 +170,85 @@
         프론트엔드 개발자에게 꼭 필요한 정보만 제공합니다.
       </p>
 
-      <div class="flex flex-col sm:flex-row gap-2 justify-center max-w-md mx-auto relative">
-        <input type="email" bind:value={email} placeholder="이메일 주소 입력" class="px-5 py-3 rounded-xl text-slate-900 w-full focus:outline-none focus:ring-2 focus:ring-blue-500" disabled={isSubmitting} on:keydown={(e) => e.key === 'Enter' && subscribe()} />
-        <button on:click={subscribe} disabled={isSubmitting} class="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 font-bold whitespace-nowrap disabled:opacity-70">
-          {isSubmitting ? '...' : '무료 구독'}
-        </button>
+      <div class="bg-slate-800/50 p-6 rounded-2xl border border-slate-700 max-w-md mx-auto backdrop-blur-sm">
+        
+        {#if user}
+          <div class="text-center">
+            <div class="flex items-center justify-center gap-3 mb-4">
+              {#if user.user_metadata?.avatar_url}
+                <img src={user.user_metadata.avatar_url} alt="Profile" class="w-10 h-10 rounded-full border-2 border-blue-500" />
+              {/if}
+              <div class="text-left">
+                <p class="text-sm text-slate-400">환영합니다!</p>
+                <p class="font-bold text-white">{user.email}</p>
+              </div>
+            </div>
+            
+            <div class="flex flex-col gap-3">
+              <button 
+                on:click={subscribe} 
+                disabled={isSubmitting}
+                class="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-500 font-bold transition-all shadow-lg shadow-blue-900/20 disabled:opacity-70"
+              >
+                {isSubmitting ? '처리 중...' : '🔥 원클릭으로 구독하기'}
+              </button>
+              
+              <button on:click={signOut} class="text-xs text-slate-500 hover:text-slate-300 underline">
+                로그아웃
+              </button>
+            </div>
+          </div>
+
+        {:else}
+          <div class="flex flex-col gap-4">
+            <button 
+              on:click={signInWithGoogle}
+              class="flex items-center justify-center gap-3 w-full py-3 bg-white text-slate-700 font-bold rounded-xl hover:bg-slate-50 transition-colors"
+            >
+              <svg class="w-5 h-5" viewBox="0 0 24 24">
+                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+              </svg>
+              Google 계정으로 계속하기
+            </button>
+
+            <div class="relative py-2">
+              <div class="absolute inset-0 flex items-center"><span class="w-full border-t border-slate-600"></span></div>
+              <div class="relative flex justify-center text-xs uppercase"><span class="bg-slate-800 px-2 text-slate-400">또는 이메일 직접 입력</span></div>
+            </div>
+
+            <div class="flex gap-2">
+              <input 
+                type="email" 
+                bind:value={email} 
+                placeholder="developer@example.com" 
+                class="flex-1 px-4 py-3 rounded-xl bg-slate-900/50 border border-slate-600 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                disabled={isSubmitting}
+                on:keydown={(e) => e.key === 'Enter' && subscribe()}
+              />
+              <button 
+                on:click={subscribe} 
+                disabled={isSubmitting}
+                class="px-4 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 font-bold transition-colors disabled:opacity-50 whitespace-nowrap"
+              >
+                구독
+              </button>
+            </div>
+          </div>
+        {/if}
+
+        {#if subStatus}
+          <p class="mt-4 text-center text-sm font-medium {subStatus.includes('✅') ? 'text-green-400' : 'text-red-400'}">
+            {subStatus}
+          </p>
+        {/if}
       </div>
-      {#if subStatus} <p class="mt-3 text-sm {subStatus.includes('✅') ? 'text-green-400' : 'text-red-400'}">{subStatus}</p> {/if}
     </div>
   </header>
 
   <main class="max-w-6xl mx-auto px-4 py-12">
-    
     <div class="mb-12 space-y-6">
       <div class="relative max-w-xl mx-auto">
         <input type="text" bind:value={searchKeyword} placeholder="관심 키워드 검색 (예: CSS, Grid...)" on:keydown={(e) => e.key === 'Enter' && handleSearch()} class="w-full px-6 py-4 pl-12 rounded-full border border-slate-200 shadow-sm text-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
@@ -185,9 +272,7 @@
     {:else}
       <div class="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
         {#each trends as trend (trend.id)}
-          <article 
-            class="group bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 border border-slate-100 flex flex-col h-full overflow-hidden hover:-translate-y-1 relative"
-          >
+          <article class="group bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 border border-slate-100 flex flex-col h-full overflow-hidden hover:-translate-y-1 relative">
             <div class="p-6 pb-0 flex justify-between items-start">
               <div class="flex flex-wrap gap-2">
                 {#each trend.tags?.slice(0, 3) || [] as tag}
@@ -198,16 +283,9 @@
             </div>
             <div class="p-6 flex-1 flex flex-col">
               <h2 class="text-xl font-bold text-slate-900 mb-3 leading-snug group-hover:text-blue-600 transition-colors">
-                <button 
-                  class="text-left w-full focus:outline-none after:absolute after:inset-0"
-                  on:click={() => openModal(trend)}
-                >
-                  {trend.title}
-                </button>
+                <button class="text-left w-full focus:outline-none after:absolute after:inset-0" on:click={() => openModal(trend)}>{trend.title}</button>
               </h2>
-              <div class="mb-4 text-sm text-slate-700 font-medium bg-slate-50 p-3 rounded-lg border-l-4 border-blue-400">
-                "{trend.oneLineSummary || trend.summary.slice(0, 60)}..."
-              </div>
+              <div class="mb-4 text-sm text-slate-700 font-medium bg-slate-50 p-3 rounded-lg border-l-4 border-blue-400">"{trend.oneLineSummary || trend.summary.slice(0, 60)}..."</div>
               <p class="text-slate-500 text-sm line-clamp-3 leading-relaxed">{trend.summary}</p>
             </div>
             <div class="px-6 py-4 border-t border-slate-50 flex justify-between items-center text-xs text-slate-400 bg-slate-50/50">

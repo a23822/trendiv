@@ -16,6 +16,8 @@ pnpm-debug.log*
 !.env.example
 *.pem
 env.yaml
+# OAuth 클라이언트 비밀 키
+client_secret*.json
 
 # ------------------------------------------------
 # 🏗️ 빌드 결과물 (Build Outputs)
