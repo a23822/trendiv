@@ -25,7 +25,11 @@ if (!supabaseUrl || !supabaseKey) {
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-const corsOrigin = process.env.FRONTEND_URL || "*";
+const corsOriginEnv = process.env.FRONTEND_URL || "http://localhost:5173";
+
+const corsOrigin = corsOriginEnv.includes(",")
+  ? corsOriginEnv.split(",")
+  : corsOriginEnv;
 
 app.use(
   cors({

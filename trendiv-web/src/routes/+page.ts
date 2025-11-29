@@ -6,7 +6,7 @@ export const load: PageLoad = async ({ fetch }) => {
 	try {
 		// 1. 백엔드 API 호출 (도커로 띄운 서버)
 		// limit=20: 최신 20개만 가져오기
-		const apiUrl = PUBLIC_API_URL || 'http://localhost:3000';
+		const apiUrl = PUBLIC_API_URL || 'http://127.0.0.1:3000';
 		const res = await fetch(`${apiUrl}/api/trends?limit=20`);
 
 		if (!res.ok) {

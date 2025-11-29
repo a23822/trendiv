@@ -4,17 +4,18 @@
   import { createClient } from '@supabase/supabase-js';
   import type { PageData } from './$types';
   import type { Trend } from '$lib/types';
-  import { PUBLIC_API_URL } from '$env/static/public';
-  
-  // ✅ 환경 변수에서 키 가져오기 (import 방식 주의)
-  import { env } from '$env/dynamic/public';
+  import { 
+    PUBLIC_API_URL, 
+    PUBLIC_SUPABASE_URL, 
+    PUBLIC_SUPABASE_ANON_KEY 
+  } from '$env/static/public';
 
   export let data: PageData;
 
   // --- [Supabase Auth 초기화] ---
   // 프론트엔드에서는 반드시 ANON KEY를 써야 합니다.
-  const supabaseUrl = env.PUBLIC_SUPABASE_URL || '';
-  const supabaseAnonKey = env.PUBLIC_SUPABASE_ANON_KEY || '';
+  const supabaseUrl = PUBLIC_SUPABASE_URL || '';
+  const supabaseAnonKey = PUBLIC_SUPABASE_ANON_KEY || '';
   const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
   // --- [상태 변수] ---
