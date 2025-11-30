@@ -27,10 +27,12 @@ Trendiv는 전 세계 주요 기술 블로그와 커뮤니티(RSS/HTML)를 수�
 - **검색 & 필터:** 키워드 검색 및 태그(#CSS, #React, #iOS 등) 기반 필터링 지원.
 - **무한 스크롤:** 대량의 데이터를 끊김 없이 탐색 가능 (Pagination 적용).
 - **상세 분석 모달:** AI가 작성한 '핵심 요약(3-Line Summary)'과 '선정 이유(Reason)' 제공.
+- **구글 로그인:** Supabase Auth를 활용한 원클릭 로그인 및 구독 관리.
 
 ### 📧 개인화된 뉴스레터
 
 - **자동 발송:** 매주 월요일, 분석 완료된 상위 트렌드를 MJML 템플릿으로 렌더링하여 이메일 발송 (Resend API).
+- **커스텀 도메인:** `trendiv.org` 도메인을 통한 신뢰도 높은 발송.
 
 ## 🏗️ 아키텍처 (Architecture)
 
@@ -51,7 +53,7 @@ Trendiv는 전 세계 주요 기술 블로그와 커뮤니티(RSS/HTML)를 수�
 프로젝트 루트에 `.env` 파일을 생성하고 아래 키를 설정하세요.
 
 ```env
-# Database & Auth
+# Database & Auth (Backend)
 SUPABASE_URL="[https://your-project.supabase.co](https://your-project.supabase.co)"
 SUPABASE_KEY="your-service-role-key"
 
@@ -59,7 +61,9 @@ SUPABASE_KEY="your-service-role-key"
 GEMINI_API_KEY="your-gemini-api-key"
 RESEND_API_KEY="re_your_resend_key"
 
-# Frontend Config
+# Frontend Config (Public)
+PUBLIC_SUPABASE_URL="[https://your-project.supabase.co](https://your-project.supabase.co)"
+PUBLIC_SUPABASE_ANON_KEY="your-anon-key"
 PUBLIC_API_URL="http://localhost:3000" # 배포 시 실제 백엔드 주소 입력
 ```
 
@@ -93,7 +97,7 @@ gcloud run deploy trendiv-backend \
 ```bash
 cd trendiv-web
 pnpm build
-npx wrangler pages deploy .svelte-kit/cloudflare --project-name trendiv-web
+npx wrangler pages deploy
 ```
 
 ## 📝 라이선스
