@@ -1,13 +1,15 @@
 <script lang="ts">
 	import { isDarkTheme } from '$lib/stores/theme';
 
+	export let className = '';
+
 	function toggle() {
 		isDarkTheme.update((value) => !value);
 	}
 </script>
 
 <button
-	class="toggle"
+	class="toggle {className}"
 	class:dark={$isDarkTheme}
 	onclick={toggle}
 	aria-label={$isDarkTheme ? '라이트 모드로 전환' : '다크 모드로 전환'}

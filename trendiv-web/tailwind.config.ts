@@ -54,6 +54,12 @@ export default {
 					subtle: 'var(--info-subtle)',
 					text: 'var(--info-text)'
 				},
+				shadow: {
+					sm: 'var(--shadow-sm)',
+					md: 'var(--shadow-md)',
+					lg: 'var(--shadow-lg)',
+					xl: 'var(--shadow-xl)'
+				},
 				mint: {
 					0: '#fff',
 					50: '#E0F7F4',

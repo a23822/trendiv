@@ -53,15 +53,18 @@
 	{#if isOpen}
 		<aside
 			id={IDs.LAYOUT.SIDE_MENU}
-			class="fixed right-0 top-0 z-40 flex h-dvh w-96 max-w-full flex-col justify-between bg-white shadow-2xl"
+			class="bg-bg-body fixed right-0 top-0 z-40 flex h-dvh w-96 max-w-full flex-col justify-between shadow-2xl"
 			transition:fly={{ x: 300, duration: 300 }}
 			on:outroend={handleClose}
 		>
 			<div class="shrink-0">
-				<ThemeSwitch />
+				<ThemeSwitch className="align-top" />
 			</div>
 			<div class="absolute right-0 top-0">
 				<CloseButton onClick={closeMenu} />
+			</div>
+			<div class="border-border-default shrink-0 border-b p-4">
+				<AuthButton onClick={closeMenu} />
 			</div>
 			<nav class="flex-1 overflow-hidden">
 				<ul>
@@ -70,10 +73,7 @@
 					<li>3</li>
 				</ul>
 			</nav>
-			<div class="border-border-default shrink-0 border-t p-4">
-				<AuthButton onClick={closeMenu} />
-			</div>
-			<div class="shrink-0 border-t bg-neutral-100">
+			<div class="bg-bg-surface border-border-default shrink-0 border-t">
 				<p class="py-10 text-center text-xs text-gray-700">© 2025 Trendiv. All rights reserved.</p>
 			</div>
 		</aside>
