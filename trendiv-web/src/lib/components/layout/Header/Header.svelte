@@ -9,7 +9,6 @@
 
 	// ✅ 메뉴 상태 관리
 	let isMenuOpen = false;
-	let isDark = false; // todo 실제 앱 연동 시 store 사용
 
 	function toggleMenu() {
 		isMenuOpen = !isMenuOpen;
@@ -69,14 +68,14 @@
 	}
 </script>
 
-<header>
+<header class="bg-bg-body">
 	<div class="flex h-[60px] items-center justify-between gap-2 px-4 md:px-6 xl:px-8">
 		<IconLogo width="76" height="44" />
-		<span class="text-mint-500 mr-auto font-mono text-xl font-bold tracking-tight">Trendiv</span>
+		<span class="text-primary mr-auto font-mono text-xl font-bold tracking-tight">Trendiv</span>
 		<MenuButton isOpen={isMenuOpen} onClick={toggleMenu} />
 	</div>
 </header>
-<SideMenu isOpen={isMenuOpen} {closeMenu} bind:isDark />
+<SideMenu isOpen={isMenuOpen} {closeMenu} />
 <!-- <header class="w-full border-b border-gray-100 bg-white/80 backdrop-blur-md sticky top-0 z-50">
   <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
     

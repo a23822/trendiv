@@ -1,0 +1,176 @@
+@layer base {
+	:root {
+		/* ========================================
+		   배경 (Background)
+		   ======================================== */
+		--bg-body: #f8fafc; /* html, body 배경 */
+		--bg-main: #ffffff; /* 메인 콘텐츠 배경 */
+		--bg-surface: #f1f5f9; /* 카드, 패널 등 surface */
+		--bg-elevated: #ffffff; /* 모달, 드롭다운 등 떠있는 요소 */
+		--bg-hover: #f1f5f9; /* hover 상태 */
+		--bg-active: #e2e8f0; /* active/pressed 상태 */
+		--bg-selected: #e0f7f4; /* 선택된 상태 (mint.50) */
+
+		/* ========================================
+		   테두리 (Border)
+		   ======================================== */
+		--border-default: #e2e8f0;
+		--border-subtle: #f1f5f9;
+		--border-strong: #cbd5e1;
+		--border-focus: #1ba896; /* 포커스 링 (mint.500) */
+
+		/* ========================================
+		   프라이머리 (Primary - Mint)
+		   ======================================== */
+		--primary: #1ba896; /* mint.500 */
+		--primary-hover: #148a7d; /* mint.600 */
+		--primary-active: #0d6b63; /* mint.700 */
+		--primary-subtle: #e0f7f4; /* mint.50 */
+		--primary-text: #ffffff;
+
+		/* ========================================
+		   시맨틱 상태 (Status)
+		   ======================================== */
+		/* Success / Confirm */
+		--confirm: #10b981;
+		--confirm-hover: #059669;
+		--confirm-subtle: #ecfdf5;
+		--confirm-text: #065f46;
+
+		/* Warning / Caution */
+		--caution: #f59e0b;
+		--caution-hover: #d97706;
+		--caution-subtle: #fffbeb;
+		--caution-text: #92400e;
+
+		/* Error / Alert */
+		--alert: #ef4444;
+		--alert-hover: #dc2626;
+		--alert-subtle: #fef2f2;
+		--alert-text: #991b1b;
+
+		/* Info */
+		--info: #0ea5e9;
+		--info-hover: #0284c7;
+		--info-subtle: #f0f9ff;
+		--info-text: #075985;
+
+		/* ========================================
+		   그레이 (Gray) - 순수 그레이, 틴트 없음
+		   ======================================== */
+		--gray-0: #ffffff;
+		--gray-100: #fafafa;
+		--gray-200: #f5f5f5;
+		--gray-300: #e5e5e5;
+		--gray-400: #d4d4d4;
+		--gray-500: #a3a3a3;
+		--gray-600: #737373;
+		--gray-700: #525252;
+		--gray-800: #404040;
+		--gray-900: #262626;
+		--gray-1000: #171717;
+
+		/* ========================================
+		   뉴트럴 (Neutral) - 웜톤, 그린/민트 틴트
+		   ======================================== */
+		--neutral-0: #ffffff;
+		--neutral-100: #f9fbfa;
+		--neutral-200: #f2f5f4;
+		--neutral-300: #e4e9e7;
+		--neutral-400: #ced6d3;
+		--neutral-500: #9ca8a4;
+		--neutral-600: #6b7a75;
+		--neutral-700: #4d5955;
+		--neutral-800: #3a4340;
+		--neutral-900: #272e2c;
+		--neutral-1000: #171b1a;
+
+		/* ========================================
+		   그림자 (Shadow)
+		   ======================================== */
+		--shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+		--shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
+		--shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+		--shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.1);
+	}
+
+	/* ============================================
+	   다크 모드
+	   ============================================ */
+	.dark {
+		/* 배경 */
+		--bg-body: #111;
+		--bg-main: #222;
+		--bg-surface: #2a2a2a;
+		--bg-elevated: #333333;
+		--bg-hover: #3a3a3a;
+		--bg-active: #444444;
+		--bg-selected: #0d6b63;
+
+		/* 테두리 */
+		--border-default: #444444;
+		--border-subtle: #383838;
+		--border-strong: #555555;
+		--border-focus: #4dd0bd;
+
+		/* 프라이머리 */
+		--primary: #4dd0bd;
+		--primary-hover: #26c6a8;
+		--primary-active: #1ba896;
+		--primary-subtle: #1a3d38;
+		--primary-text: #222222;
+
+		/* 시맨틱 상태 */
+		--confirm: #34d399;
+		--confirm-hover: #10b981;
+		--confirm-subtle: #1a3a2e;
+		--confirm-text: #a7f3d0;
+
+		--caution: #fbbf24;
+		--caution-hover: #f59e0b;
+		--caution-subtle: #3d3520;
+		--caution-text: #fef3c7;
+
+		--alert: #f87171;
+		--alert-hover: #ef4444;
+		--alert-subtle: #3d2828;
+		--alert-text: #fecaca;
+
+		--info: #38bdf8;
+		--info-hover: #0ea5e9;
+		--info-subtle: #203a4d;
+		--info-text: #bae6fd;
+
+		/* 그레이스케일 */
+		--gray-0: #171717;
+		--gray-100: #262626;
+		--gray-200: #404040;
+		--gray-300: #525252;
+		--gray-400: #737373;
+		--gray-500: #a3a3a3;
+		--gray-600: #d4d4d4;
+		--gray-700: #e5e5e5;
+		--gray-800: #f5f5f5;
+		--gray-900: #fafafa;
+		--gray-1000: #ffffff;
+
+		/* 뉴트럴 */
+		--neutral-0: #0d0d0d;
+		--neutral-100: #1a1a1a;
+		--neutral-200: #2a2a2a;
+		--neutral-300: #3d3d3d;
+		--neutral-400: #5c5c5c;
+		--neutral-500: #808080;
+		--neutral-600: #a6a6a6;
+		--neutral-700: #c7c7c7;
+		--neutral-800: #e3e3e3;
+		--neutral-900: #f5f5f5;
+		--neutral-1000: #ffffff;
+
+		/* 그림자 */
+		--shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.5), 0 0 1px rgba(255, 255, 255, 0.05);
+		--shadow-md: 0 4px 8px rgba(0, 0, 0, 0.5), 0 0 2px rgba(255, 255, 255, 0.05);
+		--shadow-lg: 0 10px 20px rgba(0, 0, 0, 0.6), 0 0 4px rgba(255, 255, 255, 0.03);
+		--shadow-xl: 0 20px 30px rgba(0, 0, 0, 0.7), 0 0 6px rgba(255, 255, 255, 0.03);
+	}
+}
