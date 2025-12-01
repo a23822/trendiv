@@ -4,23 +4,18 @@
 		PUBLIC_SUPABASE_URL,
 		PUBLIC_SUPABASE_ANON_KEY
 	} from '$env/static/public';
-	// ✅ 방금 만든 헤더 불러오기 (경로 주목!)
+	import HeroSection from '$lib/components/contents/HeroSection.svelte';
 	import Header from '$lib/components/layout/Header/Header.svelte';
+	import { user } from '$lib/stores/auth';
+	import { supabase } from '$lib/stores/db';
 	import type { Trend } from '$lib/types';
 	import type { PageData } from './$types';
-	import { createClient } from '@supabase/supabase-js';
+	import { type Subscription } from '@supabase/supabase-js';
 	import { onMount } from 'svelte';
 	import { fade, fly } from 'svelte/transition';
 
 	export let data: PageData;
 
-	// Supabase 초기화 (프론트엔드용)
-	const supabase =
-		PUBLIC_SUPABASE_URL && PUBLIC_SUPABASE_ANON_KEY
-			? createClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY)
-			: null;
-
-	let user: any = null;
 	let trends: Trend[] = data.trends || [];
 	let page = 1;
 	let isLoadingMore = false;
@@ -33,30 +28,80 @@
 	const API_URL = PUBLIC_API_URL || 'http://127.0.0.1:3000';
 	const popularTags = ['CSS', 'HTML', 'React', 'Accessibility', 'iOS', 'Performance'];
 
+	// 구독 관련 to HeroSection
+	let email = '';
+	let isSubmitting = false;
+	let subStatus = '';
+
 	onMount(() => {
-		const initSession = async () => {
+		const init = async () => {
 			if (!supabase) return;
 
 			const {
 				data: { session }
 			} = await supabase.auth.getSession();
-			user = session?.user ?? null;
+			user.set(session?.user ?? null);
 
-			if (trends.length === 0) fetchTrends(true);
+			if (trends.length === 0) {
+				fetchTrends(true);
+			}
 		};
 
-		initSession();
+		init();
 
-		if (!supabase) return;
+		let subscription: Subscription | null = null;
 
-		const {
-			data: { subscription }
-		} = supabase.auth.onAuthStateChange((_event, session) => {
-			user = session?.user ?? null;
-		});
+		if (supabase) {
+			const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+				user.set(session?.user ?? null);
+				if ($user) {
+					email = $user.email || '';
+				}
+			});
+			subscription = data.subscription;
+		}
 
-		return () => subscription.unsubscribe();
+		return () => {
+			if (subscription) {
+				subscription.unsubscribe();
+			}
+		};
 	});
+
+	async function handleLogin() {
+		await supabase?.auth.signInWithOAuth({
+			provider: 'google',
+			options: { redirectTo: window.location.origin }
+		});
+	}
+
+	async function handleSubscribe() {
+		const targetEmail = $user?.email || email;
+		if (!targetEmail) return;
+
+		isSubmitting = true;
+		subStatus = '처리 중...';
+
+		try {
+			const res = await fetch(`${API_URL}/api/subscribe`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ email: targetEmail })
+			});
+
+			if (res.ok) {
+				alert($user ? '✅ 구독 완료!' : '✅ 메일함을 확인해주세요.');
+				if (!$user) email = '';
+			} else {
+				const err = await res.json();
+				alert(`⚠️ ${err.error || '오류가 발생했습니다.'}`);
+			}
+		} catch {
+			alert('❌ 연결 실패');
+		} finally {
+			isSubmitting = false;
+		}
+	}
 
 	// --- 데이터 로드 로직 ---
 	async function fetchTrends(reset = false) {
@@ -104,15 +149,18 @@
 		selectedTag = '';
 		fetchTrends(true);
 	}
+
 	function handleTagClick(tag: string) {
 		selectedTag = selectedTag === tag ? '' : tag;
 		searchKeyword = '';
 		fetchTrends(true);
 	}
+
 	function openModal(trend: Trend) {
 		selectedTrend = trend;
 		document.body.style.overflow = 'hidden';
 	}
+
 	function closeModal() {
 		selectedTrend = null;
 		document.body.style.overflow = '';
@@ -122,7 +170,9 @@
 		const observer = new IntersectionObserver((entries) => {
 			if (entries[0].isIntersecting && hasMore && !isSearching) fetchTrends(false);
 		});
+
 		observer.observe(node);
+
 		return {
 			destroy() {
 				observer.disconnect();
@@ -132,7 +182,7 @@
 </script>
 
 <Header {user} {supabase} />
-
+<HeroSection onSubscribe={handleSubscribe} onLogin={handleLogin} bind:email {isSubmitting} />
 <div class="bg-bg-surface min-h-screen font-sans text-gray-900">
 	<section class="border-b border-gray-100 bg-gray-50/50 px-4 py-16 text-center">
 		<h1 class="mb-4 text-3xl font-extrabold tracking-tight text-gray-900 md:text-4xl">

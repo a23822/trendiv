@@ -71,7 +71,7 @@
 <header class="bg-bg-body">
 	<div class="flex h-[60px] items-center justify-between gap-2 px-4 md:px-6 xl:px-8">
 		<IconLogo width="76" height="44" />
-		<span class="text-primary mr-auto font-mono text-xl font-bold tracking-tight">Trendiv</span>
+		<h1 class="text-primary mr-auto font-mono text-xl font-bold tracking-tight">Trendiv</h1>
 		<MenuButton isOpen={isMenuOpen} onClick={toggleMenu} />
 	</div>
 </header>
