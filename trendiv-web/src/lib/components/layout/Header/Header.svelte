@@ -68,7 +68,7 @@
 	}
 </script>
 
-<header class="bg-bg-body">
+<header class="bg-bg-body sticky left-0 top-0 z-10 w-full">
 	<div class="flex h-[60px] items-center justify-between gap-2 px-4 md:px-6 xl:px-8">
 		<IconLogo width="76" height="44" />
 		<h1 class="text-primary mr-auto font-mono text-xl font-bold tracking-tight">Trendiv</h1>
