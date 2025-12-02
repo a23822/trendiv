@@ -8,7 +8,7 @@
 	export let onClick: () => void = () => {};
 	export let className = '';
 
-	// 사용자 정보 가공 (반응형)
+	// 사용자 정보 가공
 	$: currentUser = $user as User | null;
 	$: userName =
 		currentUser?.user_metadata?.full_name || currentUser?.email?.split('@')[0] || '사용자';
@@ -34,21 +34,21 @@
 
 {#if currentUser}
 	<button
-		class="bg-bg-surface hover:shadow-shadow-sm group flex w-full cursor-pointer items-center gap-3 rounded-xl p-3 transition-all duration-200 hover:bg-gray-200 {className}"
+		class="btn_auth bg-bg-surface group flex w-full items-center justify-center gap-3 rounded-xl p-3 transition-all duration-200 hover:bg-gray-200 hover:shadow-md {className}"
 		on:click={handleLogout}
 	>
 		<div
-			class="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full text-white shadow-sm"
-			style:background={userAvatar ? 'transparent' : $avatarColor}
+			class="bg-gray-0 before:rounded-inherit relative h-[40px] w-[40px] shrink-0 rounded-full before:absolute before:inset-0 before:border before:border-gray-500 before:opacity-30"
+			style:background={userAvatar ? '#fff' : $avatarColor}
 		>
 			{#if userAvatar}
-				<img src={userAvatar} alt={userName} class="h-full w-full object-cover" />
+				<img width="40" height="40" src={userAvatar} alt="" class="rounded-inherit object-cover" />
 			{:else}
 				<span class="text-sm font-semibold">{userInitials}</span>
 			{/if}
 		</div>
 
-		<div class="flex min-w-0 flex-1 flex-col items-start gap-0.5">
+		<div class="flex min-w-0 flex-1 flex-col items-start gap-0.5 text-left">
 			<span class="w-full truncate text-sm font-medium text-gray-900">
 				{userName}<span class="text-xs font-normal text-gray-500">님</span>
 			</span>

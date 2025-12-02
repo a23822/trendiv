@@ -182,7 +182,7 @@
 </script>
 
 <Header {user} {supabase} />
-<HeroSection onSubscribe={handleSubscribe} onLogin={handleLogin} bind:email {isSubmitting} />
+<HeroSection onSubscribe={handleSubscribe} onClickLogin={handleLogin} bind:email {isSubmitting} />
 <div class="bg-bg-surface min-h-screen font-sans text-gray-900">
 	<section class="border-b border-gray-100 bg-gray-50/50 px-4 py-16 text-center">
 		<h1 class="mb-4 text-3xl font-extrabold tracking-tight text-gray-900 md:text-4xl">

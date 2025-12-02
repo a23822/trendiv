@@ -156,6 +156,9 @@ export default {
 				sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
 				serif: ['Merriweather', 'serif'],
 				mono: ['Fira Code', 'monospace']
+			},
+			borderRadius: {
+				inherit: 'inherit'
 			}
 		}
 	},
