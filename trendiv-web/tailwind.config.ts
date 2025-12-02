@@ -9,56 +9,56 @@ export default {
 		extend: {
 			colors: {
 				bg: {
-					body: 'var(--bg-body)',
-					main: 'var(--bg-main)',
-					surface: 'var(--bg-surface)',
-					elevated: 'var(--bg-elevated)',
-					hover: 'var(--bg-hover)',
-					active: 'var(--bg-active)',
-					selected: 'var(--bg-selected)'
+					body: 'rgb(var(--bg-body) / <alpha-value>)',
+					main: 'rgb(var(--bg-main) / <alpha-value>)',
+					surface: 'rgb(var(--bg-surface) / <alpha-value>)',
+					elevated: 'rgb(var(--bg-elevated) / <alpha-value>)',
+					hover: 'rgb(var(--bg-hover) / <alpha-value>)',
+					active: 'rgb(var(--bg-active) / <alpha-value>)',
+					selected: 'rgb(var(--bg-selected) / <alpha-value>)'
 				},
 				border: {
-					default: 'var(--border-default)',
-					subtle: 'var(--border-subtle)',
-					strong: 'var(--border-strong)',
-					focus: 'var(--border-focus)'
+					default: 'rgb(var(--border-default) / <alpha-value>)',
+					subtle: 'rgb(var(--border-subtle) / <alpha-value>)',
+					strong: 'rgb(var(--border-strong) / <alpha-value>)',
+					focus: 'rgb(var(--border-focus) / <alpha-value>)'
 				},
 				primary: {
-					DEFAULT: 'var(--primary)',
-					hover: 'var(--primary-hover)',
-					active: 'var(--primary-active)',
-					subtle: 'var(--primary-subtle)',
-					text: 'var(--primary-text)'
+					DEFAULT: 'rgb(var(--primary) / <alpha-value>)',
+					hover: 'rgb(var(--primary-hover) / <alpha-value>)',
+					active: 'rgb(var(--primary-active) / <alpha-value>)',
+					subtle: 'rgb(var(--primary-subtle) / <alpha-value>)',
+					text: 'rgb(var(--primary-text) / <alpha-value>)'
 				},
 				confirm: {
-					DEFAULT: 'var(--confirm)',
-					hover: 'var(--confirm-hover)',
-					subtle: 'var(--confirm-subtle)',
-					text: 'var(--confirm-text)'
+					DEFAULT: 'rgb(var(--confirm) / <alpha-value>)',
+					hover: 'rgb(var(--confirm-hover) / <alpha-value>)',
+					subtle: 'rgb(var(--confirm-subtle) / <alpha-value>)',
+					text: 'rgb(var(--confirm-text) / <alpha-value>)'
 				},
 				caution: {
-					DEFAULT: 'var(--caution)',
-					hover: 'var(--caution-hover)',
-					subtle: 'var(--caution-subtle)',
-					text: 'var(--caution-text)'
+					DEFAULT: 'rgb(var(--caution) / <alpha-value>)',
+					hover: 'rgb(var(--caution-hover) / <alpha-value>)',
+					subtle: 'rgb(var(--caution-subtle) / <alpha-value>)',
+					text: 'rgb(var(--caution-text) / <alpha-value>)'
 				},
 				alert: {
-					DEFAULT: 'var(--alert)',
-					hover: 'var(--alert-hover)',
-					subtle: 'var(--alert-subtle)',
-					text: 'var(--alert-text)'
+					DEFAULT: 'rgb(var(--alert) / <alpha-value>)',
+					hover: 'rgb(var(--alert-hover) / <alpha-value>)',
+					subtle: 'rgb(var(--alert-subtle) / <alpha-value>)',
+					text: 'rgb(var(--alert-text) / <alpha-value>)'
 				},
 				info: {
-					DEFAULT: 'var(--info)',
-					hover: 'var(--info-hover)',
-					subtle: 'var(--info-subtle)',
-					text: 'var(--info-text)'
+					DEFAULT: 'rgb(var(--info) / <alpha-value>)',
+					hover: 'rgb(var(--info-hover) / <alpha-value>)',
+					subtle: 'rgb(var(--info-subtle) / <alpha-value>)',
+					text: 'rgb(var(--info-text) / <alpha-value>)'
 				},
 				shadow: {
-					sm: 'var(--shadow-sm)',
-					md: 'var(--shadow-md)',
-					lg: 'var(--shadow-lg)',
-					xl: 'var(--shadow-xl)'
+					sm: 'rgb(var(--shadow-sm) / <alpha-value>)',
+					md: 'rgb(var(--shadow-md) / <alpha-value>)',
+					lg: 'rgb(var(--shadow-lg) / <alpha-value>)',
+					xl: 'rgb(var(--shadow-xl) / <alpha-value>)'
 				},
 				mint: {
 					0: '#fff',
@@ -74,30 +74,30 @@ export default {
 					900: '#053330'
 				},
 				gray: {
-					0: 'var(--gray-0)',
-					100: 'var(--gray-100)',
-					200: 'var(--gray-200)',
-					300: 'var(--gray-300)',
-					400: 'var(--gray-400)',
-					500: 'var(--gray-500)',
-					600: 'var(--gray-600)',
-					700: 'var(--gray-700)',
-					800: 'var(--gray-800)',
-					900: 'var(--gray-900)',
-					1000: 'var(--gray-1000)'
+					0: 'rgb(var(--gray-0) / <alpha-value>)',
+					100: 'rgb(var(--gray-100) / <alpha-value>)',
+					200: 'rgb(var(--gray-200) / <alpha-value>)',
+					300: 'rgb(var(--gray-300) / <alpha-value>)',
+					400: 'rgb(var(--gray-400) / <alpha-value>)',
+					500: 'rgb(var(--gray-500) / <alpha-value>)',
+					600: 'rgb(var(--gray-600) / <alpha-value>)',
+					700: 'rgb(var(--gray-700) / <alpha-value>)',
+					800: 'rgb(var(--gray-800) / <alpha-value>)',
+					900: 'rgb(var(--gray-900) / <alpha-value>)',
+					1000: 'rgb(var(--gray-1000) / <alpha-value>)'
 				},
 				neutral: {
-					0: 'var(--neutral-0)',
-					100: 'var(--neutral-100)',
-					200: 'var(--neutral-200)',
-					300: 'var(--neutral-300)',
-					400: 'var(--neutral-400)',
-					500: 'var(--neutral-500)',
-					600: 'var(--neutral-600)',
-					700: 'var(--neutral-700)',
-					800: 'var(--neutral-800)',
-					900: 'var(--neutral-900)',
-					1000: 'var(--neutral-1000)'
+					0: 'rgb(var(--neutral-0) / <alpha-value>)',
+					100: 'rgb(var(--neutral-100) / <alpha-value>)',
+					200: 'rgb(var(--neutral-200) / <alpha-value>)',
+					300: 'rgb(var(--neutral-300) / <alpha-value>)',
+					400: 'rgb(var(--neutral-400) / <alpha-value>)',
+					500: 'rgb(var(--neutral-500) / <alpha-value>)',
+					600: 'rgb(var(--neutral-600) / <alpha-value>)',
+					700: 'rgb(var(--neutral-700) / <alpha-value>)',
+					800: 'rgb(var(--neutral-800) / <alpha-value>)',
+					900: 'rgb(var(--neutral-900) / <alpha-value>)',
+					1000: 'rgb(var(--neutral-1000) / <alpha-value>)'
 				},
 				teal: {
 					0: '#FFFFFF',

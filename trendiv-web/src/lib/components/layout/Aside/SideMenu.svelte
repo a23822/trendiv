@@ -53,7 +53,7 @@
 	{#if isOpen}
 		<aside
 			id={IDs.LAYOUT.SIDE_MENU}
-			class="bg-bg-body fixed right-0 top-0 z-40 flex h-dvh w-96 max-w-full flex-col justify-between shadow-2xl"
+			class="bg-bg-body z-100 fixed right-0 top-0 flex h-dvh w-96 max-w-full flex-col justify-between shadow-2xl"
 			transition:fly={{ x: 300, duration: 300 }}
 			on:outroend={handleClose}
 		>

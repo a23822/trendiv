@@ -1,4 +1,5 @@
 <script lang="ts">
+	import IconLogoHero from '$lib/icons/icon_logo_hero.svelte';
 	import { user } from '$lib/stores/auth';
 	import { supabase } from '$lib/stores/db';
 	import type { User } from '@supabase/supabase-js';
@@ -20,14 +21,30 @@
 	}
 </script>
 
-<section class="bg-bg-body relative overflow-hidden px-6 py-24 sm:py-32 lg:px-8">
-	<div class="mx-auto max-w-2xl text-center">
-		<h2 class="font-mono text-5xl font-bold tracking-tight text-gray-900 sm:text-7xl">
-			<span class="text-gray-400">&lt;</span><span class="text-primary">div</span><span
-				class="text-gray-400">&gt;</span
-			>Trend<span class="text-gray-400">&lt;/</span><span class="text-primary">div</span><span
-				class="text-gray-400">&gt;</span
-			>
+<section class="relative min-h-[500px] overflow-hidden bg-[#1a1a1a] px-6 py-24">
+	<!-- 레이어들 -->
+	<div
+		class="animate-mesh1 pointer-events-none absolute inset-[-50%] bg-[radial-gradient(circle_at_30%_30%,rgba(77,208,189,0.25)_0%,transparent_40%)]"
+	></div>
+	<div
+		class="animate-mesh2 pointer-events-none absolute inset-[-50%] bg-[radial-gradient(circle_at_70%_60%,rgba(128,222,209,0.2)_0%,transparent_35%)]"
+	></div>
+	<div
+		class="animate-mesh3 pointer-events-none absolute inset-[-50%] bg-[radial-gradient(circle_at_50%_80%,rgba(27,168,150,0.18)_0%,transparent_40%)]"
+	></div>
+	<div
+		class="animate-mesh4 pointer-events-none absolute inset-[-50%] bg-[radial-gradient(circle_at_20%_70%,rgba(77,208,189,0.15)_0%,transparent_30%)]"
+	></div>
+
+	<!-- 노이즈 텍스처 -->
+	<div
+		class="pointer-events-none absolute inset-0 opacity-[0.04]"
+		style="background-image: url(&quot;data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E&quot;);"
+	></div>
+
+	<div class="mx-auto max-w-3xl text-center">
+		<h2>
+			<IconLogoHero />
 		</h2>
 
 		<p class="mt-8 text-lg leading-8 text-gray-600">
@@ -83,3 +100,64 @@
 		></div>
 	</div>
 </section>
+
+<style>
+	@keyframes mesh1 {
+		0%,
+		100% {
+			transform: translate(0, 0) scale(1);
+		}
+		25% {
+			transform: translate(10%, 5%) scale(1.1);
+		}
+		50% {
+			transform: translate(5%, 10%) scale(1.05);
+		}
+		75% {
+			transform: translate(-5%, 5%) scale(1.15);
+		}
+	}
+	@keyframes mesh2 {
+		0%,
+		100% {
+			transform: translate(0, 0) scale(1);
+		}
+		33% {
+			transform: translate(-8%, 8%) scale(1.1);
+		}
+		66% {
+			transform: translate(8%, -5%) scale(0.95);
+		}
+	}
+	@keyframes mesh3 {
+		0%,
+		100% {
+			transform: translate(0, 0) scale(1);
+		}
+		50% {
+			transform: translate(6%, -8%) scale(1.2);
+		}
+	}
+	@keyframes mesh4 {
+		0%,
+		100% {
+			transform: translate(0, 0) scale(1) rotate(0deg);
+		}
+		50% {
+			transform: translate(-10%, 10%) scale(1.15) rotate(5deg);
+		}
+	}
+
+	.animate-mesh1 {
+		animation: mesh1 8s ease-in-out infinite;
+	}
+	.animate-mesh2 {
+		animation: mesh2 10s ease-in-out infinite;
+	}
+	.animate-mesh3 {
+		animation: mesh3 12s ease-in-out infinite;
+	}
+	.animate-mesh4 {
+		animation: mesh4 9s ease-in-out infinite;
+	}
+</style>

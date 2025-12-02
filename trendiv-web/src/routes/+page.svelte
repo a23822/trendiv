@@ -1,9 +1,5 @@
 <script lang="ts">
-	import {
-		PUBLIC_API_URL,
-		PUBLIC_SUPABASE_URL,
-		PUBLIC_SUPABASE_ANON_KEY
-	} from '$env/static/public';
+	import { PUBLIC_API_URL } from '$env/static/public';
 	import HeroSection from '$lib/components/contents/HeroSection.svelte';
 	import Header from '$lib/components/layout/Header/Header.svelte';
 	import { user } from '$lib/stores/auth';

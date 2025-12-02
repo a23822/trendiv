@@ -38,7 +38,7 @@
 		on:click={handleLogout}
 	>
 		<div
-			class="bg-gray-0 before:rounded-inherit relative h-[40px] w-[40px] shrink-0 rounded-full before:absolute before:inset-0 before:border before:border-gray-500 before:opacity-30"
+			class="bg-gray-0 before:rounded-inherit relative h-[40px] w-[40px] shrink-0 rounded-full shadow-sm before:absolute before:inset-0 before:border before:border-gray-500/30"
 			style:background={userAvatar ? '#fff' : $avatarColor}
 		>
 			{#if userAvatar}

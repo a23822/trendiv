@@ -3,3 +3,16 @@
 @import 'tailwindcss/utilities';
 
 @import './lib/constants/variables_color.scss';
+
+.theme-transitioning,
+.theme-transitioning *,
+.theme-transitioning *::before,
+.theme-transitioning *::after {
+	transition:
+		background-color 0.3s ease-out,
+		border-color 0.3s ease-out,
+		color 0.3s ease-out,
+		fill 0.3s ease-out,
+		stroke 0.3s ease-out,
+		box-shadow 0.3s ease-out !important;
+}

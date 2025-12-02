@@ -13,11 +13,11 @@ const getInitialTheme = () => {
 	return window.matchMedia('(prefers-color-scheme: dark)').matches;
 };
 
-export const isDarkTheme = writable(getInitialTheme());
+export const isDarkTheme = writable<boolean>(getInitialTheme());
 
 if (browser) {
-	isDarkTheme.subscribe((value) => {
-		if (value) {
+	isDarkTheme.subscribe((isDark) => {
+		if (isDark) {
 			document.documentElement.classList.add('dark');
 			localStorage.setItem('theme', 'dark');
 		} else {
@@ -25,4 +25,16 @@ if (browser) {
 			localStorage.setItem('theme', 'light');
 		}
 	});
+}
+
+export function toggleTheme() {
+	if (!browser) return;
+
+	document.documentElement.classList.add('theme-transitioning');
+
+	isDarkTheme.update((current) => !current);
+
+	setTimeout(() => {
+		document.documentElement.classList.remove('theme-transitioning');
+	}, 3000);
 }
