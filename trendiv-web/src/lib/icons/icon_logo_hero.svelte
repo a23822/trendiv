@@ -1,4 +1,4 @@
-<svg class="h-auto w-full" viewBox="0 0 400 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+<svg class="h-auto w-full" viewBox="0 0 450 80" fill="none" xmlns="http://www.w3.org/2000/svg">
 	<defs>
 		<linearGradient id="tagGrad" x1="0%" y1="0%" x2="100%" y2="100%">
 			<stop offset="0%" style="stop-color: #80ded1" />
@@ -14,47 +14,47 @@
 			</feMerge>
 		</filter>
 	</defs>
-	<!-- <div> -->
+
 	<text
-		x="20"
+		x="41"
 		y="55"
-		font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace"
-		font-size="42"
+		font-family="'Fira Code', monospace"
+		font-size="38"
 		font-weight="700"
 		fill="url(#tagGrad)"
 		filter="url(#glow)"
 	>
 		&lt;div&gt;
 	</text>
-	<!-- Trend -->
+
 	<text
-		x="138"
+		x="155"
 		y="55"
-		font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace"
-		font-size="42"
+		font-family="'Fira Code', monospace"
+		font-size="38"
 		font-weight="700"
 		fill="#ffffff"
 		filter="url(#glow)"
 	>
 		Trend
 	</text>
-	<!-- 커서 -->
+
 	<rect
 		class="animate-blink"
-		x="258"
-		y="20"
-		width="4"
-		height="40"
+		x="270"
+		y="22"
+		width="3"
+		height="38"
 		rx="2"
 		fill="#4DD0BD"
 		filter="url(#glow)"
 	/>
-	<!-- </div> -->
+
 	<text
-		x="265"
+		x="273"
 		y="55"
-		font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace"
-		font-size="42"
+		font-family="'Fira Code', monospace"
+		font-size="38"
 		font-weight="700"
 		fill="url(#tagGrad)"
 		filter="url(#glow)"
@@ -74,8 +74,7 @@
 			opacity: 0;
 		}
 	}
-
 	.animate-blink {
-		animation: blink 1s infinite;
+		animation: blink 1s step-end infinite;
 	}
 </style>

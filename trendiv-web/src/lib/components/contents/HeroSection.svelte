@@ -72,9 +72,9 @@
 			<IconLogoHero />
 		</h2>
 
-		<p class="mt-8 text-lg font-bold leading-8 text-gray-600">
-			트렌디한 <span class="text-gray-900">HTML, CSS, A11y</span> 정보를<br />
-			<span class="text-gray-900">AI</span>가 직접 선별해서 보여드립니다.
+		<p class="mt-8 text-lg font-bold leading-8 text-gray-300 dark:text-gray-600">
+			트렌디한 <span class="text-gray-100 dark:text-gray-900">HTML, CSS, A11y</span> 정보를<br />
+			<span class="text-gray-100 dark:text-gray-900">AI</span>가 직접 선별해서 보여드립니다.
 		</p>
 		<div class="mt-10 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
 			{#if !currentUser}
