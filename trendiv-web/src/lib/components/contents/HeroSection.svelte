@@ -185,16 +185,6 @@
 		animation: mesh4 9s ease-in-out infinite;
 	}
 
-	/* 저사양 기기 대응 - prefers-reduced-motion */
-	@media (prefers-reduced-motion: reduce) {
-		.animate-mesh1,
-		.animate-mesh2,
-		.animate-mesh3,
-		.animate-mesh4 {
-			animation: none !important;
-		}
-	}
-
 	.paused .animate-mesh1,
 	.paused .animate-mesh2,
 	.paused .animate-mesh3,

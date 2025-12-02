@@ -25,6 +25,7 @@ if (browser) {
 		}
 	});
 }
+
 export function toggleTheme() {
 	if (!browser) return;
 
