@@ -7,6 +7,14 @@ const getInitialTheme = browser ? document.documentElement.classList.contains('d
 export const isDarkTheme = writable<boolean>(getInitialTheme);
 
 if (browser) {
+	const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+
+	const handleSystemChange = (e: MediaQueryListEvent) => {
+		isDarkTheme.set(e.matches);
+	};
+
+	mediaQuery.addEventListener('change', handleSystemChange);
+
 	isDarkTheme.subscribe((isDark) => {
 		if (isDark) {
 			document.documentElement.classList.add('dark');
@@ -17,7 +25,6 @@ if (browser) {
 		}
 	});
 }
-
 export function toggleTheme() {
 	if (!browser) return;
 
