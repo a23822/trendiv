@@ -178,160 +178,155 @@
 </script>
 
 <Header {user} {supabase} />
-<HeroSection onSubscribe={handleSubscribe} onClickLogin={handleLogin} bind:email {isSubmitting} />
-<div class="bg-bg-surface min-h-screen font-sans text-gray-900">
-	<section class="border-b border-gray-100 bg-gray-50/50 px-4 py-16 text-center">
-		<h1 class="mb-4 text-3xl font-extrabold tracking-tight text-gray-900 md:text-4xl">
-			Weekly <span class="text-gray-400">Developer</span> Trends
-		</h1>
-		<p class="mx-auto max-w-lg text-gray-500">
-			AI가 엄선한 개발 인사이트. 광고 없이 핵심만 봅니다.
-		</p>
-	</section>
+<main>
+	<HeroSection onSubscribe={handleSubscribe} onClickLogin={handleLogin} bind:email {isSubmitting} />
+	<div class="bg-bg-surface min-h-screen font-sans text-gray-900">
+		<div class="mx-auto max-w-5xl px-4 py-12">
+			<div class="mb-12 space-y-6">
+				<div class="group mx-auto max-w-lg">
+					<input
+						type="text"
+						bind:value={searchKeyword}
+						placeholder="검색어 입력..."
+						on:keydown={(e) => e.key === 'Enter' && handleSearch()}
+						class="w-full rounded-xl border border-gray-200 bg-gray-50 px-5 py-3 pl-12 text-gray-900 transition-all focus:bg-white focus:outline-none focus:ring-2 focus:ring-gray-900"
+					/>
+					<span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+				</div>
 
-	<main class="mx-auto max-w-5xl px-4 py-12">
-		<div class="mb-12 space-y-6">
-			<div class="group relative mx-auto max-w-lg">
-				<input
-					type="text"
-					bind:value={searchKeyword}
-					placeholder="검색어 입력..."
-					on:keydown={(e) => e.key === 'Enter' && handleSearch()}
-					class="w-full rounded-xl border border-gray-200 bg-gray-50 px-5 py-3 pl-12 text-gray-900 transition-all focus:bg-white focus:outline-none focus:ring-2 focus:ring-gray-900"
-				/>
-				<span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
-			</div>
-
-			<div class="flex flex-wrap justify-center gap-2">
-				{#each popularTags as tag}
-					<button
-						class="rounded-full border px-4 py-1.5 text-sm font-medium transition-all
+				<div class="flex flex-wrap justify-center gap-2">
+					{#each popularTags as tag}
+						<button
+							class="rounded-full border px-4 py-1.5 text-sm font-medium transition-all
             {selectedTag === tag
-							? 'border-gray-900 bg-gray-900 text-white'
-							: 'border-gray-200 bg-white text-gray-500 hover:border-gray-400 hover:text-gray-900'}"
-						on:click={() => handleTagClick(tag)}
-					>
-						{tag}
-					</button>
-				{/each}
+								? 'border-gray-900 bg-gray-900 text-white'
+								: 'border-gray-200 bg-white text-gray-500 hover:border-gray-400 hover:text-gray-900'}"
+							on:click={() => handleTagClick(tag)}
+						>
+							{tag}
+						</button>
+					{/each}
+				</div>
 			</div>
+
+			{#if isSearching}
+				<div class="py-32 text-center text-gray-400">로딩 중...</div>
+			{:else if trends.length === 0}
+				<div class="py-32 text-center text-gray-400">결과가 없습니다.</div>
+			{:else}
+				<div class="grid gap-6">
+					{#each trends as trend (trend.id)}
+						<div
+							class="group relative cursor-pointer rounded-xl border border-gray-200 bg-white p-6 transition-all hover:border-gray-400 hover:shadow-sm"
+							on:click={() => openModal(trend)}
+							on:keydown={(e) => e.key === 'Enter' && openModal(trend)}
+							tabindex="0"
+							role="button"
+						>
+							<div class="mb-3 flex items-center justify-between">
+								<div class="flex gap-2">
+									{#each trend.tags?.slice(0, 2) || [] as tag}
+										<span
+											class="rounded-md border border-gray-200 bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600"
+										>
+											{tag}
+										</span>
+									{/each}
+								</div>
+								<span class="font-mono text-xs text-gray-400"
+									>{new Date(trend.date).toLocaleDateString()}</span
+								>
+							</div>
+
+							<h2
+								class="mb-2 text-xl font-bold leading-snug text-gray-900 transition-colors group-hover:text-blue-600"
+							>
+								{trend.title}
+							</h2>
+
+							<p class="mb-4 line-clamp-2 text-sm leading-relaxed text-gray-500">
+								{trend.oneLineSummary || trend.summary}
+							</p>
+
+							<div class="flex items-center justify-between border-t border-gray-100 pt-4">
+								<span class="text-xs font-bold uppercase tracking-wide text-gray-400"
+									>{trend.source}</span
+								>
+								<span class="rounded bg-gray-100 px-2 py-1 text-xs font-bold text-gray-900"
+									>AI Score {trend.score}</span
+								>
+							</div>
+						</div>
+					{/each}
+				</div>
+
+				{#if hasMore}
+					<div use:infiniteScroll class="flex justify-center py-16 text-sm text-gray-400">
+						{#if isLoadingMore}
+							로딩 중...
+						{:else}
+							스크롤하여 더 보기
+						{/if}
+					</div>
+				{/if}
+			{/if}
 		</div>
 
-		{#if isSearching}
-			<div class="py-32 text-center text-gray-400">로딩 중...</div>
-		{:else if trends.length === 0}
-			<div class="py-32 text-center text-gray-400">결과가 없습니다.</div>
-		{:else}
-			<div class="grid gap-6">
-				{#each trends as trend (trend.id)}
-					<article
-						class="group relative cursor-pointer rounded-xl border border-gray-200 bg-white p-6 transition-all hover:border-gray-400 hover:shadow-sm"
-						on:click={() => openModal(trend)}
-						on:keydown={(e) => e.key === 'Enter' && openModal(trend)}
-						tabindex="0"
-						role="button"
-					>
-						<div class="mb-3 flex items-center justify-between">
+		{#if selectedTrend}
+			<div
+				class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+				on:click={closeModal}
+				transition:fade={{ duration: 200 }}
+			>
+				<div
+					class="max-h-[90vh] w-full max-w-2xl overflow-hidden overflow-y-auto rounded-2xl bg-white shadow-2xl"
+					transition:fly={{ y: 20 }}
+				>
+					<div class="p-8">
+						<div class="mb-6 flex items-start justify-between">
 							<div class="flex gap-2">
-								{#each trend.tags?.slice(0, 2) || [] as tag}
-									<span
-										class="rounded-md border border-gray-200 bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600"
-									>
-										{tag}
-									</span>
-								{/each}
+								<span class="rounded-full bg-black px-3 py-1 text-xs font-bold text-white"
+									>Score {selectedTrend.score}</span
+								>
 							</div>
-							<span class="font-mono text-xs text-gray-400"
-								>{new Date(trend.date).toLocaleDateString()}</span
-							>
+							<button on:click={closeModal} class="text-gray-400 hover:text-black">✕</button>
 						</div>
 
-						<h2
-							class="mb-2 text-xl font-bold leading-snug text-gray-900 transition-colors group-hover:text-blue-600"
-						>
-							{trend.title}
+						<h2 class="mb-6 text-2xl font-bold leading-tight text-gray-900">
+							{selectedTrend.title}
 						</h2>
 
-						<p class="mb-4 line-clamp-2 text-sm leading-relaxed text-gray-500">
-							{trend.oneLineSummary || trend.summary}
-						</p>
+						{#if selectedTrend.keyPoints?.length}
+							<div class="mb-8 rounded-xl border border-gray-100 bg-gray-50 p-6">
+								<h3 class="mb-4 text-sm font-bold uppercase tracking-wide text-gray-900">
+									Key Takeaways
+								</h3>
+								<ul class="space-y-3">
+									{#each selectedTrend.keyPoints as point}
+										<li class="flex gap-3 text-sm text-gray-700">
+											<span class="font-bold text-black">•</span>
+											{point}
+										</li>
+									{/each}
+								</ul>
+							</div>
+						{/if}
 
-						<div class="flex items-center justify-between border-t border-gray-100 pt-4">
-							<span class="text-xs font-bold uppercase tracking-wide text-gray-400"
-								>{trend.source}</span
-							>
-							<span class="rounded bg-gray-100 px-2 py-1 text-xs font-bold text-gray-900"
-								>AI Score {trend.score}</span
+						<div class="prose prose-sm max-w-none text-gray-600">
+							<p class="whitespace-pre-line">{selectedTrend.summary}</p>
+						</div>
+
+						<div class="mt-8 flex justify-end border-t border-gray-100 pt-6">
+							<a
+								href={selectedTrend.link}
+								target="_blank"
+								class="rounded-lg bg-black px-6 py-3 font-bold text-white transition-colors hover:bg-gray-800"
+								>원문 보기 →</a
 							>
 						</div>
-					</article>
-				{/each}
-			</div>
-
-			{#if hasMore}
-				<div use:infiniteScroll class="flex justify-center py-16 text-sm text-gray-400">
-					{#if isLoadingMore}
-						로딩 중...
-					{:else}
-						스크롤하여 더 보기
-					{/if}
+					</div>
 				</div>
-			{/if}
+			</div>
 		{/if}
-	</main>
-
-	{#if selectedTrend}
-		<div
-			class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
-			on:click={closeModal}
-			transition:fade={{ duration: 200 }}
-		>
-			<div
-				class="max-h-[90vh] w-full max-w-2xl overflow-hidden overflow-y-auto rounded-2xl bg-white shadow-2xl"
-				transition:fly={{ y: 20 }}
-			>
-				<div class="p-8">
-					<div class="mb-6 flex items-start justify-between">
-						<div class="flex gap-2">
-							<span class="rounded-full bg-black px-3 py-1 text-xs font-bold text-white"
-								>Score {selectedTrend.score}</span
-							>
-						</div>
-						<button on:click={closeModal} class="text-gray-400 hover:text-black">✕</button>
-					</div>
-
-					<h2 class="mb-6 text-2xl font-bold leading-tight text-gray-900">{selectedTrend.title}</h2>
-
-					{#if selectedTrend.keyPoints?.length}
-						<div class="mb-8 rounded-xl border border-gray-100 bg-gray-50 p-6">
-							<h3 class="mb-4 text-sm font-bold uppercase tracking-wide text-gray-900">
-								Key Takeaways
-							</h3>
-							<ul class="space-y-3">
-								{#each selectedTrend.keyPoints as point}
-									<li class="flex gap-3 text-sm text-gray-700">
-										<span class="font-bold text-black">•</span>
-										{point}
-									</li>
-								{/each}
-							</ul>
-						</div>
-					{/if}
-
-					<div class="prose prose-sm max-w-none text-gray-600">
-						<p class="whitespace-pre-line">{selectedTrend.summary}</p>
-					</div>
-
-					<div class="mt-8 flex justify-end border-t border-gray-100 pt-6">
-						<a
-							href={selectedTrend.link}
-							target="_blank"
-							class="rounded-lg bg-black px-6 py-3 font-bold text-white transition-colors hover:bg-gray-800"
-							>원문 보기 →</a
-						>
-					</div>
-				</div>
-			</div>
-		</div>
-	{/if}
-</div>
+	</div>
+</main>

@@ -68,7 +68,7 @@
 	}
 </script>
 
-<header class="bg-bg-body/70 z-90 sticky left-0 top-0 w-full backdrop-blur-md">
+<header class="bg-bg-body/70 sticky left-0 right-0 top-0 z-[90] backdrop-blur-md">
 	<div class="flex h-[60px] items-center justify-between gap-2 px-4 md:px-6 xl:px-8">
 		<IconLogo width="76" height="44" />
 		<h1 class="text-primary mr-auto font-mono text-xl font-bold tracking-tight">Trendiv</h1>
@@ -76,49 +76,3 @@
 	</div>
 </header>
 <SideMenu isOpen={isMenuOpen} {closeMenu} />
-<!-- <header class="w-full border-b border-gray-100 bg-white/80 backdrop-blur-md sticky top-0 z-50">
-  <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-    
-    <div class="flex items-center gap-2">
-      <div class="w-8 h-8 bg-black rounded-lg flex items-center justify-center text-white font-bold text-lg">T</div>
-      <span class="text-xl font-bold tracking-tight text-gray-900">Trendiv</span>
-    </div>
-
-    <div class="flex items-center gap-4">
-      {#if user}
-        <div class="hidden md:flex items-center gap-3 text-sm">
-          <span class="text-gray-500">{user.email}</span>
-          <button 
-            on:click={subscribe}
-            disabled={isSubmitting}
-            class="px-4 py-2 bg-black text-white rounded-full font-medium hover:bg-gray-800 transition-all disabled:opacity-50"
-          >
-            {isSubmitting ? '...' : '구독하기'}
-          </button>
-          <button on:click={signOut} class="text-gray-400 hover:text-gray-600">로그아웃</button>
-        </div>
-        <button on:click={signOut} class="md:hidden text-sm text-gray-500">로그아웃</button>
-
-      {:else}
-        <button 
-          on:click={signInWithGoogle}
-          class="text-sm font-medium text-gray-600 hover:text-black transition-colors"
-        >
-          로그인
-        </button>
-        <button 
-          on:click={signInWithGoogle}
-          class="px-4 py-2 bg-black text-white rounded-full text-sm font-medium hover:bg-gray-800 transition-all shadow-sm hover:shadow-md"
-        >
-          시작하기
-        </button>
-      {/if}
-    </div>
-  </div>
-  
-  {#if subStatus}
-    <div class="absolute top-16 left-0 w-full bg-gray-900 text-white text-center text-sm py-2 animate-fade-in">
-      {subStatus}
-    </div>
-  {/if}
-</header> -->

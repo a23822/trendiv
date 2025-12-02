@@ -3,6 +3,7 @@
 	import { user } from '$lib/stores/auth';
 	import { supabase } from '$lib/stores/db';
 	import type { User } from '@supabase/supabase-js';
+	import { onMount } from 'svelte';
 
 	export let onClickLogin: () => void;
 	export let onSubscribe: () => void;
@@ -10,6 +11,26 @@
 	export let isSubmitting = false;
 
 	$: currentUser = $user as User | null;
+
+	let heroSection: HTMLElement;
+	let isVisible = true;
+
+	onMount(() => {
+		const observer = new IntersectionObserver(
+			(entries) => {
+				entries.forEach((entry) => {
+					isVisible = entry.isIntersecting;
+				});
+			},
+			{ threshold: 0 }
+		);
+
+		if (heroSection) observer.observe(heroSection);
+
+		return () => {
+			if (heroSection) observer.unobserve(heroSection);
+		};
+	});
 
 	// 로그인 핸들러
 	async function handleLogin() {
@@ -21,7 +42,11 @@
 	}
 </script>
 
-<section class="relative min-h-[500px] overflow-hidden bg-[#1a1a1a] px-6 py-24">
+<section
+	bind:this={heroSection}
+	class:paused={!isVisible}
+	class="relative min-h-[500px] overflow-hidden bg-[#1a1a1a] px-6 py-24 sm:px-4"
+>
 	<!-- 레이어들 -->
 	<div
 		class="animate-mesh1 pointer-events-none absolute inset-[-50%] bg-[radial-gradient(circle_at_30%_30%,rgba(77,208,189,0.25)_0%,transparent_40%)]"
@@ -159,5 +184,22 @@
 	}
 	.animate-mesh4 {
 		animation: mesh4 9s ease-in-out infinite;
+	}
+
+	/* 저사양 기기 대응 - prefers-reduced-motion */
+	@media (prefers-reduced-motion: reduce) {
+		.animate-mesh1,
+		.animate-mesh2,
+		.animate-mesh3,
+		.animate-mesh4 {
+			animation: none !important;
+		}
+	}
+
+	.paused .animate-mesh1,
+	.paused .animate-mesh2,
+	.paused .animate-mesh3,
+	.paused .animate-mesh4 {
+		animation-play-state: paused !important;
 	}
 </style>
