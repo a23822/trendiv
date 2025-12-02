@@ -44,7 +44,7 @@
 	.toggle {
 		position: relative;
 		width: 100%;
-		height: 60px;
+		height: theme('spacing.header-height');
 		border: none;
 		cursor: pointer;
 		overflow: hidden;

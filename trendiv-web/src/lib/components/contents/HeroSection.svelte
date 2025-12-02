@@ -165,25 +165,49 @@
 			transform: translate(-10%, 10%) scale(1.15) rotate(5deg);
 		}
 	}
-	@media (min-width: 768px) {
-		.animate-mesh1 {
-			animation: mesh1 8s ease-in-out infinite;
-		}
-		.animate-mesh2 {
-			animation: mesh2 10s ease-in-out infinite;
-		}
-		.animate-mesh3 {
-			animation: mesh3 12s ease-in-out infinite;
-		}
+	.animate-mesh1,
+	.animate-mesh2,
+	.animate-mesh3,
+	.animate-mesh4 {
+		transition: opacity 0.3s ease;
+		will-change: transform, opacity;
+	}
+	@media (min-width: theme('spacing.sidemenu')) {
+		.animate-mesh1,
+		.animate-mesh2,
+		.animate-mesh3,
 		.animate-mesh4 {
-			animation: mesh4 9s ease-in-out infinite;
+			transition: none;
+			will-change: transform;
 		}
+	}
+	.animate-mesh1 {
+		animation: mesh1 8s ease-in-out infinite;
+	}
+	.animate-mesh2 {
+		animation: mesh2 10s ease-in-out infinite;
+	}
+	.animate-mesh3 {
+		animation: mesh3 12s ease-in-out infinite;
+	}
+	.animate-mesh4 {
+		animation: mesh4 9s ease-in-out infinite;
 	}
 
 	.paused .animate-mesh1,
 	.paused .animate-mesh2,
 	.paused .animate-mesh3,
 	.paused .animate-mesh4 {
-		animation-play-state: paused !important;
+		animation: none;
+		opacity: 0;
+	}
+	@media (min-width: theme('spacing.sidemenu')) {
+		.paused .animate-mesh1,
+		.paused .animate-mesh2,
+		.paused .animate-mesh3,
+		.paused .animate-mesh4 {
+			opacity: 1;
+			animation-play-state: paused;
+		}
 	}
 </style>

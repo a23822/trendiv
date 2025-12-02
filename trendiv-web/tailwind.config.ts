@@ -159,6 +159,10 @@ export default {
 			},
 			borderRadius: {
 				inherit: 'inherit'
+			},
+			spacing: {
+				sidemenu: '460px',
+				'header-height': '60px'
 			}
 		}
 	},
