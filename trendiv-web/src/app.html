@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="kr">
+<html lang="ko">
 	<head>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -8,10 +8,34 @@
 		<link
 			href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300..700&display=swap"
 			rel="stylesheet"
+			crossorigin
 		/>
+		<link
+			rel="stylesheet"
+			as="style"
+			crossorigin
+			href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css"
+		/>
+
+		<script>
+			(function () {
+				// 로컬 스토리지 확인
+				const storedTheme = localStorage.getItem('theme');
+				// 시스템 설정 확인
+				const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+				// 조건: 저장이 'dark'로 되어있거나, (저장이 안 되어있는데 시스템이 dark인 경우)
+				if (storedTheme === 'dark' || (!storedTheme && systemTheme)) {
+					document.documentElement.classList.add('dark');
+				} else {
+					document.documentElement.classList.remove('dark');
+				}
+			})();
+		</script>
+
 		%sveltekit.head%
 	</head>
-	<body class="bg-bg-body" data-sveltekit-preload-data="hover">
+	<body class="bg-bg-body font-sans" data-sveltekit-preload-data="hover">
 		<div style="display: contents">%sveltekit.body%</div>
 	</body>
 </html>

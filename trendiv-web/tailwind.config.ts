@@ -153,7 +153,7 @@ export default {
 				}
 			},
 			fontFamily: {
-				sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+				sans: ['Pretendard', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
 				serif: ['Merriweather', 'serif'],
 				mono: ['Fira Code', 'monospace']
 			},
