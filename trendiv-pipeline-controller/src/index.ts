@@ -50,8 +50,8 @@ app.get("/api/trends", async (req: Request, res: Response) => {
     const limit = parseInt(req.query.limit as string) || 20;
 
     // 검색어와 태그 필터 파라미터 받기
-    const searchKeyword = (req.query.searchKeyword as string) || "";
-    const tagFilter = (req.query.tagFilter as string) || "";
+    const searchKeyword = ((req.query.searchKeyword as string) || "").trim();
+    const tagFilter = ((req.query.tagFilter as string) || "").trim();
 
     // 범위 계산 (1페이지: 0~19, 2페이지: 20~39)
     const from = (page - 1) * limit;
@@ -60,7 +60,9 @@ app.get("/api/trends", async (req: Request, res: Response) => {
     // 1. 기본 쿼리 (점수가 0보다 큰 것만)
     let query = supabase
       .from("trend")
-      .select("*", { count: "exact" })
+      .select("id, title, link, date, summary, tags, score, source", {
+        count: "exact",
+      })
       .gt("score", 0)
       .order("date", { ascending: false });
 
@@ -79,8 +81,25 @@ app.get("/api/trends", async (req: Request, res: Response) => {
     // 4. 페이지네이션 및 실행
     const { data, error, count } = await query.range(from, to);
 
-    if (error) throw error;
+    if (error) {
+      // 4-1. 페이지가 2페이지 이상인데 에러가 났다면? -> "데이터 없음(416)"일 확률 99%
+      //    이때는 죽지 말고 "성공(빈 리스트)"으로 처리합니다.
+      if (page > 1) {
+        console.warn(
+          `⚠️ Page ${page} fetching failed (likely 416 Range Not Satisfiable). Returning empty list.`
+        );
+        return res.status(200).json({
+          success: true,
+          data: [], // 빈 데이터 반환
+          page: page,
+          total: 0, // 카운트는 알 수 없거나 0 처리
+        });
+      }
 
+      // 4-2. 그 외 진짜 DB 에러(1페이지부터 에러 등)는 로그 찍고 500 에러 발생
+      console.error("🔍 DB Error Detail:", error);
+      throw error;
+    }
     res.status(200).json({
       success: true,
       data: data,
@@ -88,8 +107,12 @@ app.get("/api/trends", async (req: Request, res: Response) => {
       total: count,
     });
   } catch (error: any) {
-    console.error("❌ 트렌드 조회 실패:", error);
-    res.status(500).json({ error: "데이터 로드 실패" });
+    console.error("❌ 트렌드 조회 실패 (Server Fault):", error);
+
+    res.status(500).json({
+      error: "데이터 로드 실패",
+      details: error.message || "Unknown error",
+    });
   }
 });
 

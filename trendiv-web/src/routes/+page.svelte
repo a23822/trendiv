@@ -121,6 +121,12 @@
 				tagFilter: selectedTag
 			});
 			const res = await fetch(`${API_URL}/api/trends?${params}`);
+
+			// 응답이 200 OK가 아닐 경우 (500 에러 등)
+			if (!res.ok) {
+				throw new Error(`HTTP Error: ${res.status}`);
+			}
+
 			const result = await res.json();
 
 			if (result.success) {
@@ -132,9 +138,14 @@
 					trends = [...trends, ...newItems];
 				}
 				if (trends.length >= result.total) hasMore = false;
+			} else {
+				// ❌ [추가됨] 서버에서 success: false를 보낸 경우 (에러 메시지 등)
+				console.error('데이터 로드 실패:', result.error);
+				hasMore = false; // 더 이상 시도하지 않음 (무한 스크롤 방지)
 			}
 		} catch (e) {
-			console.error(e);
+			console.error('API 호출 중 오류 발생:', e);
+			hasMore = false;
 		} finally {
 			isLoadingMore = false;
 			isSearching = false;

@@ -46,7 +46,7 @@
 <section
 	bind:this={heroSection}
 	class:paused={!isVisible || $isSideMenuOpen}
-	class="relative min-h-[500px] overflow-hidden bg-[#1a1a1a] px-6 py-24 sm:px-4"
+	class="relative overflow-hidden bg-[#1a1a1a] px-6 py-24 sm:px-4"
 >
 	<div
 		class="animate-mesh1 pointer-events-none absolute inset-[-50%] bg-[radial-gradient(circle_at_30%_30%,rgba(77,208,189,0.25)_0%,transparent_40%)]"
@@ -66,7 +66,7 @@
 			<IconLogoHero />
 		</h2>
 
-		<p class="mt-8 text-lg font-bold leading-8 text-gray-300 dark:text-gray-600">
+		<p class="mt-4 text-lg font-bold leading-8 text-gray-300 dark:text-gray-600">
 			트렌디한 <span class="text-gray-100 dark:text-gray-900">HTML, CSS, A11y</span> 정보를<br />
 			<span class="text-gray-100 dark:text-gray-900">AI</span>가 직접 선별해서 보여드립니다.
 		</p>
