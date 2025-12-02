@@ -3,19 +3,17 @@
 	import SideMenu from '$lib/components/layout/Aside/SideMenu.svelte';
 	import MenuButton from '$lib/components/pure/Button/MenuButton.svelte';
 	import IconLogo from '$lib/icons/icon_logo.svelte';
+	import { isSideMenuOpen } from '$lib/stores/state';
 
 	export let user: any;
 	export let supabase: any;
 
-	// ✅ 메뉴 상태 관리
-	let isMenuOpen = false;
-
 	function toggleMenu() {
-		isMenuOpen = !isMenuOpen;
+		isSideMenuOpen.update((v) => !v);
 	}
 
 	function closeMenu() {
-		isMenuOpen = false;
+		isSideMenuOpen.set(false);
 	}
 
 	let email = '';
@@ -72,7 +70,7 @@
 	<div class="flex h-[60px] items-center justify-between gap-2 px-4 md:px-6 xl:px-8">
 		<IconLogo width="76" height="44" />
 		<h1 class="text-primary mr-auto font-mono text-xl font-bold tracking-tight">Trendiv</h1>
-		<MenuButton isOpen={isMenuOpen} onClick={toggleMenu} />
+		<MenuButton isOpen={$isSideMenuOpen} onClick={toggleMenu} />
 	</div>
 </header>
-<SideMenu isOpen={isMenuOpen} {closeMenu} />
+<SideMenu isOpen={$isSideMenuOpen} {closeMenu} />

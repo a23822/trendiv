@@ -2,6 +2,7 @@
 	import IconLogoHero from '$lib/icons/icon_logo_hero.svelte';
 	import { user } from '$lib/stores/auth';
 	import { supabase } from '$lib/stores/db';
+	import { isSideMenuOpen } from '$lib/stores/state';
 	import type { User } from '@supabase/supabase-js';
 	import { onMount } from 'svelte';
 
@@ -44,10 +45,9 @@
 
 <section
 	bind:this={heroSection}
-	class:paused={!isVisible}
+	class:paused={!isVisible || $isSideMenuOpen}
 	class="relative min-h-[500px] overflow-hidden bg-[#1a1a1a] px-6 py-24 sm:px-4"
 >
-	<!-- 레이어들 -->
 	<div
 		class="animate-mesh1 pointer-events-none absolute inset-[-50%] bg-[radial-gradient(circle_at_30%_30%,rgba(77,208,189,0.25)_0%,transparent_40%)]"
 	></div>
@@ -59,12 +59,6 @@
 	></div>
 	<div
 		class="animate-mesh4 pointer-events-none absolute inset-[-50%] bg-[radial-gradient(circle_at_20%_70%,rgba(77,208,189,0.15)_0%,transparent_30%)]"
-	></div>
-
-	<!-- 노이즈 텍스처 -->
-	<div
-		class="pointer-events-none absolute inset-0 opacity-[0.04]"
-		style="background-image: url(&quot;data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E&quot;);"
 	></div>
 
 	<div class="mx-auto max-w-3xl text-center">
@@ -171,18 +165,19 @@
 			transform: translate(-10%, 10%) scale(1.15) rotate(5deg);
 		}
 	}
-
-	.animate-mesh1 {
-		animation: mesh1 8s ease-in-out infinite;
-	}
-	.animate-mesh2 {
-		animation: mesh2 10s ease-in-out infinite;
-	}
-	.animate-mesh3 {
-		animation: mesh3 12s ease-in-out infinite;
-	}
-	.animate-mesh4 {
-		animation: mesh4 9s ease-in-out infinite;
+	@media (min-width: 768px) {
+		.animate-mesh1 {
+			animation: mesh1 8s ease-in-out infinite;
+		}
+		.animate-mesh2 {
+			animation: mesh2 10s ease-in-out infinite;
+		}
+		.animate-mesh3 {
+			animation: mesh3 12s ease-in-out infinite;
+		}
+		.animate-mesh4 {
+			animation: mesh4 9s ease-in-out infinite;
+		}
 	}
 
 	.paused .animate-mesh1,
