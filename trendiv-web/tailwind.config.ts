@@ -1,5 +1,6 @@
 import type { Config } from 'tailwindcss';
 import typography from '@tailwindcss/typography';
+import plugin from 'tailwindcss/plugin';
 
 export default {
 	darkMode: 'class',
@@ -163,9 +164,33 @@ export default {
 			spacing: {
 				sidemenu: '460px',
 				'header-height': '60px'
+			},
+			lineClamp: {
+				7: '7',
+				8: '8',
+				10: '10'
 			}
 		}
 	},
 
-	plugins: [typography]
+	plugins: [
+		typography,
+
+		plugin(function ({ matchUtilities, theme }) {
+			matchUtilities(
+				{
+					'line-clamp': (value) => ({
+						display: '-webkit-box',
+						'-webkit-box-orient': 'vertical',
+						'-webkit-line-clamp': value,
+						overflow: 'hidden',
+						'text-overflow': 'ellipsis',
+						'word-break': 'break-all',
+						'word-wrap': 'break-word'
+					})
+				},
+				{ values: theme('lineClamp') }
+			);
+		})
+	]
 } as Config;

@@ -4,5 +4,8 @@ export const IDs = {
 	},
 	BUTTON: {
 		MENU_BUTTON: 'header-menu-button'
+	},
+	HERO: {
+		EMAIL_INPUT: 'hero-email-input'
 	}
 };

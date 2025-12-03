@@ -1,4 +1,7 @@
 <script lang="ts">
+	import AuthButton from '$lib/components/pure/Button/AuthButton.svelte';
+	import TextLoading from '$lib/components/pure/Load/TextLoading.svelte';
+	import { IDs } from '$lib/constants/ids';
 	import IconLogoHero from '$lib/icons/icon_logo_hero.svelte';
 	import { user } from '$lib/stores/auth';
 	import { supabase } from '$lib/stores/db';
@@ -46,7 +49,7 @@
 <section
 	bind:this={heroSection}
 	class:paused={!isVisible || $isSideMenuOpen}
-	class="relative overflow-hidden bg-[#1a1a1a] px-6 py-24 sm:px-4"
+	class="relative overflow-hidden bg-[#1a1a1a] px-4 py-12 sm:px-6 sm:py-20"
 >
 	<div
 		class="animate-mesh1 pointer-events-none absolute inset-[-50%] bg-[radial-gradient(circle_at_30%_30%,rgba(77,208,189,0.25)_0%,transparent_40%)]"
@@ -61,46 +64,64 @@
 		class="animate-mesh4 pointer-events-none absolute inset-[-50%] bg-[radial-gradient(circle_at_20%_70%,rgba(77,208,189,0.15)_0%,transparent_30%)]"
 	></div>
 
-	<div class="mx-auto max-w-3xl text-center">
+	<div class="relative z-10 mx-auto max-w-3xl text-center">
 		<h2>
-			<IconLogoHero />
+			<IconLogoHero aria-hidden="true" />
 		</h2>
-
 		<p class="mt-4 text-lg font-bold leading-8 text-gray-300 dark:text-gray-600">
 			트렌디한 <span class="text-gray-100 dark:text-gray-900">HTML, CSS, A11y</span> 정보를<br />
 			<span class="text-gray-100 dark:text-gray-900">AI</span>가 직접 선별해서 보여드립니다.
 		</p>
-		<div class="mt-10 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+		<form
+			class="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row"
+			on:submit|preventDefault={onSubscribe}
+		>
 			{#if !currentUser}
-				<div class="relative w-full sm:w-80">
-					<label for="email-address" class="sr-only">Email address</label>
+				<div class="w-full flex-1">
+					<label for={IDs.HERO.EMAIL_INPUT} class="sr-only">Email address</label>
 					<input
-						id="email-address"
+						id={IDs.HERO.EMAIL_INPUT}
 						name="email"
 						type="email"
 						autocomplete="email"
 						required
-						placeholder="이메일을 입력하세요"
+						placeholder="이메일을 입력해주세요."
 						bind:value={email}
-						class="focus:ring-primary w-full rounded-xl border-0 bg-white px-4 py-3.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-200 transition-all placeholder:text-gray-400 focus:ring-2 focus:ring-inset sm:text-sm sm:leading-6"
+						class="w-full rounded-2xl bg-white px-6 py-4 text-xl"
 					/>
 				</div>
 			{/if}
 			<button
 				type="submit"
-				class="w-full flex-none rounded-xl bg-gray-900 px-6 py-3.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-gray-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
-				on:click={onSubscribe}
+				class="grid shrink-0 place-items-center rounded-2xl bg-black px-6 py-4 text-xl text-white"
 				disabled={isSubmitting}
+				aria-label={isSubmitting ? '구독 처리 중' : '이메일로 구독하기'}
 			>
-				{isSubmitting ? '처리 중...' : '무료로 구독하기'}
+				<span
+					aria-hidden="true"
+					class="col-start-1 row-start-1 transition-opacity duration-200 {isSubmitting
+						? 'opacity-0'
+						: 'opacity-100'}"
+				>
+					이메일로 구독하기
+				</span>
+
+				<div
+					aria-hidden="true"
+					class="col-start-1 row-start-1 flex justify-center transition-opacity duration-200 {isSubmitting
+						? 'opacity-100'
+						: 'opacity-0'}"
+				>
+					<TextLoading />
+				</div>
 			</button>
-		</div>
+		</form>
 		{#if !currentUser}
-			<div class="mt-6 text-sm text-gray-500">
-				이미 계정이 있으신가요?
+			<div class="mt-6 text-sm text-white">
+				{'Google 계정으로 계속할까요?'}
 				<button
-					on:click={onClickLogin}
-					class="text-primary hover:text-primary-hover ml-1 font-semibold hover:underline"
+					on:click={handleLogin}
+					class="text-primary hover:text-primary-hover ml-1 font-bold hover:underline"
 				>
 					로그인하기
 				</button>
@@ -109,8 +130,9 @@
 	</div>
 
 	<div
-		class="absolute left-1/2 top-1/2 -z-10 -translate-x-1/2 -translate-y-1/2 transform-gpu blur-3xl"
+		class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 transform-gpu blur-3xl"
 		aria-hidden="true"
+		class:aurora_paused={!isVisible || $isSideMenuOpen}
 	>
 		<div
 			class="to-primary aspect-[1155/678] w-[72.1875rem] bg-gradient-to-tr from-[#ff80b5] opacity-20"
@@ -209,5 +231,8 @@
 			opacity: 1;
 			animation-play-state: paused;
 		}
+	}
+	.aurora_paused {
+		display: none;
 	}
 </style>
