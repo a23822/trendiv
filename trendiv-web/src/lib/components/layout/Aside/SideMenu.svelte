@@ -4,6 +4,7 @@
 	import CloseButton from '$lib/components/pure/Button/CloseButton.svelte';
 	import ThemeSwitch from '$lib/components/pure/ToggleSwitch/ThemeSwitch.svelte';
 	import { IDs } from '$lib/constants/ids';
+	import BodyScrollLock from '$lib/utils/BodyScrollLock.svelte';
 	import { fly } from 'svelte/transition';
 
 	export let isOpen = false;
@@ -13,20 +14,6 @@
 
 	$: if (dialog && isOpen && !dialog.open) {
 		dialog.showModal();
-	}
-
-	$: if (browser && document.body) {
-		if (isOpen) {
-			const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
-
-			document.body.style.paddingRight = `${scrollbarWidth}px`;
-
-			document.body.classList.add('overflow-hidden');
-		} else {
-			document.body.style.paddingRight = '';
-
-			document.body.classList.remove('overflow-hidden');
-		}
 	}
 
 	function handleClose() {
@@ -51,6 +38,7 @@
 	class:closed={!isOpen}
 >
 	{#if isOpen}
+		<BodyScrollLock />
 		<aside
 			id={IDs.LAYOUT.SIDE_MENU}
 			class="bg-bg-body z-100 w-sidemenu fixed right-0 top-0 flex h-dvh max-w-full flex-col justify-between shadow-2xl"

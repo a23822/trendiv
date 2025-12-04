@@ -1,6 +1,7 @@
 <script>
 	import favicon from '$lib/assets/favicon.svg';
 	import { modalState } from '$lib/stores/modal';
+	import BodyScrollLock from '$lib/utils/BodyScrollLock.svelte';
 	import '../app.css';
 
 	let { children } = $props();
@@ -13,6 +14,7 @@
 {@render children()}
 
 {#if $modalState.component}
+	<BodyScrollLock />
 	{@const ActiveModal = $modalState.component}
 
 	<ActiveModal {...$modalState.props} />

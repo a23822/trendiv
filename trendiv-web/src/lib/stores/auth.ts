@@ -3,6 +3,7 @@ import { supabase } from '$lib/stores/db';
 import { openModal } from '$lib/stores/modal';
 import NoticeModal from '$lib/components/modal/NoticeModal.svelte';
 import type { User } from '@supabase/supabase-js';
+import { TERMS_TEXT, PRIVACY_TEXT } from '$lib/stores/policy';
 
 // 사용자 정보를 담는 스토어 (초기값: null)
 export const user = writable<User | null>(null);
@@ -15,10 +16,6 @@ if (supabase) {
 		user.set(session?.user || null);
 	});
 }
-
-// 약관 텍스트 변수 (맨 아래에 있던 것)
-const TERMS_TEXT = `<div style="text-align:left">...이용약관 내용...</div>`;
-const PRIVACY_TEXT = `<div style="text-align:left">...개인정보 내용...</div>`;
 
 /**
  * 로그인 전 약관 모달
