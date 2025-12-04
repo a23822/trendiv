@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { browser } from '$app/environment';
 	import AuthButton from '$lib/components/pure/Button/AuthButton.svelte';
 	import CloseButton from '$lib/components/pure/Button/CloseButton.svelte';
 	import ThemeSwitch from '$lib/components/pure/ToggleSwitch/ThemeSwitch.svelte';
@@ -52,7 +51,7 @@
 				<CloseButton onClick={closeMenu} />
 			</div>
 			<div class="border-border-default shrink-0 border-b p-4">
-				<AuthButton onClick={closeMenu} />
+				<AuthButton />
 			</div>
 			<nav class="flex-1 overflow-hidden">
 				<ul>

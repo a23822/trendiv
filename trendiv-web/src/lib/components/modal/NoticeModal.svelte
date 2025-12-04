@@ -21,23 +21,25 @@
 		}
 	});
 
-	// 닫기 동작
-	function handleClose() {
-		dialog.close(); // 닫기 애니메이션 등을 위해 native close 호출
-		closeModal(); // 스토어 상태 초기화
+	function requestClose() {
+		dialog?.close();
+	}
+
+	function handleNativeClose() {
+		closeModal();
 	}
 
 	// 확인(로그인) 동작
 	function handleConfirm() {
 		if (onConfirm) onConfirm();
-		handleClose();
+		requestClose();
 	}
 
 	// 배경 클릭 시 닫기 (Dialog 백드롭 클릭 감지)
 	function handleBackdropClick(e: MouseEvent) {
 		// 클릭된 타겟이 dialog 태그 자체라면(내부 컨텐츠가 아니라면) 백드롭을 클릭한 것임
 		if (e.target === dialog) {
-			handleClose();
+			requestClose();
 		}
 	}
 </script>
@@ -45,7 +47,7 @@
 <dialog
 	bind:this={dialog}
 	class="w-[400px] max-w-[90%] overflow-hidden rounded-lg p-0 backdrop:bg-black/50 open:shadow-xl"
-	onclose={handleClose}
+	onclose={handleNativeClose}
 	onclick={handleBackdropClick}
 >
 	<div class="flex flex-col bg-white">
@@ -83,7 +85,7 @@
 			{#if onConfirm}
 				<button
 					class="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-					onclick={handleClose}
+					onclick={requestClose}
 				>
 					취소
 				</button>
@@ -96,7 +98,7 @@
 			{:else}
 				<button
 					class="rounded-md bg-gray-800 px-4 py-2 text-sm text-white hover:bg-gray-700"
-					onclick={handleClose}
+					onclick={requestClose}
 				>
 					닫기
 				</button>
