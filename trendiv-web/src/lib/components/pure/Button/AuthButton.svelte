@@ -1,8 +1,7 @@
 <script lang="ts">
 	import IconLogoGoogle from '$lib/icons/icon_logo_google.svelte';
 	import IconSignin from '$lib/icons/icon_signin.svelte';
-	import { user, avatarColor } from '$lib/stores/auth';
-	import { supabase } from '$lib/stores/db';
+	import { user, avatarColor, openLoginModal, signOut } from '$lib/stores/auth';
 	import type { User } from '@supabase/supabase-js';
 
 	export let onClick: () => void = () => {};
@@ -19,15 +18,12 @@
 	// 로그인 핸들러
 	async function handleLogin() {
 		onClick();
-		await supabase?.auth.signInWithOAuth({
-			provider: 'google',
-			options: { redirectTo: window.location.origin }
-		});
+		openLoginModal();
 	}
 
 	// 로그아웃 핸들러
 	async function handleLogout() {
-		await supabase?.auth.signOut();
+		await signOut();
 		onClick(); // 로그아웃 후 메뉴 닫기
 	}
 </script>

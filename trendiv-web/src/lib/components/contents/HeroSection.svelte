@@ -1,15 +1,13 @@
 <script lang="ts">
-	import AuthButton from '$lib/components/pure/Button/AuthButton.svelte';
 	import TextLoading from '$lib/components/pure/Load/TextLoading.svelte';
 	import { IDs } from '$lib/constants/ids';
 	import IconLogoHero from '$lib/icons/icon_logo_hero.svelte';
-	import { user } from '$lib/stores/auth';
+	import { user, openLoginModal } from '$lib/stores/auth';
 	import { supabase } from '$lib/stores/db';
 	import { isSideMenuOpen } from '$lib/stores/state';
 	import type { User } from '@supabase/supabase-js';
 	import { onMount } from 'svelte';
 
-	export let onClickLogin: () => void;
 	export let onSubscribe: () => void;
 	export let email = '';
 	export let isSubmitting = false;
@@ -38,11 +36,7 @@
 
 	// 로그인 핸들러
 	async function handleLogin() {
-		onClickLogin();
-		await supabase?.auth.signInWithOAuth({
-			provider: 'google',
-			options: { redirectTo: window.location.origin }
-		});
+		openLoginModal();
 	}
 </script>
 

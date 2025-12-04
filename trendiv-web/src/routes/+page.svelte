@@ -64,13 +64,6 @@
 		};
 	});
 
-	async function handleLogin() {
-		await supabase?.auth.signInWithOAuth({
-			provider: 'google',
-			options: { redirectTo: window.location.origin }
-		});
-	}
-
 	async function handleSubscribe() {
 		const targetEmail = $user?.email || email;
 		if (!targetEmail) return;
@@ -190,7 +183,7 @@
 
 <Header {user} {supabase} />
 <main>
-	<HeroSection onSubscribe={handleSubscribe} onClickLogin={handleLogin} bind:email {isSubmitting} />
+	<HeroSection onSubscribe={handleSubscribe} bind:email {isSubmitting} />
 	<div class="bg-bg-surface min-h-screen font-sans text-gray-900">
 		<div class="mx-auto max-w-5xl px-4 py-12">
 			<div class="mb-12 space-y-6">
