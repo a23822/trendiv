@@ -18,6 +18,11 @@
 }
 
 @layer base {
+	.scroll-locked {
+		overflow: hidden;
+		padding-right: var(--scrollbar-gap); /* 변수 사용! */
+	}
+
 	/* [크롬, 사파리, 엣지]*/
 	::-webkit-scrollbar {
 		width: 10px;
@@ -40,7 +45,7 @@
 	}
 
 	/* [파이어폭스] */
-	html {
+	* {
 		scrollbar-width: thin;
 		scrollbar-color: #148a7d transparent;
 	}

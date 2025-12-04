@@ -1,4 +1,5 @@
-const H4_STYLE = 'mt-5 mb-2 text-base font-bold text-gray-800 border-l-4 border-blue-500 pl-2';
+const H4_STYLE =
+	'first:mt-0 my-4 text-base font-bold text-gray-800 border-l-4 border-blue-500 pl-2';
 const P_STYLE = 'mb-2 text-gray-600 leading-relaxed text-sm';
 const UL_STYLE = 'list-disc pl-5 mb-4 text-gray-600 text-sm';
 

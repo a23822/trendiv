@@ -162,6 +162,7 @@ export default {
 				inherit: 'inherit'
 			},
 			spacing: {
+				'scrollbar-gap': 'var(--scrollbar-gap)',
 				sidemenu: '460px',
 				'header-height': '60px'
 			},

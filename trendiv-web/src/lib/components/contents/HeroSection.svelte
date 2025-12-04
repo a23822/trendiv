@@ -3,7 +3,6 @@
 	import { IDs } from '$lib/constants/ids';
 	import IconLogoHero from '$lib/icons/icon_logo_hero.svelte';
 	import { user, openLoginModal } from '$lib/stores/auth';
-	import { supabase } from '$lib/stores/db';
 	import { isSideMenuOpen } from '$lib/stores/state';
 	import type { User } from '@supabase/supabase-js';
 	import { onMount } from 'svelte';
