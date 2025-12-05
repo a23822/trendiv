@@ -2,6 +2,7 @@
 	import CloseButton from '$lib/components/pure/Button/CloseButton.svelte';
 	import MenuTab from '$lib/components/pure/Tab/MenuTab.svelte';
 	import { closeModal } from '$lib/stores/modal';
+	import { cn } from '$lib/utils/ClassMerge';
 
 	interface Props {
 		title?: string;
@@ -43,27 +44,48 @@
 
 <dialog
 	bind:this={dialog}
-	class="w-[400px] max-w-[calc(100%_-_32px)] overflow-hidden rounded-2xl backdrop:bg-black/50 sm:rounded-3xl"
+	class={cn(
+		'w-[400px] max-w-[calc(100%_-_32px)] overflow-hidden rounded-2xl backdrop:bg-black/50',
+		'sm:rounded-3xl'
+	)}
 	onclose={handleNativeClose}
 	onclick={handleBackdropClick}
 >
 	<div class="bg-bg-body flex flex-col">
-		<div class="flex flex-row-reverse items-center justify-between pl-4 sm:pl-6">
-			<CloseButton variant="inverted" size={40} onclick={requestClose} />
+		<div
+			class={cn(
+				'flex flex-row-reverse items-center justify-between',
+				'pl-4 pt-3',
+				'sm:pl-6'
+			)}
+		>
+			<CloseButton
+				className="shrink-0"
+				variant="inverted"
+				size={40}
+				onclick={requestClose}
+			/>
 
 			{#if title}
-				<div class="text-gray-900">
-					<h2 class="">{title}</h2>
+				<div class="overflow-hidden text-xl font-bold text-gray-900">
+					<h2 class="truncate">{title}</h2>
 				</div>
 			{/if}
 		</div>
 		{#if tabs.length > 1}
-			<div class="p-4 sm:p-6">
-				<MenuTab items={tabs.map((t) => t.title)} bind:current={activeIndex} />
+			<div class="px-4 py-3 sm:px-6">
+				<MenuTab
+					items={tabs.map((t) => t.title)}
+					bind:current={activeIndex}
+				/>
 			</div>
 		{:else if tabs.length === 1}
 			<h3
-				class="border-b border-gray-100 bg-gray-50 p-4 text-center text-lg font-bold text-gray-800"
+				class={cn(
+					'bg-gray-50 p-4',
+					'border-b border-gray-100',
+					'text-center text-lg font-bold text-gray-800'
+				)}
 			>
 				{tabs[0].title}
 			</h3>
@@ -71,14 +93,19 @@
 
 		<div
 			style="scrollbar-gutter: stable; padding-right: calc(1.5rem - var(--scrollbar-gap));"
-			class="max-h-[400px] overflow-y-auto px-6 pb-4 text-sm text-gray-700"
+			class={cn(
+				'max-h-[400px] overflow-y-auto px-6 pb-4',
+				'text-sm text-gray-700'
+			)}
 		>
 			{#if tabs[activeIndex]}
 				{@html tabs[activeIndex].content}
 			{/if}
 		</div>
 
-		<div class="flex justify-center gap-3 border-t border-gray-100 p-4">
+		<div
+			class={cn('flex justify-center gap-3', 'border-t border-gray-100 p-4')}
+		>
 			{#if onConfirm}
 				<button
 					class="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"

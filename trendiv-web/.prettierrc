@@ -1,13 +1,16 @@
 {
 	"useTabs": true,
 	"singleQuote": true,
+	"tabWidth": 2,
 	"trailingComma": "none",
-	"printWidth": 100,
+	"printWidth": 80,
 	"plugins": [
 		"@trivago/prettier-plugin-sort-imports",
 		"prettier-plugin-svelte",
 		"prettier-plugin-tailwindcss"
 	],
+	"singleAttributePerLine": true,
+
 	"overrides": [
 		{
 			"files": "*.svelte",

@@ -4,6 +4,7 @@
 	import IconLogoHero from '$lib/icons/icon_logo_hero.svelte';
 	import { user, openLoginModal } from '$lib/stores/auth';
 	import { isSideMenuOpen } from '$lib/stores/state';
+	import { cn } from '$lib/utils/ClassMerge';
 	import type { User } from '@supabase/supabase-js';
 	import { onMount } from 'svelte';
 
@@ -42,36 +43,71 @@
 <section
 	bind:this={heroSection}
 	class:paused={!isVisible || $isSideMenuOpen}
-	class="relative overflow-hidden bg-[#1a1a1a] px-4 py-12 sm:px-6 sm:py-20"
+	class={cn(
+		'relative overflow-hidden bg-[#1a1a1a]',
+		'px-4 py-12 sm:px-6 sm:py-20'
+	)}
 >
 	<div
-		class="animate-mesh1 pointer-events-none absolute inset-[-50%] bg-[radial-gradient(circle_at_30%_30%,rgba(77,208,189,0.25)_0%,transparent_40%)]"
+		class={cn(
+			'absolute inset-[-50%]',
+			'bg-[radial-gradient(circle_at_30%_30%,rgba(77,208,189,0.25)_0%,transparent_40%)]',
+			'animate-mesh1 pointer-events-none'
+		)}
 	></div>
 	<div
-		class="animate-mesh2 pointer-events-none absolute inset-[-50%] bg-[radial-gradient(circle_at_70%_60%,rgba(128,222,209,0.2)_0%,transparent_35%)]"
+		class={cn(
+			'absolute inset-[-50%]',
+			'bg-[radial-gradient(circle_at_70%_60%,rgba(128,222,209,0.2)_0%,transparent_35%)]',
+			'animate-mesh2 pointer-events-none'
+		)}
 	></div>
 	<div
-		class="animate-mesh3 pointer-events-none absolute inset-[-50%] bg-[radial-gradient(circle_at_50%_80%,rgba(27,168,150,0.18)_0%,transparent_40%)]"
+		class={cn(
+			'absolute inset-[-50%]',
+			'bg-[radial-gradient(circle_at_50%_80%,rgba(27,168,150,0.18)_0%,transparent_40%)]',
+			'animate-mesh3 pointer-events-none'
+		)}
 	></div>
 	<div
-		class="animate-mesh4 pointer-events-none absolute inset-[-50%] bg-[radial-gradient(circle_at_20%_70%,rgba(77,208,189,0.15)_0%,transparent_30%)]"
+		class={cn(
+			'absolute inset-[-50%]',
+			'bg-[radial-gradient(circle_at_20%_70%,rgba(77,208,189,0.15)_0%,transparent_30%)]',
+			'animate-mesh4 pointer-events-none'
+		)}
 	></div>
 
 	<div class="relative z-10 mx-auto max-w-3xl text-center">
 		<h2>
 			<IconLogoHero aria-hidden="true" />
 		</h2>
-		<p class="mt-4 text-lg font-bold leading-8 text-gray-300 dark:text-gray-600">
-			트렌디한 <span class="text-gray-100 dark:text-gray-900">HTML, CSS, A11y</span> 정보를<br />
-			<span class="text-gray-100 dark:text-gray-900">AI</span>가 직접 선별해서 보여드립니다.
+		<p
+			class={cn(
+				'mt-4 leading-8',
+				'text-lg font-bold  text-gray-300 dark:text-gray-600'
+			)}
+		>
+			트렌디한 <span class="text-gray-100 dark:text-gray-900"
+				>HTML, CSS, A11y</span
+			>
+			정보를<br />
+			<span class="text-gray-100 dark:text-gray-900">AI</span>가 직접 선별해서
+			보여드립니다.
 		</p>
 		<form
-			class="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row"
+			class={cn(
+				'flex flex-col items-center justify-center gap-3',
+				'mt-10',
+				'sm:flex-row'
+			)}
 			on:submit|preventDefault={onSubscribe}
 		>
 			{#if !currentUser}
 				<div class="w-full flex-1">
-					<label for={IDs.HERO.EMAIL_INPUT} class="sr-only">Email address</label>
+					<label
+						for={IDs.HERO.EMAIL_INPUT}
+						class="sr-only">Email address</label
+					>
 					<input
 						id={IDs.HERO.EMAIL_INPUT}
 						name="email"
