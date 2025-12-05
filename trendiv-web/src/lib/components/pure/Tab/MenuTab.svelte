@@ -28,8 +28,10 @@
 			<button
 				onclick={() => (current = i)}
 				type="button"
-				class="relative z-10 flex-1 rounded-lg py-2 text-sm font-bold capitalize transition-colors duration-200
-            {current === i ? 'text-white' : 'text-gray-500 hover:text-gray-700'}"
+				class="text-md relative z-10 flex-1 rounded-lg py-3 font-bold capitalize transition-colors duration-200 sm:text-lg
+            {current === i
+					? 'text-gray-100'
+					: 'text-gray-100 sm:text-gray-300 sm:hover:text-gray-100'}"
 			>
 				{item}
 			</button>

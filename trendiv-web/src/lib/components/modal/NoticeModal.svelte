@@ -1,14 +1,16 @@
 <script lang="ts">
+	import CloseButton from '$lib/components/pure/Button/CloseButton.svelte';
 	import MenuTab from '$lib/components/pure/Tab/MenuTab.svelte';
 	import { closeModal } from '$lib/stores/modal';
 
 	interface Props {
+		title?: string;
 		tabs?: { title: string; content: string }[];
 		confirmText?: string;
 		onConfirm?: () => void;
 	}
 
-	let { tabs = [], confirmText = '확인', onConfirm }: Props = $props();
+	let { title, tabs = [], confirmText = '확인', onConfirm }: Props = $props();
 
 	let activeIndex = $state(0);
 	let dialog: HTMLDialogElement;
@@ -46,8 +48,17 @@
 	onclick={handleBackdropClick}
 >
 	<div class="bg-bg-body flex flex-col">
+		<div class="flex flex-row-reverse items-center justify-between pl-4 sm:pl-6">
+			<CloseButton variant="inverted" size={40} onclick={requestClose} />
+
+			{#if title}
+				<div class="text-gray-900">
+					<h2 class="">{title}</h2>
+				</div>
+			{/if}
+		</div>
 		{#if tabs.length > 1}
-			<div class="px-4 py-3 sm:px-6 sm:py-4">
+			<div class="p-4 sm:p-6">
 				<MenuTab items={tabs.map((t) => t.title)} bind:current={activeIndex} />
 			</div>
 		{:else if tabs.length === 1}

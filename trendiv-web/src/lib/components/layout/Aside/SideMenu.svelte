@@ -48,7 +48,7 @@
 				<ThemeSwitch className="align-top" />
 			</div>
 			<div class="absolute right-0 top-0">
-				<CloseButton onClick={closeMenu} />
+				<CloseButton onclick={closeMenu} />
 			</div>
 			<div class="border-border-default shrink-0 border-b p-4">
 				<AuthButton />

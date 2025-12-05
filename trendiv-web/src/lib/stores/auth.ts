@@ -22,6 +22,7 @@ if (supabase) {
  */
 export function openLoginModal() {
 	openModal(NoticeModal, {
+		title: '서비스 이용 동의',
 		// 1. 탭 데이터 전달
 		tabs: [
 			{ title: '이용약관', content: TERMS_TEXT },
