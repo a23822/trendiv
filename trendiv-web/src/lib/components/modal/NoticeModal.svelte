@@ -3,15 +3,23 @@
 	import MenuTab from '$lib/components/pure/Tab/MenuTab.svelte';
 	import { closeModal } from '$lib/stores/modal';
 	import { cn } from '$lib/utils/ClassMerge';
+	import type { Component } from 'svelte';
 
 	interface Props {
 		title?: string;
 		tabs?: { title: string; content: string }[];
 		confirmText?: string;
 		onConfirm?: () => void;
+		confirmIcon?: Component;
 	}
 
-	let { title, tabs = [], confirmText = '확인', onConfirm }: Props = $props();
+	let {
+		title,
+		tabs = [],
+		confirmText = '확인',
+		onConfirm,
+		confirmIcon: ConfirmIcon
+	}: Props = $props();
 
 	let activeIndex = $state(0);
 	let dialog: HTMLDialogElement;
@@ -45,22 +53,17 @@
 <dialog
 	bind:this={dialog}
 	class={cn(
-		'w-[400px] max-w-[calc(100%_-_32px)] overflow-hidden rounded-2xl backdrop:bg-black/50',
-		'sm:rounded-3xl'
+		'w-[400px] max-w-[calc(100%_-_32px)] overflow-hidden rounded-2xl p-4',
+		'bg-bg-body backdrop:bg-black/50',
+		'sm:rounded-3xl sm:p-6'
 	)}
 	onclose={handleNativeClose}
 	onclick={handleBackdropClick}
 >
-	<div class="bg-bg-body flex flex-col">
-		<div
-			class={cn(
-				'flex flex-row-reverse items-center justify-between',
-				'pl-4 pt-3',
-				'sm:pl-6'
-			)}
-		>
+	<div class="flex flex-col">
+		<div class={cn('flex flex-row-reverse items-center justify-between')}>
 			<CloseButton
-				className="shrink-0"
+				className="shrink-0 -mt-1 sm:-mr-2"
 				variant="inverted"
 				size={40}
 				onclick={requestClose}
@@ -73,7 +76,7 @@
 			{/if}
 		</div>
 		{#if tabs.length > 1}
-			<div class="px-4 py-3 sm:px-6">
+			<div class="pt-3">
 				<MenuTab
 					items={tabs.map((t) => t.title)}
 					bind:current={activeIndex}
@@ -82,7 +85,7 @@
 		{:else if tabs.length === 1}
 			<h3
 				class={cn(
-					'bg-gray-50 p-4',
+					'bg-gray-50 py-4',
 					'border-b border-gray-100',
 					'text-center text-lg font-bold text-gray-800'
 				)}
@@ -90,41 +93,53 @@
 				{tabs[0].title}
 			</h3>
 		{/if}
-
 		<div
-			style="scrollbar-gutter: stable; padding-right: calc(1.5rem - var(--scrollbar-gap));"
 			class={cn(
-				'max-h-[400px] overflow-y-auto px-6 pb-4',
-				'text-sm text-gray-700'
+				'relative',
+				'before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:z-10 before:h-6',
+				'before:from-bg-body before:bg-gradient-to-b before:to-transparent',
+				'after:pointer-events-none after:absolute after:inset-x-0 after:bottom-0 after:z-10 after:h-6',
+				'after:from-bg-body after:bg-gradient-to-t after:to-transparent'
 			)}
 		>
-			{#if tabs[activeIndex]}
-				{@html tabs[activeIndex].content}
-			{/if}
+			<div
+				style="scrollbar-gutter: stable; margin-right: calc(var(--scrollbar-gap) * -1);"
+				class={cn(
+					'max-h-[400px] overflow-y-auto',
+					'pt-6',
+					'text-sm text-gray-700'
+				)}
+			>
+				{#if tabs[activeIndex]}
+					{@html tabs[activeIndex].content}
+				{/if}
+			</div>
 		</div>
-
-		<div
-			class={cn('flex justify-center gap-3', 'border-t border-gray-100 p-4')}
-		>
+		<div class={cn('flex justify-center gap-2 pt-4')}>
+			<button
+				class={cn(
+					'h-[40px] flex-1 rounded-xl',
+					'bg-gray-300',
+					'text-xl font-semibold text-gray-600'
+				)}
+				onclick={requestClose}
+			>
+				취소
+			</button>
 			{#if onConfirm}
 				<button
-					class="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-					onclick={requestClose}
-				>
-					취소
-				</button>
-				<button
-					class="rounded-md bg-blue-500 px-4 py-2 text-sm font-bold text-white hover:bg-blue-600"
+					class={cn(
+						'flex items-center justify-center',
+						'h-[40px] flex-1 rounded-xl',
+						'bg-gray-900',
+						'text-xl font-semibold text-gray-600'
+					)}
 					onclick={handleConfirm}
 				>
+					{#if ConfirmIcon}
+						<ConfirmIcon class="h-6 w-6 fill-current" />
+					{/if}
 					{confirmText}
-				</button>
-			{:else}
-				<button
-					class="rounded-md bg-gray-800 px-4 py-2 text-sm text-white hover:bg-gray-700"
-					onclick={requestClose}
-				>
-					닫기
 				</button>
 			{/if}
 		</div>

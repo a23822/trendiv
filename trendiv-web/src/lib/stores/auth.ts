@@ -1,9 +1,10 @@
-import { writable } from 'svelte/store';
+import NoticeModal from '$lib/components/modal/NoticeModal.svelte';
+import IconLogoGoogle from '$lib/icons/icon_logo_google.svelte';
 import { supabase } from '$lib/stores/db';
 import { openModal } from '$lib/stores/modal';
-import NoticeModal from '$lib/components/modal/NoticeModal.svelte';
-import type { User } from '@supabase/supabase-js';
 import { TERMS_TEXT, PRIVACY_TEXT } from '$lib/stores/policy';
+import type { User } from '@supabase/supabase-js';
+import { writable } from 'svelte/store';
 
 // 사용자 정보를 담는 스토어 (초기값: null)
 export const user = writable<User | null>(null);
@@ -23,15 +24,13 @@ if (supabase) {
 export function openLoginModal() {
 	openModal(NoticeModal, {
 		title: '서비스 이용 동의',
-		// 1. 탭 데이터 전달
 		tabs: [
 			{ title: '이용약관', content: TERMS_TEXT },
 			{ title: '개인정보처리방침', content: PRIVACY_TEXT }
 		],
-		// 2. 버튼 설정 전달
-		confirmText: '동의하고 구글 로그인',
+		confirmText: '구글로 로그인',
+		confirmIcon: IconLogoGoogle,
 
-		// 🔥 3. 확인 버튼을 누르면 실행될 함수 전달
 		onConfirm: () => {
 			signInWithGoogle();
 		}

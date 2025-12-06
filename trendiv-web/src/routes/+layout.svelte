@@ -27,17 +27,32 @@
 		return width;
 	}
 
-	$effect(() => {
+	function updateScrollbarWidth() {
 		const width = getScrollbarWidth();
-
 		scrollbarWidth.set(width);
-
 		document.documentElement.style.setProperty('--scrollbar-gap', `${width}px`);
+	}
+
+	$effect(() => {
+		updateScrollbarWidth();
+
+		const observer = new ResizeObserver(() => {
+			updateScrollbarWidth();
+		});
+
+		observer.observe(document.documentElement);
+
+		return () => {
+			observer.disconnect();
+		};
 	});
 </script>
 
 <svelte:head>
-	<link rel="icon" href={favicon} />
+	<link
+		rel="icon"
+		href={favicon}
+	/>
 </svelte:head>
 
 {@render children()}
