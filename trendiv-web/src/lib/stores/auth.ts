@@ -1,3 +1,4 @@
+import AgreementModalBottom from '$lib/components/modal/AgreementModalBottom.svelte';
 import NoticeModal from '$lib/components/modal/NoticeModal.svelte';
 import IconLogoGoogle from '$lib/icons/icon_logo_google.svelte';
 import { supabase } from '$lib/stores/db';
@@ -28,10 +29,21 @@ export function openLoginModal() {
 			{ title: '이용약관', content: TERMS_TEXT },
 			{ title: '개인정보처리방침', content: PRIVACY_TEXT }
 		],
-		confirmText: '구글로 로그인',
-		confirmIcon: IconLogoGoogle,
+		bottomComponent: AgreementModalBottom,
+		bottomProps: {
+			confirmText: 'Google로 시작하기',
+			confirmIcon: IconLogoGoogle,
+			agreements: [
+				{ id: 'terms', text: '[필수] 이용약관 동의', required: true },
+				{
+					id: 'privacy',
+					text: '[필수] 개인정보 수집 및 이용 동의',
+					required: true
+				}
+			]
+		},
 
-		onConfirm: () => {
+		onOk: () => {
 			signInWithGoogle();
 		}
 	});

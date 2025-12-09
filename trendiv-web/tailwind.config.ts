@@ -1,5 +1,5 @@
-import type { Config } from 'tailwindcss';
 import typography from '@tailwindcss/typography';
+import type { Config } from 'tailwindcss';
 import plugin from 'tailwindcss/plugin';
 
 export default {
@@ -62,17 +62,32 @@ export default {
 					xl: 'rgb(var(--shadow-xl) / <alpha-value>)'
 				},
 				mint: {
-					0: '#fff',
-					50: '#E0F7F4',
-					100: '#B2EBE3',
-					200: '#80DED1',
-					300: '#4DD0BD',
-					400: '#26C6A8',
-					500: '#1BA896',
-					600: '#148A7D',
-					700: '#0D6B63',
-					800: '#09504B',
-					900: '#053330'
+					0: 'rgb(var(--mint-0) / <alpha-value>)',
+					50: 'rgb(var(--mint-50) / <alpha-value>)',
+					100: 'rgb(var(--mint-100) / <alpha-value>)',
+					200: 'rgb(var(--mint-200) / <alpha-value>)',
+					300: 'rgb(var(--mint-300) / <alpha-value>)',
+					400: 'rgb(var(--mint-400) / <alpha-value>)',
+					500: 'rgb(var(--mint-500) / <alpha-value>)',
+					600: 'rgb(var(--mint-600) / <alpha-value>)',
+					700: 'rgb(var(--mint-700) / <alpha-value>)',
+					800: 'rgb(var(--mint-800) / <alpha-value>)',
+					900: 'rgb(var(--mint-900) / <alpha-value>)',
+					1000: 'rgb(var(--mint-1000) / <alpha-value>)'
+				},
+				forest: {
+					0: 'rgb(var(--forest-0) / <alpha-value>)',
+					50: 'rgb(var(--forest-50) / <alpha-value>)',
+					100: 'rgb(var(--forest-100) / <alpha-value>)',
+					200: 'rgb(var(--forest-200) / <alpha-value>)',
+					300: 'rgb(var(--forest-300) / <alpha-value>)',
+					400: 'rgb(var(--forest-400) / <alpha-value>)',
+					500: 'rgb(var(--forest-500) / <alpha-value>)',
+					600: 'rgb(var(--forest-600) / <alpha-value>)',
+					700: 'rgb(var(--forest-700) / <alpha-value>)',
+					800: 'rgb(var(--forest-800) / <alpha-value>)',
+					900: 'rgb(var(--forest-900) / <alpha-value>)',
+					1000: 'rgb(var(--forest-1000) / <alpha-value>)'
 				},
 				gray: {
 					0: 'rgb(var(--gray-0) / <alpha-value>)',
@@ -99,6 +114,60 @@ export default {
 					800: 'rgb(var(--neutral-800) / <alpha-value>)',
 					900: 'rgb(var(--neutral-900) / <alpha-value>)',
 					1000: 'rgb(var(--neutral-1000) / <alpha-value>)'
+				},
+				'mint-fixed': {
+					0: 'rgb(var(--mint-0-fixed) / <alpha-value>)',
+					50: 'rgb(var(--mint-50-fixed) / <alpha-value>)',
+					100: 'rgb(var(--mint-100-fixed) / <alpha-value>)',
+					200: 'rgb(var(--mint-200-fixed) / <alpha-value>)',
+					300: 'rgb(var(--mint-300-fixed) / <alpha-value>)',
+					400: 'rgb(var(--mint-400-fixed) / <alpha-value>)',
+					500: 'rgb(var(--mint-500-fixed) / <alpha-value>)',
+					600: 'rgb(var(--mint-600-fixed) / <alpha-value>)',
+					700: 'rgb(var(--mint-700-fixed) / <alpha-value>)',
+					800: 'rgb(var(--mint-800-fixed) / <alpha-value>)',
+					900: 'rgb(var(--mint-900-fixed) / <alpha-value>)',
+					1000: 'rgb(var(--mint-1000-fixed) / <alpha-value>)'
+				},
+				'forest-fixed': {
+					0: 'rgb(var(--forest-0-fixed) / <alpha-value>)',
+					50: 'rgb(var(--forest-50-fixed) / <alpha-value>)',
+					100: 'rgb(var(--forest-100-fixed) / <alpha-value>)',
+					200: 'rgb(var(--forest-200-fixed) / <alpha-value>)',
+					300: 'rgb(var(--forest-300-fixed) / <alpha-value>)',
+					400: 'rgb(var(--forest-400-fixed) / <alpha-value>)',
+					500: 'rgb(var(--forest-500-fixed) / <alpha-value>)',
+					600: 'rgb(var(--forest-600-fixed) / <alpha-value>)',
+					700: 'rgb(var(--forest-700-fixed) / <alpha-value>)',
+					800: 'rgb(var(--forest-800-fixed) / <alpha-value>)',
+					900: 'rgb(var(--forest-900-fixed) / <alpha-value>)',
+					1000: 'rgb(var(--forest-1000-fixed) / <alpha-value>)'
+				},
+				'gray-fixed': {
+					0: 'rgb(var(--gray-0-fixed) / <alpha-value>)',
+					100: 'rgb(var(--gray-100-fixed) / <alpha-value>)',
+					200: 'rgb(var(--gray-200-fixed) / <alpha-value>)',
+					300: 'rgb(var(--gray-300-fixed) / <alpha-value>)',
+					400: 'rgb(var(--gray-400-fixed) / <alpha-value>)',
+					500: 'rgb(var(--gray-500-fixed) / <alpha-value>)',
+					600: 'rgb(var(--gray-600-fixed) / <alpha-value>)',
+					700: 'rgb(var(--gray-700-fixed) / <alpha-value>)',
+					800: 'rgb(var(--gray-800-fixed) / <alpha-value>)',
+					900: 'rgb(var(--gray-900-fixed) / <alpha-value>)',
+					1000: 'rgb(var(--gray-1000-fixed) / <alpha-value>)'
+				},
+				'neutral-fixed': {
+					0: 'rgb(var(--neutral-0-fixed) / <alpha-value>)',
+					100: 'rgb(var(--neutral-100-fixed) / <alpha-value>)',
+					200: 'rgb(var(--neutral-200-fixed) / <alpha-value>)',
+					300: 'rgb(var(--neutral-300-fixed) / <alpha-value>)',
+					400: 'rgb(var(--neutral-400-fixed) / <alpha-value>)',
+					500: 'rgb(var(--neutral-500-fixed) / <alpha-value>)',
+					600: 'rgb(var(--neutral-600-fixed) / <alpha-value>)',
+					700: 'rgb(var(--neutral-700-fixed) / <alpha-value>)',
+					800: 'rgb(var(--neutral-800-fixed) / <alpha-value>)',
+					900: 'rgb(var(--neutral-900-fixed) / <alpha-value>)',
+					1000: 'rgb(var(--neutral-1000-fixed) / <alpha-value>)'
 				},
 				teal: {
 					0: '#FFFFFF',
@@ -138,23 +207,16 @@ export default {
 					700: '#0B4C5E',
 					800: '#073845',
 					900: '#04242D'
-				},
-				forest: {
-					0: '#FFFFFF',
-					50: '#E5F5EF',
-					100: '#C2E8DA',
-					200: '#96D9C2',
-					300: '#68C7A8',
-					400: '#42B391',
-					500: '#2D9A7A',
-					600: '#237D63',
-					700: '#19604C',
-					800: '#104538',
-					900: '#082B23'
 				}
 			},
 			fontFamily: {
-				sans: ['Pretendard', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+				sans: [
+					'Pretendard',
+					'Inter',
+					'ui-sans-serif',
+					'system-ui',
+					'sans-serif'
+				],
 				serif: ['Merriweather', 'serif'],
 				mono: ['Fira Code', 'monospace']
 			},

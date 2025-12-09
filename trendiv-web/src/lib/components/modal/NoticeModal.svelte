@@ -9,16 +9,18 @@
 		title?: string;
 		tabs?: { title: string; content: string }[];
 		confirmText?: string;
-		onConfirm?: () => void;
-		confirmIcon?: Component;
+		onOk?: () => void;
+		bottomComponent?: Component;
+		bottomProps?: Record<string, any>;
 	}
 
 	let {
 		title,
 		tabs = [],
 		confirmText = '확인',
-		onConfirm,
-		confirmIcon: ConfirmIcon
+		onOk,
+		bottomComponent: BottomComponent,
+		bottomProps = {}
 	}: Props = $props();
 
 	let activeIndex = $state(0);
@@ -39,7 +41,7 @@
 	}
 
 	function handleConfirm() {
-		if (onConfirm) onConfirm();
+		if (onOk) onOk();
 		requestClose();
 	}
 
@@ -53,14 +55,14 @@
 <dialog
 	bind:this={dialog}
 	class={cn(
-		'w-[400px] max-w-[calc(100%_-_32px)] overflow-hidden rounded-2xl p-4',
+		'w-[400px] max-w-[calc(100%_-_32px)] overflow-hidden overflow-y-auto rounded-2xl p-4',
 		'bg-bg-body backdrop:bg-black/50',
 		'sm:rounded-3xl sm:p-6'
 	)}
 	onclose={handleNativeClose}
 	onclick={handleBackdropClick}
 >
-	<div class="flex flex-col">
+	<section>
 		<div class={cn('flex flex-row-reverse items-center justify-between')}>
 			<CloseButton
 				className="shrink-0 -mt-1 sm:-mr-2"
@@ -95,18 +97,19 @@
 		{/if}
 		<div
 			class={cn(
-				'relative',
-				'before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:z-10 before:h-6',
-				'before:from-bg-body before:bg-gradient-to-b before:to-transparent',
-				'after:pointer-events-none after:absolute after:inset-x-0 after:bottom-0 after:z-10 after:h-6',
-				'after:from-bg-body after:bg-gradient-to-t after:to-transparent'
+				'relative -mx-4 sm:-mx-6',
+				'before:pointer-events-none before:absolute before:left-0 before:right-[var(--scrollbar-gap)] before:top-0 before:z-10 before:h-8',
+				'before:from-bg-body before:bg-gradient-to-b before:from-[0.5rem] before:to-transparent',
+				'after:pointer-events-none after:absolute after:bottom-0 after:left-0 after:right-[var(--scrollbar-gap)] after:z-10 after:h-8',
+				'after:from-bg-body after:bg-gradient-to-t after:from-[0.5rem] after:to-transparent'
 			)}
 		>
 			<div
-				style="scrollbar-gutter: stable; margin-right: calc(var(--scrollbar-gap) * -1);"
+				style="scrollbar-gutter: stable;"
 				class={cn(
 					'max-h-[400px] overflow-y-auto',
-					'pt-6',
+					'py-8 pl-4 sm:pl-6',
+					'pr-[calc(1rem-var(--scrollbar-gap))] sm:pr-[calc(1.5rem-var(--scrollbar-gap))]',
 					'text-sm text-gray-700'
 				)}
 			>
@@ -115,33 +118,13 @@
 				{/if}
 			</div>
 		</div>
-		<div class={cn('flex justify-center gap-2 pt-4')}>
-			<button
-				class={cn(
-					'h-[40px] flex-1 rounded-xl',
-					'bg-gray-300',
-					'text-xl font-semibold text-gray-600'
-				)}
-				onclick={requestClose}
-			>
-				취소
-			</button>
-			{#if onConfirm}
-				<button
-					class={cn(
-						'flex items-center justify-center',
-						'h-[40px] flex-1 rounded-xl',
-						'bg-gray-900',
-						'text-xl font-semibold text-gray-600'
-					)}
-					onclick={handleConfirm}
-				>
-					{#if ConfirmIcon}
-						<ConfirmIcon class="h-6 w-6 fill-current" />
-					{/if}
-					{confirmText}
-				</button>
-			{/if}
-		</div>
-	</div>
+		{#if BottomComponent}
+			<BottomComponent
+				onCancel={requestClose}
+				onConfirm={handleConfirm}
+				{confirmText}
+				{...bottomProps}
+			/>
+		{/if}
+	</section>
 </dialog>

@@ -7,5 +7,8 @@ export const IDs = {
 	},
 	HERO: {
 		EMAIL_INPUT: 'hero-email-input'
+	},
+	MODAL: {
+		AGREEMENT_CHECKBOX_GROUP: 'modal-agreement-checkbox-group'
 	}
 };

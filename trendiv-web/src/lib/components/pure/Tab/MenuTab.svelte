@@ -14,23 +14,18 @@
 	let leftPos = $derived(current * tabWidth);
 </script>
 
-<div class="w-full rounded-xl bg-gray-800 px-1 {className}">
+<div
+	class={cn(
+		'border-mint-200 bg-forest-100/50 rounded-lg border p-1',
+		className
+	)}
+>
 	<div class="relative flex">
 		<div
 			class={cn(
-				'absolute bottom-1 top-1',
-				'from-mint-300 to-mint-500 bg-gradient-to-r',
-				'rounded-lg opacity-50 blur-sm',
-				'transition-all duration-300 ease-out'
-			)}
-			style="width: {tabWidth}%; left: {leftPos}%;"
-		></div>
-
-		<div
-			class={cn(
-				'absolute bottom-1 top-1',
-				'from-mint-400 to-mint-600 bg-gradient-to-r',
-				'rounded-lg shadow-sm',
+				'absolute inset-y-0',
+				'border-mint-200 rounded-md border',
+				'shadow-mint-100 bg-gray-fixed-0 shadow-sm',
 				'transition-all duration-300 ease-out'
 			)}
 			style="width: {tabWidth}%; left: {leftPos}%;"
@@ -41,14 +36,12 @@
 				onclick={() => (current = i)}
 				type="button"
 				class={cn(
-					'relative z-10 flex-1 rounded-lg py-3 capitalize',
-					'transition-colors duration-200',
-					'text-md font-bold sm:text-lg',
-
-					'text-gray-100',
+					'relative z-10 flex-1 rounded-md px-3 py-2',
+					'truncate text-sm font-medium',
+					'transition-colors duration-300',
 					current === i
-						? 'dark:text-gray-800'
-						: 'sm:text-gray-300 sm:hover:text-gray-100'
+						? 'text-forest-fixed-800 font-bold'
+						: 'text-neutral-700 hover:font-bold hover:text-neutral-800'
 				)}
 			>
 				{item}
