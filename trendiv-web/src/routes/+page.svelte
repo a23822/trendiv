@@ -18,7 +18,7 @@
 	let isLoadingMore = false;
 	let hasMore = true;
 	let searchKeyword = '';
-	let selectedTag = '';
+	let selectedTags: string[] = [];
 	let isSearching = false;
 	let selectedTrend: Trend | null = null;
 
@@ -119,7 +119,7 @@
 				page: page.toString(),
 				limit: '20',
 				searchKeyword: searchKeyword,
-				tagFilter: selectedTag
+				tagFilter: selectedTags.join(',')
 			});
 			const res = await fetch(`${API_URL}/api/trends?${params}`);
 
@@ -153,12 +153,18 @@
 		}
 	}
 
-	function handleSearch() {
+	function handleSearch(keyword: string) {
+		searchKeyword = keyword;
 		fetchTrends(true);
 	}
 
-	function handleTagClick(tag: string) {
-		selectedTag = selectedTag === tag ? '' : tag;
+	function handleClear() {
+		searchKeyword = '';
+		fetchTrends(true);
+	}
+
+	function handleTagChange(newTags: string[]) {
+		selectedTags = newTags;
 		fetchTrends(true);
 	}
 
@@ -200,35 +206,15 @@
 	/>
 	<div class="bg-bg-surface">
 		<div class="mx-auto max-w-5xl p-4 sm:p-6">
-			<!-- <div class="relative mb-12 space-y-6">
-				<div class="group mx-auto max-w-lg">
-					<input
-						type="text"
-						bind:value={searchKeyword}
-						placeholder="검색어를 입력해주세요."
-						on:keydown={(e) => e.key === 'Enter' && handleSearch()}
-						class="w-full rounded-xl border border-gray-200 bg-gray-50 px-5 py-3 pl-12 text-gray-900 transition-all focus:bg-white focus:outline-none focus:ring-2 focus:ring-gray-900"
-					/>
-					<span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
-						>🔍</span
-					>
-				</div>
-
-				<div class="flex flex-wrap justify-center gap-2">
-					{#each popularTags as tag}
-						<button
-							class="rounded-full border px-4 py-1.5 text-sm font-medium transition-all
-            {selectedTag === tag
-								? 'border-gray-900 bg-gray-900 text-white'
-								: 'border-gray-200 bg-white text-gray-500 hover:border-gray-400 hover:text-gray-900'}"
-							on:click={() => handleTagClick(tag)}
-						>
-							{tag}
-						</button>
-					{/each}
-				</div>
-			</div> -->
-			<SearchCard />
+			<SearchCard
+				bind:searchKeyword
+				bind:selectedTags
+				tags={popularTags}
+				{isLoadingMore}
+				onsearch={handleSearch}
+				onclear={handleClear}
+				onchange={handleTagChange}
+			/>
 
 			{#if isSearching}
 				<div class="py-32 text-center text-gray-400">로딩 중...</div>
