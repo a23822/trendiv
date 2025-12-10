@@ -5,7 +5,7 @@ const BASE_TRANSITION_COLOR = 'transition-colors duration-300 ease-in-out';
 export const CommonStyles = {
 	CARD: cn(
 		'group',
-		'bg-gray-0 rounded-lg sm:rounded-xl',
+		'bg-gray-0 rounded-xl',
 		'p-4 sm:p-6',
 		'border border-gray-300/60',
 		'hover:border-gray-400 hover:shadow-sm',
