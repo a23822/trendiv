@@ -1,9 +1,9 @@
 import AgreementModalBottom from '$lib/components/modal/AgreementModalBottom.svelte';
 import NoticeModal from '$lib/components/modal/NoticeModal.svelte';
+import { TERMS_TEXT, PRIVACY_TEXT } from '$lib/constants/policy';
 import IconLogoGoogle from '$lib/icons/icon_logo_google.svelte';
 import { supabase } from '$lib/stores/db';
 import { openModal } from '$lib/stores/modal';
-import { TERMS_TEXT, PRIVACY_TEXT } from '$lib/stores/policy';
 import type { User } from '@supabase/supabase-js';
 import { writable } from 'svelte/store';
 

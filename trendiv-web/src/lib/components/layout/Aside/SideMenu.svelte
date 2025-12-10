@@ -54,14 +54,16 @@
 				<AuthButton />
 			</div>
 			<nav class="flex-1 overflow-hidden">
-				<ul>
+				<!-- <ul>
 					<li>1</li>
 					<li>2</li>
 					<li>3</li>
-				</ul>
+				</ul> -->
 			</nav>
 			<div class="bg-bg-surface border-border-default shrink-0 border-t">
-				<p class="py-10 text-center text-xs text-gray-700">© 2025 Trendiv. All rights reserved.</p>
+				<p class="py-10 text-center text-xs text-gray-700">
+					© 2025 Trendiv. All rights reserved.
+				</p>
 			</div>
 		</aside>
 	{/if}

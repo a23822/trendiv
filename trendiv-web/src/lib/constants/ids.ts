@@ -10,5 +10,8 @@ export const IDs = {
 	},
 	MODAL: {
 		AGREEMENT_CHECKBOX_GROUP: 'modal-agreement-checkbox-group'
+	},
+	CARD: {
+		SEARCH_INPUT: 'card-search-input'
 	}
 };

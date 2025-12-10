@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { PUBLIC_API_URL } from '$env/static/public';
 	import HeroSection from '$lib/components/contents/HeroSection.svelte';
+	import SearchCard from '$lib/components/contents/SearchCard.svelte';
 	import Header from '$lib/components/layout/Header/Header.svelte';
 	import { user } from '$lib/stores/auth';
 	import { supabase } from '$lib/stores/db';
@@ -22,7 +23,14 @@
 	let selectedTrend: Trend | null = null;
 
 	const API_URL = PUBLIC_API_URL || 'http://127.0.0.1:3000';
-	const popularTags = ['CSS', 'HTML', 'React', 'Accessibility', 'iOS', 'Performance'];
+	const popularTags = [
+		'CSS',
+		'HTML',
+		'React',
+		'Accessibility',
+		'iOS',
+		'Performance'
+	];
 
 	// 구독 관련 to HeroSection
 	let email = '';
@@ -146,13 +154,11 @@
 	}
 
 	function handleSearch() {
-		selectedTag = '';
 		fetchTrends(true);
 	}
 
 	function handleTagClick(tag: string) {
 		selectedTag = selectedTag === tag ? '' : tag;
-		searchKeyword = '';
 		fetchTrends(true);
 	}
 
@@ -168,7 +174,8 @@
 
 	function infiniteScroll(node: HTMLElement) {
 		const observer = new IntersectionObserver((entries) => {
-			if (entries[0].isIntersecting && hasMore && !isSearching) fetchTrends(false);
+			if (entries[0].isIntersecting && hasMore && !isSearching)
+				fetchTrends(false);
 		});
 
 		observer.observe(node);
@@ -181,21 +188,30 @@
 	}
 </script>
 
-<Header {user} {supabase} />
+<Header
+	{user}
+	{supabase}
+/>
 <main>
-	<HeroSection onSubscribe={handleSubscribe} bind:email {isSubmitting} />
-	<div class="bg-bg-surface min-h-screen font-sans text-gray-900">
-		<div class="mx-auto max-w-5xl px-4 py-12">
-			<div class="mb-12 space-y-6">
+	<HeroSection
+		onSubscribe={handleSubscribe}
+		bind:email
+		{isSubmitting}
+	/>
+	<div class="bg-bg-surface">
+		<div class="mx-auto max-w-5xl p-4 sm:p-6">
+			<!-- <div class="relative mb-12 space-y-6">
 				<div class="group mx-auto max-w-lg">
 					<input
 						type="text"
 						bind:value={searchKeyword}
-						placeholder="검색어 입력..."
+						placeholder="검색어를 입력해주세요."
 						on:keydown={(e) => e.key === 'Enter' && handleSearch()}
 						class="w-full rounded-xl border border-gray-200 bg-gray-50 px-5 py-3 pl-12 text-gray-900 transition-all focus:bg-white focus:outline-none focus:ring-2 focus:ring-gray-900"
 					/>
-					<span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+					<span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+						>🔍</span
+					>
 				</div>
 
 				<div class="flex flex-wrap justify-center gap-2">
@@ -211,7 +227,8 @@
 						</button>
 					{/each}
 				</div>
-			</div>
+			</div> -->
+			<SearchCard />
 
 			{#if isSearching}
 				<div class="py-32 text-center text-gray-400">로딩 중...</div>
@@ -248,15 +265,21 @@
 								{trend.title}
 							</h2>
 
-							<p class="mb-4 line-clamp-2 text-sm leading-relaxed text-gray-500">
+							<p
+								class="mb-4 line-clamp-2 text-sm leading-relaxed text-gray-500"
+							>
 								{trend.oneLineSummary || trend.summary}
 							</p>
 
-							<div class="flex items-center justify-between border-t border-gray-100 pt-4">
-								<span class="text-xs font-bold uppercase tracking-wide text-gray-400"
+							<div
+								class="flex items-center justify-between border-t border-gray-100 pt-4"
+							>
+								<span
+									class="text-xs font-bold uppercase tracking-wide text-gray-400"
 									>{trend.source}</span
 								>
-								<span class="rounded bg-gray-100 px-2 py-1 text-xs font-bold text-gray-900"
+								<span
+									class="rounded bg-gray-100 px-2 py-1 text-xs font-bold text-gray-900"
 									>AI Score {trend.score}</span
 								>
 							</div>
@@ -265,7 +288,10 @@
 				</div>
 
 				{#if hasMore}
-					<div use:infiniteScroll class="flex justify-center py-16 text-sm text-gray-400">
+					<div
+						use:infiniteScroll
+						class="flex justify-center py-16 text-sm text-gray-400"
+					>
 						{#if isLoadingMore}
 							로딩 중...
 						{:else}
@@ -289,11 +315,15 @@
 					<div class="p-8">
 						<div class="mb-6 flex items-start justify-between">
 							<div class="flex gap-2">
-								<span class="rounded-full bg-black px-3 py-1 text-xs font-bold text-white"
+								<span
+									class="rounded-full bg-black px-3 py-1 text-xs font-bold text-white"
 									>Score {selectedTrend.score}</span
 								>
 							</div>
-							<button on:click={closeModal} class="text-gray-400 hover:text-black">✕</button>
+							<button
+								on:click={closeModal}
+								class="text-gray-400 hover:text-black">✕</button
+							>
 						</div>
 
 						<h2 class="mb-6 text-2xl font-bold leading-tight text-gray-900">
@@ -301,8 +331,12 @@
 						</h2>
 
 						{#if selectedTrend.keyPoints?.length}
-							<div class="mb-8 rounded-xl border border-gray-100 bg-gray-50 p-6">
-								<h3 class="mb-4 text-sm font-bold uppercase tracking-wide text-gray-900">
+							<div
+								class="mb-8 rounded-xl border border-gray-100 bg-gray-50 p-6"
+							>
+								<h3
+									class="mb-4 text-sm font-bold uppercase tracking-wide text-gray-900"
+								>
 									Key Takeaways
 								</h3>
 								<ul class="space-y-3">
