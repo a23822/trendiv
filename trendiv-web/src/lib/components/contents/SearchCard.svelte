@@ -6,7 +6,7 @@
 	import { cn } from '$lib/utils/ClassMerge';
 	import { flip } from 'svelte/animate';
 	import { quintOut } from 'svelte/easing';
-	import { crossfade, fade } from 'svelte/transition';
+	import { crossfade, fade, slide } from 'svelte/transition';
 
 	interface Props {
 		tags?: string[];
@@ -74,16 +74,22 @@
 		{onsearch}
 		{onclear}
 	/>
-	<div class="border-default mt-4 border-t-2 py-4">
+	<div class="border-default mt-4 border-t-2">
 		<div>
 			{#if hasSelected}
 				<div
-					class="flex items-center gap-2 border-b border-gray-200 pb-4 dark:border-gray-700"
+					in:slide={{ duration: 300, easing: quintOut }}
+					out:slide={{ duration: 300, easing: quintOut, delay: 200 }}
+					class="mb-4 flex items-center gap-2 border-b border-gray-200 py-4 dark:border-gray-700"
 				>
-					<div class="flex flex-wrap gap-2">
+					<div
+						in:fade={{ duration: 300, delay: 200 }}
+						out:fade={{ duration: 200 }}
+						class="flex flex-wrap gap-2"
+					>
 						{#each selectedTags as tag (tag)}
 							<div
-								animate:flip={{ duration: 300 }}
+								animate:flip={{ duration: 300, delay: 100 }}
 								in:receive={{ key: tag }}
 								out:send={{ key: tag }}
 							>
@@ -100,7 +106,7 @@
 				</div>
 			{/if}
 
-			<div class="flex flex-wrap gap-2 pt-4">
+			<div class="mt-4 flex flex-wrap gap-2">
 				<div transition:fade={{ duration: 200 }}>
 					<SearchChip
 						onclick={resetAll}
@@ -114,7 +120,7 @@
 				</div>
 				{#each unselectedTags as tag (tag)}
 					<div
-						animate:flip={{ duration: 300 }}
+						animate:flip={{ duration: 300, delay: 100 }}
 						in:receive={{ key: tag }}
 						out:send={{ key: tag }}
 					>
