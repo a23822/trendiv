@@ -50,16 +50,16 @@
 			<div class="absolute right-0 top-0">
 				<CloseButton onclick={closeMenu} />
 			</div>
-			<div class="border-border-default shrink-0 border-b p-4">
+			<div class="border-border-default mb-auto shrink-0 border-b p-4">
 				<AuthButton />
 			</div>
-			<nav class="flex-1 overflow-hidden">
-				<!-- <ul>
+			<!-- <nav class="flex-1 overflow-hidden">
+				<ul>
 					<li>1</li>
 					<li>2</li>
 					<li>3</li>
-				</ul> -->
-			</nav>
+				</ul>
+			</nav> -->
 			<div class="bg-bg-surface border-border-default shrink-0 border-t">
 				<p class="py-10 text-center text-xs text-gray-700">
 					© 2025 Trendiv. All rights reserved.

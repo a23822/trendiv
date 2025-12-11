@@ -129,9 +129,9 @@
 			class={cn(
 				'flex h-12 w-12 items-center justify-center rounded-xl',
 				CommonStyles.DEFAULT_TRANSTION_COLOR,
-				'bg-mint-200 text-gray-800',
+				'bg-forest-200/80 text-forest-700',
 				'active:scale-95 sm:hover:translate-x-0.5',
-				'disabled:bg-mint-200/50 disabled:cursor-not-allowed disabled:text-gray-800/50'
+				'disabled:bg-forest-200/50 disabled:text-forest-500/70 disabled:cursor-not-allowed'
 			)}
 			onclick={handleSearch}
 			disabled={isLoading || !value.trim()}

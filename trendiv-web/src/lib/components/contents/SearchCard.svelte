@@ -80,28 +80,32 @@
 				<div
 					in:slide={{ duration: 300, easing: quintOut }}
 					out:slide={{ duration: 300, easing: quintOut, delay: 200 }}
-					class="mb-4 flex items-center gap-2 border-b border-gray-200 py-4 dark:border-gray-700"
 				>
 					<div
-						in:fade={{ duration: 300, delay: 200 }}
-						out:fade={{ duration: 200 }}
-						class="flex flex-wrap gap-2"
+						transition:fade={{ duration: 200 }}
+						class="border-default mb-4 flex items-center gap-2 border-b-2 py-4"
 					>
-						{#each selectedTags as tag (tag)}
-							<div
-								animate:flip={{ duration: 300, delay: 100 }}
-								in:receive={{ key: tag }}
-								out:send={{ key: tag }}
-							>
-								<SearchChip
-									active={true}
-									onclick={() => unselectTag(tag)}
-									hasClose={true}
+						<div
+							in:fade={{ duration: 300, delay: 200 }}
+							out:fade={{ duration: 200 }}
+							class="flex flex-wrap gap-2"
+						>
+							{#each selectedTags as tag (tag)}
+								<div
+									animate:flip={{ duration: 300, delay: 100 }}
+									in:receive={{ key: tag }}
+									out:send={{ key: tag }}
 								>
-									{tag}
-								</SearchChip>
-							</div>
-						{/each}
+									<SearchChip
+										active={true}
+										onclick={() => unselectTag(tag)}
+										hasClose={true}
+									>
+										{tag}
+									</SearchChip>
+								</div>
+							{/each}
+						</div>
 					</div>
 				</div>
 			{/if}

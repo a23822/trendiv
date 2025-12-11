@@ -91,7 +91,7 @@
 				>HTML, CSS, A11y</span
 			>
 			정보를<br />
-			<span class="text-gray-100 dark:text-gray-900">AI</span>가 직접 선별해서
+			<span class="text-gray-100 dark:text-gray-900">AI</span>가 분석해서
 			보여드립니다.
 		</p>
 		<form
