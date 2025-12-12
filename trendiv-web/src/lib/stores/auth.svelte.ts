@@ -3,7 +3,7 @@ import NoticeModal from '$lib/components/modal/NoticeModal.svelte';
 import { TERMS_TEXT, PRIVACY_TEXT } from '$lib/constants/policy';
 import IconLogoGoogle from '$lib/icons/icon_logo_google.svelte';
 import { supabase } from '$lib/stores/db';
-import { openModal } from '$lib/stores/modal';
+import { modal } from '$lib/stores/modal.svelte.js';
 import type { User } from '@supabase/supabase-js';
 import { writable } from 'svelte/store';
 
@@ -23,7 +23,7 @@ if (supabase) {
  * 로그인 전 약관 모달
  */
 export function openLoginModal() {
-	openModal(NoticeModal, {
+	modal.open(NoticeModal, {
 		title: '서비스 이용 동의',
 		tabs: [
 			{ title: '이용약관', content: TERMS_TEXT },
@@ -42,7 +42,6 @@ export function openLoginModal() {
 				}
 			]
 		},
-
 		onOk: () => {
 			signInWithGoogle();
 		}
@@ -63,7 +62,7 @@ async function signInWithGoogle(redirectTo?: string) {
 	} catch (e) {
 		console.error(e);
 		// 에러 났을 때는 단순 알림 모달 띄우기 (onConfirm 없음)
-		openModal(NoticeModal, {
+		modal.open(NoticeModal, {
 			tabs: [{ title: '오류', content: '로그인 도중 오류가 발생했습니다.' }]
 		});
 	}

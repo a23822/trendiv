@@ -1,4 +1,5 @@
 <script lang="ts">
+	import IconBookmark from '$lib/icons/icon_bookmark.svelte';
 	import type { Trend, AnalysisResult } from '$lib/types';
 
 	interface Props {
@@ -71,12 +72,21 @@
 			</span>
 		</div>
 
+		<!-- 저장 버튼 -->
 		<button
 			type="button"
 			onclick={handleBookmark}
-			class="..."
+			class="
+				flex items-center gap-1 rounded-lg px-2 py-1
+				text-xs font-medium transition-all
+				{isBookmarked
+				? 'text-mint-600 dark:text-mint-400'
+				: 'text-gray-500 dark:text-gray-400'}
+				hover:text-mint-600 dark:hover:text-mint-400
+				hover:bg-mint-50 dark:hover:bg-mint-900/30
+			"
 		>
-			저장
+			<IconBookmark />
 		</button>
 	</div>
 

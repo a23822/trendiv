@@ -1,7 +1,7 @@
 <script lang="ts">
 	import CloseButton from '$lib/components/pure/Button/CloseButton.svelte';
 	import MenuTab from '$lib/components/pure/Tab/MenuTab.svelte';
-	import { closeModal } from '$lib/stores/modal';
+	import { modal } from '$lib/stores/modal.svelte.js';
 	import { cn } from '$lib/utils/ClassMerge';
 	import type { Component } from 'svelte';
 
@@ -33,11 +33,15 @@
 	});
 
 	function requestClose() {
+		// 1. 다이얼로그 닫기 애니메이션 등을 위해 먼저 native close 호출
 		dialog?.close();
+		// 2. 전역 스토어 상태 초기화
+		modal.close();
 	}
 
 	function handleNativeClose() {
-		closeModal();
+		// Esc 키 등으로 닫혔을 때 스토어 동기화
+		modal.close();
 	}
 
 	function handleConfirm() {

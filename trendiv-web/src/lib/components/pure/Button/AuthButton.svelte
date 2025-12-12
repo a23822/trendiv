@@ -1,19 +1,28 @@
 <script lang="ts">
 	import IconLogoGoogle from '$lib/icons/icon_logo_google.svelte';
 	import IconSignin from '$lib/icons/icon_signin.svelte';
-	import { user, avatarColor, openLoginModal, signOut } from '$lib/stores/auth';
+	import {
+		user,
+		avatarColor,
+		openLoginModal,
+		signOut
+	} from '$lib/stores/auth.svelte.js';
 	import type { User } from '@supabase/supabase-js';
 
-	export let onClick: () => void = () => {};
-	export let className = '';
+	let { onClick = () => {}, className = '' } = $props();
 
 	// 사용자 정보 가공
-	$: currentUser = $user as User | null;
-	$: userName =
-		currentUser?.user_metadata?.full_name || currentUser?.email?.split('@')[0] || '사용자';
-	$: userEmail = currentUser?.email || '';
-	$: userAvatar = currentUser?.user_metadata?.avatar_url || '';
-	$: userInitials = userName.slice(0, 2).toUpperCase();
+	const currentUser = $derived($user);
+	const currentAvatarColor = $derived($avatarColor);
+
+	const userName = $derived(
+		currentUser?.user_metadata?.full_name ||
+			currentUser?.email?.split('@')[0] ||
+			'사용자'
+	);
+	const userEmail = $derived(currentUser?.email || '');
+	const userAvatar = $derived(currentUser?.user_metadata?.avatar_url || '');
+	const userInitials = $derived((userName || '').slice(0, 2).toUpperCase());
 
 	// 로그인 핸들러
 	async function handleLogin() {
@@ -38,7 +47,13 @@
 			style:background={userAvatar ? '#fff' : $avatarColor}
 		>
 			{#if userAvatar}
-				<img width="40" height="40" src={userAvatar} alt="" class="rounded-inherit object-cover" />
+				<img
+					width="40"
+					height="40"
+					src={userAvatar}
+					alt=""
+					class="rounded-inherit object-cover"
+				/>
 			{:else}
 				<span class="text-sm font-semibold">{userInitials}</span>
 			{/if}
@@ -60,6 +75,8 @@
 		on:click={handleLogin}
 	>
 		<IconLogoGoogle />
-		<span class="font-sans text-sm font-semibold text-gray-700">Google로 시작하기</span>
+		<span class="font-sans text-sm font-semibold text-gray-700"
+			>Google로 시작하기</span
+		>
 	</button>
 {/if}

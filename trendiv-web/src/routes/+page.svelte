@@ -5,25 +5,22 @@
 	import SearchCard from '$lib/components/contents/SearchCard.svelte';
 	import Header from '$lib/components/layout/Header/Header.svelte';
 	import ArticleModal from '$lib/components/modal/ArticleModal.svelte';
-	import { user } from '$lib/stores/auth';
+	import { user } from '$lib/stores/auth.svelte.js';
 	import { supabase } from '$lib/stores/db';
+	import { modal } from '$lib/stores/modal.svelte.js';
 	import type { Trend } from '$lib/types';
 	import type { PageData } from './$types';
 	import { type Subscription } from '@supabase/supabase-js';
 	import { onMount } from 'svelte';
 
-	export let data: PageData;
-
-	let trends: Trend[] = data.trends || [];
-	let page = 1;
-	let isLoadingMore = false;
-	let hasMore = true;
-	let searchKeyword = '';
-	let selectedTags: string[] = [];
-	let isSearching = false;
-
-	let selectedTrend: Trend | null = null;
-	let isModalOpen = false;
+	let { data }: { data: PageData } = $props();
+	let trends = $state<Trend[]>(data.trends || []);
+	let page = $state(1);
+	let isLoadingMore = $state(false);
+	let hasMore = $state(true);
+	let searchKeyword = $state('');
+	let selectedTags = $state<string[]>([]);
+	let isSearching = $state(false);
 
 	const API_URL = PUBLIC_API_URL || 'http://127.0.0.1:3000';
 	const popularTags = [
@@ -36,8 +33,8 @@
 	];
 
 	// 구독 관련
-	let email = '';
-	let isSubmitting = false;
+	let email = $state('');
+	let isSubmitting = $state(false);
 
 	onMount(() => {
 		const init = async () => {
@@ -165,8 +162,10 @@
 	}
 
 	function openModal(trend: Trend) {
-		selectedTrend = trend;
-		isModalOpen = true;
+		modal.open(ArticleModal, {
+			trend: trend,
+			onbookmark: handleBookmark
+		});
 	}
 
 	// ✨ [추가] 북마크 핸들러 (기능 구현 전이면 로그만)
@@ -189,12 +188,26 @@
 			}
 		};
 	}
+
+	// ArticleCard masonry 배열
+	let innerWidth = $state(0);
+
+	const masonryColumns = $derived.by(() => {
+		if (innerWidth < 640) {
+			return [trends];
+		} else {
+			const cols: Trend[][] = [[], []];
+			trends.forEach((trend, i) => {
+				cols[i % 2].push(trend);
+			});
+			return cols;
+		}
+	});
 </script>
 
-<Header
-	{user}
-	{supabase}
-/>
+<svelte:window bind:innerWidth />
+
+<Header />
 
 <main>
 	<HeroSection
@@ -219,13 +232,17 @@
 			{:else if trends.length === 0}
 				<div class="py-32 text-center text-gray-400">결과가 없습니다.</div>
 			{:else}
-				<div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2">
-					{#each trends as trend (trend.id)}
-						<ArticleCard
-							{trend}
-							onclick={() => openModal(trend)}
-							onbookmark={handleBookmark}
-						/>
+				<div class="grid grid-cols-1 items-start gap-6 sm:grid-cols-2">
+					{#each masonryColumns as column, colIndex (colIndex)}
+						<div class="flex flex-col gap-6">
+							{#each column as trend (trend.id)}
+								<ArticleCard
+									{trend}
+									onclick={() => openModal(trend)}
+									onbookmark={handleBookmark}
+								/>
+							{/each}
+						</div>
 					{/each}
 				</div>
 
@@ -243,11 +260,5 @@
 				{/if}
 			{/if}
 		</div>
-
-		<ArticleModal
-			trend={selectedTrend}
-			bind:isOpen={isModalOpen}
-			onbookmark={handleBookmark}
-		/>
 	</div>
 </main>

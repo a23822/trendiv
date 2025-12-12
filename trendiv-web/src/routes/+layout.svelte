@@ -1,6 +1,6 @@
 <script>
 	import favicon from '$lib/assets/favicon.svg';
-	import { modalState } from '$lib/stores/modal';
+	import { modal } from '$lib/stores/modal.svelte.js';
 	import { scrollbarWidth } from '$lib/stores/state';
 	import BodyScrollLock from '$lib/utils/BodyScrollLock.svelte';
 	import '../app.css';
@@ -57,9 +57,8 @@
 
 {@render children()}
 
-{#if $modalState.component}
+{#if modal.component}
 	<BodyScrollLock />
-	{@const ActiveModal = $modalState.component}
 
-	<ActiveModal {...$modalState.props} />
+	<modal.component {...modal.props} />
 {/if}

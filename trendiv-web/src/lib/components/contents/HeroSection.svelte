@@ -2,7 +2,7 @@
 	import TextLoading from '$lib/components/pure/Load/TextLoading.svelte';
 	import { IDs } from '$lib/constants/ids';
 	import IconLogoHero from '$lib/icons/icon_logo_hero.svelte';
-	import { user, openLoginModal } from '$lib/stores/auth';
+	import { user, openLoginModal } from '$lib/stores/auth.svelte.js';
 	import { isSideMenuOpen } from '$lib/stores/state';
 	import { cn } from '$lib/utils/ClassMerge';
 	import type { User } from '@supabase/supabase-js';

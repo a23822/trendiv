@@ -1,21 +1,15 @@
 <script lang="ts">
-	import type { Trend, AnalysisResult } from '$lib/types';
+	import { modal } from '$lib/stores/modal.svelte.js';
+	import type { Trend } from '$lib/types';
 	import { cn } from '$lib/utils/ClassMerge';
 	import { fade } from 'svelte/transition';
 
 	interface Props {
-		trend: Trend | null;
-		isOpen?: boolean;
-		onclose?: () => void;
+		trend: Trend;
 		onbookmark?: (trend: Trend) => void;
 	}
 
-	let {
-		trend,
-		isOpen = $bindable(false),
-		onclose,
-		onbookmark
-	}: Props = $props();
+	let { trend, onbookmark }: Props = $props();
 
 	let isBookmarked = $state(false);
 
@@ -25,12 +19,9 @@
 	// 2. 탭 인덱스 (기본값: 최신 결과)
 	let selectedIndex = $state(-1);
 
-	$effect(() => {
-		if (isOpen && trend) {
-			const res = trend.analysis_results || [];
-			selectedIndex = res.length > 0 ? res.length - 1 : -1;
-		}
-	});
+	function close() {
+		modal.close();
+	}
 
 	// 3. 현재 데이터 (분석 결과가 없으면 undefined)
 	const currentData = $derived(
@@ -47,12 +38,6 @@
 		trend ? new Date(trend.date).toLocaleDateString('ko-KR') : ''
 	);
 
-	function close() {
-		isOpen = false;
-		onclose?.();
-		document.body.style.overflow = '';
-	}
-
 	function handleBookmark() {
 		isBookmarked = !isBookmarked;
 		if (trend) onbookmark?.(trend);
@@ -61,15 +46,9 @@
 	function handleBackdropClick(e: MouseEvent) {
 		if (e.target === e.currentTarget) close();
 	}
-
-	$effect(() => {
-		if (isOpen) {
-			document.body.style.overflow = 'hidden';
-		}
-	});
 </script>
 
-{#if isOpen && trend}
+{#if trend}
 	<div
 		class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
 		onclick={handleBackdropClick}
@@ -124,6 +103,7 @@
               rounded-lg p-2 text-white/80
               transition-colors hover:bg-white/10 hover:text-white
             "
+						aria-label="닫기"
 					>
 						<svg
 							class="h-6 w-6"
