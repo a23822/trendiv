@@ -60,22 +60,37 @@ app.get("/api/trends", async (req: Request, res: Response) => {
     // 1. 기본 쿼리 (점수가 0보다 큰 것만)
     let query = supabase
       .from("trend")
-      .select("id, title, link, date, summary, tags, score, source", {
+      .select("id, title, link, date, source, analysis_results", {
         count: "exact",
       })
-      .gt("score", 0)
+      .eq("status", "ANALYZED")
       .order("date", { ascending: false });
 
     // 2. 검색어 필터 (제목 또는 요약에 포함)
     if (searchKeyword) {
-      query = query.or(
-        `title.ilike.%${searchKeyword}%,summary.ilike.%${searchKeyword}%`
-      );
+      query = query.ilike("title", `%${searchKeyword}%`);
     }
 
     // 3. 태그 필터 (배열에 포함)
     if (tagFilter) {
-      query = query.contains("tags", [tagFilter]);
+      // "React,CSS" -> ["React", "CSS"]
+      const tags = tagFilter
+        .split(",")
+        .map((t) => t.trim())
+        .filter((t) => t);
+
+      if (tags.length > 0) {
+        // PostgREST의 JSONB contains 연산자 활용
+        // analysis_results 컬럼은 배열이므로, 배열 안의 객체 중 하나라도
+        // 해당 태그들을 포함하고 있는지 검사합니다.
+        // 문법: analysis_results.cs.[{"tags": ["React", "CSS"]}]
+
+        // 주의: tags 배열 전체가 포함되어야 함 (Subset Check)
+        query = query.contains(
+          "analysis_results",
+          JSON.stringify([{ tags: tags }])
+        );
+      }
     }
 
     // 4. 페이지네이션 및 실행

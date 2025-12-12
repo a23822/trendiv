@@ -31,6 +31,7 @@ interface TrendItem {
 
 interface AnalyzedReport {
   title: string;
+  title_ko: string;
   oneLineSummary: string;
   keyPoints: string[];
   tags: string[];
@@ -148,11 +149,12 @@ async function analyzeArticle(
     [출력 포맷 (JSON Only)]
     {
       "score": 0~10 (정수, 기준에 안 맞으면 과감하게 0점 줄 것),
-      "title": "한국어 제목 (개발자가 클릭하고 싶게)",
+      "title": "원문 제목 (개발자가 클릭하고 싶게)",
+      "title_ko": "title 을 한국어로 번역"
       "oneLineSummary": "한 줄 요약 (한국어)",
-      "keyPoints": ["핵심1", "핵심2", "핵심3"],
+      "keyPoints": ["핵심1", "핵심2", "핵심3"......],
       "tags": ["CSS", "A11y", "iOS" 등], 
-      "reason": "점수 부여 사유 (예: 'iOS 17 사파리 렌더링 버그를 다루므로 9점')"
+      "reason": "점수 부여 사유 (예: 'iOS 17 사파리 렌더링 버그를 다루므로 9점'), 0점일 경우 탈락 사유"
     }
   `;
 
@@ -269,4 +271,22 @@ export async function runAnalysis(trends: TrendItem[]): Promise<any[]> {
   }
 
   return reports;
+}
+
+export async function translateTitleOnly(title: string): Promise<string> {
+  const prompt = `
+    Translate this tech article title to Korean naturally for developers.
+    CLICK-BAIT style but professional.
+    Input: "${title}"
+    Output (String only):
+  `;
+
+  try {
+    // 재시도 로직 없이 심플하게 호출
+    const result = await model.generateContent(prompt);
+    return result.response.text().trim();
+  } catch (e) {
+    console.error(`❌ 번역 실패: ${title}`);
+    return title; // 실패하면 원문 반환
+  }
 }
