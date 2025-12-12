@@ -1,6 +1,9 @@
 <script lang="ts">
-	export let size = 24;
-	export let strokeWidth = 2;
+	interface Props {
+		size?: number;
+		strokeWidth?: number;
+	}
+	let { size = 24, strokeWidth = 2 }: Props = $props();
 </script>
 
 <svg

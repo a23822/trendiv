@@ -4,19 +4,27 @@
 	import ThemeSwitch from '$lib/components/pure/ToggleSwitch/ThemeSwitch.svelte';
 	import { IDs } from '$lib/constants/ids';
 	import BodyScrollLock from '$lib/utils/BodyScrollLock.svelte';
+	import { cn } from '$lib/utils/ClassMerge';
 	import { fly } from 'svelte/transition';
 
-	export let isOpen = false;
-	export let closeMenu: () => void;
-
-	let dialog: HTMLDialogElement;
-
-	$: if (dialog && isOpen && !dialog.open) {
-		dialog.showModal();
+	interface Props {
+		closeMenu: () => void;
+		isOpen: boolean;
 	}
 
+	let { isOpen = false, closeMenu }: Props = $props();
+
+	let dialog = $state<HTMLDialogElement>();
+
+	$effect(() => {
+		if (dialog && isOpen && !dialog.open) {
+			dialog.showModal();
+		}
+	});
+
 	function handleClose() {
-		if (dialog && dialog.open) {
+		if (dialog && !isOpen) {
+			// isOpen이 false일 때만 닫기
 			dialog.close();
 		}
 	}
@@ -31,8 +39,8 @@
 <dialog
 	bind:this={dialog}
 	id={IDs.LAYOUT.SIDE_MENU}
-	on:click={handleBackdropClick}
-	on:close={closeMenu}
+	onclick={handleBackdropClick}
+	onclose={closeMenu}
 	class="side_menu"
 	class:closed={!isOpen}
 >
@@ -40,9 +48,14 @@
 		<BodyScrollLock />
 		<aside
 			id={IDs.LAYOUT.SIDE_MENU}
-			class="bg-bg-body z-100 w-sidemenu fixed right-0 top-0 flex h-dvh max-w-full flex-col justify-between shadow-2xl"
+			class={cn(
+				'z-100 fixed right-0 top-0',
+				' flex flex-col justify-between',
+				'w-sidemenu h-dvh max-w-full',
+				'bg-bg-body shadow-2xl'
+			)}
 			transition:fly={{ x: 300, duration: 300 }}
-			on:outroend={handleClose}
+			onoutroend={handleClose}
 		>
 			<div class="shrink-0">
 				<ThemeSwitch className="align-top" />
@@ -50,7 +63,7 @@
 			<div class="absolute right-0 top-0">
 				<CloseButton onclick={closeMenu} />
 			</div>
-			<div class="border-border-default mb-auto shrink-0 border-b p-4">
+			<div class={cn('mb-auto shrink-0 p-4', 'border-border-default border-b')}>
 				<AuthButton />
 			</div>
 			<!-- <nav class="flex-1 overflow-hidden">

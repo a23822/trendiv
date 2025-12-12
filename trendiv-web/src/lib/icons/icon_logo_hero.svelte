@@ -1,19 +1,50 @@
+<script type="ts">
+	let { ...rest } = $props();
+</script>
+
 <svg
 	class="h-auto w-full"
 	viewBox="0 0 450 80"
 	fill="none"
 	xmlns="http://www.w3.org/2000/svg"
-	{...$$props}
+	{...rest}
 >
 	<defs>
-		<linearGradient id="tagGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-			<stop offset="0%" style="stop-color: #80ded1" />
-			<stop offset="100%" style="stop-color: #26c6a8" />
+		<linearGradient
+			id="tagGrad"
+			x1="0%"
+			y1="0%"
+			x2="100%"
+			y2="100%"
+		>
+			<stop
+				offset="0%"
+				style="stop-color: #80ded1"
+			/>
+			<stop
+				offset="100%"
+				style="stop-color: #26c6a8"
+			/>
 		</linearGradient>
-		<filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-			<feGaussianBlur stdDeviation="4" result="coloredBlur" />
-			<feFlood flood-color="#4DD0BD" flood-opacity="0.5" />
-			<feComposite in2="coloredBlur" operator="in" />
+		<filter
+			id="glow"
+			x="-50%"
+			y="-50%"
+			width="200%"
+			height="200%"
+		>
+			<feGaussianBlur
+				stdDeviation="4"
+				result="coloredBlur"
+			/>
+			<feFlood
+				flood-color="#4DD0BD"
+				flood-opacity="0.5"
+			/>
+			<feComposite
+				in2="coloredBlur"
+				operator="in"
+			/>
 			<feMerge>
 				<feMergeNode />
 				<feMergeNode in="SourceGraphic" />

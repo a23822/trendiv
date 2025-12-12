@@ -2,20 +2,25 @@
 	import TextLoading from '$lib/components/pure/Load/TextLoading.svelte';
 	import { IDs } from '$lib/constants/ids';
 	import IconLogoHero from '$lib/icons/icon_logo_hero.svelte';
-	import { user, openLoginModal } from '$lib/stores/auth.svelte.js';
-	import { isSideMenuOpen } from '$lib/stores/state';
+	import { auth } from '$lib/stores/auth.svelte.js';
+	import { uiState } from '$lib/stores/state.svelte';
 	import { cn } from '$lib/utils/ClassMerge';
-	import type { User } from '@supabase/supabase-js';
 	import { onMount } from 'svelte';
 
-	export let onSubscribe: () => void;
-	export let email = '';
-	export let isSubmitting = false;
+	let {
+		onSubscribe,
+		email = $bindable(''), // 부모에서 bind:email로 쓰므로 bindable 필요
+		isSubmitting = false
+	}: {
+		onSubscribe: () => void;
+		email?: string;
+		isSubmitting?: boolean;
+	} = $props();
 
-	$: currentUser = $user as User | null;
+	const currentUser = $derived(auth.user);
 
-	let heroSection: HTMLElement;
-	let isVisible = true;
+	let heroSection = $state<HTMLElement>();
+	let isVisible = $state(true);
 
 	onMount(() => {
 		const observer = new IntersectionObserver(
@@ -36,13 +41,18 @@
 
 	// 로그인 핸들러
 	async function handleLogin() {
-		openLoginModal();
+		auth.openLoginModal();
+	}
+
+	function handleSubmit(e: SubmitEvent) {
+		e.preventDefault();
+		onSubscribe();
 	}
 </script>
 
 <section
 	bind:this={heroSection}
-	class:paused={!isVisible || $isSideMenuOpen}
+	class:paused={!isVisible || uiState.isSideMenuOpen}
 	class={cn(
 		'relative overflow-hidden bg-[#1a1a1a]',
 		'px-4 py-12 sm:px-6 sm:py-20'
@@ -100,7 +110,7 @@
 				'mt-10',
 				'sm:flex-row'
 			)}
-			on:submit|preventDefault={onSubscribe}
+			onsubmit={onSubscribe}
 		>
 			{#if !currentUser}
 				<div class="w-full flex-1">
@@ -149,7 +159,7 @@
 			<div class="mt-6 text-sm text-white">
 				{'Google 계정으로 계속할까요?'}
 				<button
-					on:click={handleLogin}
+					onclick={handleLogin}
 					class="text-primary hover:text-primary-hover ml-1 font-bold hover:underline"
 				>
 					로그인하기
@@ -161,7 +171,7 @@
 	<div
 		class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 transform-gpu blur-3xl"
 		aria-hidden="true"
-		class:aurora_paused={!isVisible || $isSideMenuOpen}
+		class:aurora_paused={!isVisible || uiState.isSideMenuOpen}
 	>
 		<div
 			class="to-primary aspect-[1155/678] w-[72.1875rem] bg-gradient-to-tr from-[#ff80b5] opacity-20"

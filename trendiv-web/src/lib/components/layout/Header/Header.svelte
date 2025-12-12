@@ -2,14 +2,14 @@
 	import SideMenu from '$lib/components/layout/Aside/SideMenu.svelte';
 	import MenuButton from '$lib/components/pure/Button/MenuButton.svelte';
 	import IconLogo from '$lib/icons/icon_logo.svelte';
-	import { isSideMenuOpen } from '$lib/stores/state';
+	import { uiState } from '$lib/stores/state.svelte.js';
 
 	function toggleMenu() {
-		isSideMenuOpen.update((v) => !v);
+		uiState.toggleSideMenu();
 	}
 
 	function closeMenu() {
-		isSideMenuOpen.set(false);
+		uiState.closeSideMenu();
 	}
 </script>
 
@@ -19,20 +19,17 @@
 	<div
 		class="h-header-height flex items-center justify-between gap-2 px-4 md:px-6 xl:px-8"
 	>
-		<IconLogo
-			width="76"
-			height="44"
-		/>
+		<IconLogo />
 		<h1 class="text-primary mr-auto font-mono text-xl font-bold tracking-tight">
 			Trendiv
 		</h1>
 		<MenuButton
-			isOpen={$isSideMenuOpen}
-			onClick={toggleMenu}
+			isOpen={uiState.isSideMenuOpen}
+			onclick={toggleMenu}
 		/>
 	</div>
 </header>
 <SideMenu
-	isOpen={$isSideMenuOpen}
+	isOpen={uiState.isSideMenuOpen}
 	{closeMenu}
 />

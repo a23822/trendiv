@@ -1,16 +1,20 @@
 <script lang="ts">
 	import { IDs } from '$lib/constants/ids';
 
-	export let isOpen = false;
-	export let onClick: () => void;
-	export let className = '';
+	interface Props {
+		onclick?: () => void;
+		className?: string;
+		isOpen: boolean;
+	}
+
+	let { isOpen = false, onclick, className }: Props = $props();
 </script>
 
 <button
 	type="button"
 	class="btn_menu {className}"
 	aria-expanded={isOpen}
-	onclick={onClick}
+	{onclick}
 	aria-label="메뉴"
 	aria-controls={IDs.LAYOUT.SIDE_MENU}
 >

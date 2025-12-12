@@ -1,7 +1,10 @@
 <script lang="ts">
-	export let width = '24';
-	export let height = '24';
-	export let className = '';
+	interface Props {
+		width?: number;
+		height?: number;
+		className?: string;
+	}
+	let { width = 24, height = 24, className }: Props = $props();
 </script>
 
 <svg
@@ -18,7 +21,12 @@
 
 	<g class="arrow">
 		<polyline points="16 17 21 12 16 7" />
-		<line x1="21" y1="12" x2="9" y2="12" />
+		<line
+			x1="21"
+			y1="12"
+			x2="9"
+			y2="12"
+		/>
 	</g>
 </svg>
 

@@ -18,7 +18,7 @@
 		children: Snippet;
 	}
 
-	const {
+	let {
 		active = false,
 		disabled = false,
 		hasClose = false,

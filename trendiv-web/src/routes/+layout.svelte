@@ -1,7 +1,7 @@
 <script>
 	import favicon from '$lib/assets/favicon.svg';
 	import { modal } from '$lib/stores/modal.svelte.js';
-	import { scrollbarWidth } from '$lib/stores/state';
+	import { uiState } from '$lib/stores/state.svelte.js';
 	import BodyScrollLock from '$lib/utils/BodyScrollLock.svelte';
 	import '../app.css';
 
@@ -29,7 +29,7 @@
 
 	function updateScrollbarWidth() {
 		const width = getScrollbarWidth();
-		scrollbarWidth.set(width);
+		uiState.scrollbarWidth = width;
 		document.documentElement.style.setProperty('--scrollbar-gap', `${width}px`);
 	}
 

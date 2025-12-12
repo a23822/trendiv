@@ -1,14 +1,18 @@
 <script lang="ts">
-	import { isDarkTheme, toggleTheme } from '$lib/stores/theme';
+	import { theme } from '$lib/stores/theme.svelte';
 
-	export let className = '';
+	interface Props {
+		className?: string;
+	}
+
+	let { className }: Props = $props();
 </script>
 
 <button
 	class="toggle {className}"
-	class:dark={$isDarkTheme}
-	onclick={toggleTheme}
-	aria-label={$isDarkTheme ? '라이트 모드로 전환' : '다크 모드로 전환'}
+	class:dark={theme.isDark}
+	onclick={theme.toggle}
+	aria-label={theme.isDark ? '라이트 모드로 전환' : '다크 모드로 전환'}
 	type="button"
 >
 	<div class="bg"></div>

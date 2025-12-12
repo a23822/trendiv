@@ -5,7 +5,7 @@
 	import SearchCard from '$lib/components/contents/SearchCard.svelte';
 	import Header from '$lib/components/layout/Header/Header.svelte';
 	import ArticleModal from '$lib/components/modal/ArticleModal.svelte';
-	import { user } from '$lib/stores/auth.svelte.js';
+	import { auth } from '$lib/stores/auth.svelte.js';
 	import { supabase } from '$lib/stores/db';
 	import { modal } from '$lib/stores/modal.svelte.js';
 	import type { Trend } from '$lib/types';
@@ -36,43 +36,20 @@
 	let email = $state('');
 	let isSubmitting = $state(false);
 
-	onMount(() => {
-		const init = async () => {
-			if (!supabase) return;
-
-			const {
-				data: { session }
-			} = await supabase.auth.getSession();
-			user.set(session?.user ?? null);
-
-			if (trends.length === 0) {
-				fetchTrends(true);
-			}
-		};
-
-		init();
-
-		let subscription: Subscription | null = null;
-
-		if (supabase) {
-			const { data } = supabase.auth.onAuthStateChange((_event, session) => {
-				user.set(session?.user ?? null);
-				if ($user) {
-					email = $user.email || '';
-				}
-			});
-			subscription = data.subscription;
+	$effect(() => {
+		if (auth.user?.email) {
+			email = auth.user.email;
 		}
+	});
 
-		return () => {
-			if (subscription) {
-				subscription.unsubscribe();
-			}
-		};
+	onMount(() => {
+		if (trends.length === 0) {
+			fetchTrends(true);
+		}
 	});
 
 	async function handleSubscribe() {
-		const targetEmail = $user?.email || email;
+		const targetEmail = auth.user?.email || email;
 		if (!targetEmail) return;
 
 		isSubmitting = true;
@@ -85,8 +62,8 @@
 			});
 
 			if (res.ok) {
-				alert($user ? '✅ 구독 완료!' : '✅ 메일함을 확인해주세요.');
-				if (!$user) email = '';
+				alert(auth.user ? '✅ 구독 완료!' : '✅ 메일함을 확인해주세요.');
+				if (!auth.user) email = '';
 			} else {
 				const err = await res.json();
 				alert(`⚠️ ${err.error || '오류가 발생했습니다.'}`);
