@@ -47,7 +47,10 @@ export class RssScraper implements Scraper {
       const cleanXml = xmlData
         .toString()
         .trim()
-        .replace(/^\uFEFF/, '');
+        .replace(/^\uFEFF/, '') // BOM 제거
+        // XML 태그가 아닌 '<' 문자(코드 스니펫의 부등호 등)를 '&lt;'로 변환
+        // 정규식 설명: < 뒤에 공백(\s)이나 숫자([0-9])가 오면 태그가 아니라고 판단하여 치환
+        .replace(/<(?=\s|[0-9])/g, '&lt;');
 
       const feed = await this.parser.parseString(cleanXml);
 

@@ -16,7 +16,12 @@ if (!apiKey) {
 
 const genAI = new GoogleGenerativeAI(apiKey);
 const MODEL_NAME = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
-const model = genAI.getGenerativeModel({ model: MODEL_NAME });
+const model = genAI.getGenerativeModel({
+  model: MODEL_NAME,
+  generationConfig: {
+    responseMimeType: 'application/json',
+  },
+});
 
 console.log(`⚙️ Trendiv 심층 분석 엔진 가동 (Model: ${MODEL_NAME})`);
 
@@ -261,6 +266,7 @@ export async function runAnalysis(trends: TrendItem[]): Promise<any[]> {
           originalLink: item.link,
           date: item.date,
           id: item.id,
+          aiModel: MODEL_NAME,
         });
       }
       // Rate Limit 방지용 딜레이

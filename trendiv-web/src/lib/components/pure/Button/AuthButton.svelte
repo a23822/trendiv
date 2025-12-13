@@ -4,11 +4,11 @@
 	import { auth } from '$lib/stores/auth.svelte.js';
 
 	interface Props {
-		onclick: () => void;
+		onclick?: () => void;
 		className?: string;
 	}
 
-	let { onclick, className } = $props();
+	let { onclick = () => {}, className = '' } = $props();
 
 	// 사용자 정보 가공
 	const userName = $derived(

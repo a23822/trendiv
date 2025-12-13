@@ -44,10 +44,8 @@ export const runPipeline = async () => {
         title: item.title,
         link: item.link,
         date: item.date || new Date().toISOString(),
-        summary: item.summary || "",
         source: "scraped",
         status: "RAW",
-        score: 0,
       }));
 
       // 이미 있는 건 건너뛰고(ignoreDuplicates), 새것만 저장
@@ -88,7 +86,7 @@ export const runPipeline = async () => {
       title: item.title,
       link: item.link,
       date: item.date,
-      summary: item.summary,
+      summary: (item as any).summary || "",
       source: item.source,
     }));
 
@@ -166,12 +164,6 @@ export const runPipeline = async () => {
           .from("trend")
           .update({
             analysis_results: updatedHistory,
-            title_ko: result.title_ko,
-            oneLineSummary: result.oneLineSummary,
-            tags: result.tags,
-            score: result.score,
-            reason: result.reason,
-            keyPoints: result.keyPoints,
             status: "ANALYZED",
             source: "AI_Analysis",
           })
@@ -186,9 +178,8 @@ export const runPipeline = async () => {
         const { error } = await supabase
           .from("trend")
           .update({
-            score: 0,
             status: "REJECTED", // 거절됨 상태로 변경
-            reason: result.reason,
+            analysis_results: updatedHistory,
             source: "AI_Analysis",
           })
           .eq("id", result.id);
