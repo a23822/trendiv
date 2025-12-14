@@ -63,7 +63,7 @@
 			<div class="absolute right-0 top-0">
 				<CloseButton onclick={closeMenu} />
 			</div>
-			<div class={cn('mb-auto shrink-0 p-4', 'border-border-default border-b')}>
+			<div class={cn('mb-auto shrink-0 p-4')}>
 				<AuthButton />
 			</div>
 			<!-- <nav class="flex-1 overflow-hidden">

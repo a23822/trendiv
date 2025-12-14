@@ -1,14 +1,16 @@
 <script lang="ts">
+	import { CommonStyles } from '$lib/constants/styles';
 	import IconLogoGoogle from '$lib/icons/icon_logo_google.svelte';
 	import IconSignin from '$lib/icons/icon_signin.svelte';
 	import { auth } from '$lib/stores/auth.svelte.js';
+	import { cn } from '$lib/utils/ClassMerge';
 
 	interface Props {
 		onclick?: () => void;
 		className?: string;
 	}
 
-	let { onclick = () => {}, className = '' } = $props();
+	let { onclick = () => {}, className }: Props = $props();
 
 	// 사용자 정보 가공
 	const userName = $derived(
@@ -35,7 +37,14 @@
 
 {#if auth.user}
 	<button
-		class="btn_auth bg-bg-surface group flex w-full items-center justify-center gap-3 rounded-xl p-3 transition-all duration-200 hover:bg-gray-200 hover:shadow-md {className}"
+		class={cn(
+			'btn_auth group',
+			'flex items-center justify-center gap-3',
+			'bg-bg-surface ml-auto w-full rounded-xl p-3',
+			CommonStyles.DEFAULT_TRANSITION,
+			'hover:bg-gray-200 hover:shadow-md',
+			className
+		)}
 		onclick={handleLogout}
 	>
 		<div
