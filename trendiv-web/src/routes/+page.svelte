@@ -140,15 +140,8 @@
 
 	function openModal(trend: Trend) {
 		modal.open(ArticleModal, {
-			trend: trend,
-			onbookmark: handleBookmark
+			trend: trend
 		});
-	}
-
-	// ✨ [추가] 북마크 핸들러 (기능 구현 전이면 로그만)
-	function handleBookmark(trend: Trend) {
-		console.log('Bookmark toggled:', trend.id);
-		// 추후 Supabase 북마크 저장 로직 연결
 	}
 
 	function infiniteScroll(node: HTMLElement) {
@@ -216,7 +209,6 @@
 								<ArticleCard
 									{trend}
 									onclick={() => openModal(trend)}
-									onbookmark={handleBookmark}
 								/>
 							{/each}
 						</div>

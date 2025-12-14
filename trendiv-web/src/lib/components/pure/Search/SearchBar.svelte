@@ -131,7 +131,7 @@
 				CommonStyles.DEFAULT_TRANSTION_COLOR,
 				'bg-forest-200/80 text-forest-700',
 				'active:scale-95 sm:hover:translate-x-0.5',
-				'disabled:bg-forest-200/50 disabled:text-forest-500/70 disabled:cursor-not-allowed'
+				'disabled:bg-forest-200/50 disabled:text-forest-500/70 disabled:hover:cursor-not-allowed sm:hover:disabled:transform-none'
 			)}
 			onclick={handleSearch}
 			disabled={isLoading || !value.trim()}

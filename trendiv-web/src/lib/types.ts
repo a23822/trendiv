@@ -18,3 +18,14 @@ export interface Trend {
 
 	analysis_results?: AnalysisResult[];
 }
+
+export interface Bookmark {
+	id: number;
+	user_id: string;
+	article_url: string;
+	article_title: string;
+	article_image?: string;
+	article_source?: string;
+	article_date?: string;
+	created_at: string;
+}
