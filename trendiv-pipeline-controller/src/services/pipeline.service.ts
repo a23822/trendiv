@@ -44,8 +44,9 @@ export const runPipeline = async () => {
         title: item.title,
         link: item.link,
         date: item.date || new Date().toISOString(),
-        source: "scraped",
         status: "RAW",
+        source: item.source,
+        category: item.category,
       }));
 
       // 이미 있는 건 건너뛰고(ignoreDuplicates), 새것만 저장
@@ -86,8 +87,8 @@ export const runPipeline = async () => {
       title: item.title,
       link: item.link,
       date: item.date,
-      summary: (item as any).summary || "",
       source: item.source,
+      category: item.category || "Uncategorized",
     }));
 
     let analysisResults: any[] = [];
@@ -165,7 +166,6 @@ export const runPipeline = async () => {
           .update({
             analysis_results: updatedHistory,
             status: "ANALYZED",
-            source: "AI_Analysis",
           })
           .eq("id", result.id);
 
@@ -180,7 +180,6 @@ export const runPipeline = async () => {
           .update({
             status: "REJECTED", // 거절됨 상태로 변경
             analysis_results: updatedHistory,
-            source: "AI_Analysis",
           })
           .eq("id", result.id);
 

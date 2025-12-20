@@ -63,9 +63,8 @@ export class RssScraper implements Scraper {
           title: item.title?.trim() || '제목 없음',
           link: item.link || '',
           date: date,
-          summary:
-            summary.length > 200 ? summary.substring(0, 200) + '...' : summary,
           source: config.name,
+          category: config.category,
         };
       });
     } catch (parseError) {

@@ -69,6 +69,7 @@ export class HtmlScraper implements Scraper {
       const finalTrends = trends.map((t) => ({
         ...t,
         source: config.name,
+        category: config.category,
         link: t.link?.startsWith('http')
           ? t.link
           : new URL(t.link || '', config.url).href,

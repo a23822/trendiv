@@ -2,13 +2,20 @@ export interface TrendItem {
   title?: string;
   link?: string;
   date?: string;
-  summary?: string;
   source: string;
+  category: string;
 }
 
 export interface ScraperConfig {
   name: string;
-  type: 'rss' | 'html';
+  category: string;
+  type:
+    | 'rss'
+    | 'html'
+    | 'youtube_search'
+    | 'youtube'
+    | 'google_search'
+    | 'stackoverflow';
   url: string;
   selector?: string;
 }

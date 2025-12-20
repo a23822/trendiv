@@ -1,93 +1,166 @@
 import { ScraperConfig } from '../scrapers/interface';
 
 export const TARGETS: ScraperConfig[] = [
-  // =========================
-  // 1. Global Web Trends (Hacker News & MDN)
-  // =========================
+  // =================================================
+  // 1. Social & Community (Platform Name = Category)
+  // =================================================
   {
-    name: 'Hacker News (Web)', // 해커뉴스에서 'web' 키워드 포함된 인기글만 필터링 (hnrss 사용)
-    type: 'rss',
-    url: 'https://hnrss.org/newest?q=web&points=100', // 100점 이상 인기글만
+    name: 'X (Twitter)',
+    category: 'X',
+    type: 'google_search',
+    url: 'site:x.com (css OR html OR "web accessibility" OR a11y) -"marketing" -"hiring" -"job"',
   },
   {
-    name: 'MDN Web Docs Blog', // Mozilla 공식 웹 표준 문서 블로그
+    name: 'Hacker News',
+    category: 'Hacker News',
+    type: 'rss',
+    url: 'https://hnrss.org/newest?q=web&points=100',
+  },
+  {
+    name: 'Reddit',
+    category: 'Reddit',
+    type: 'rss',
+    url: 'https://www.reddit.com/r/css+html+accessibility+a11y/top/.rss?t=day',
+  },
+  {
+    name: 'Reddit',
+    category: 'Reddit',
+    type: 'rss',
+    url: 'https://www.reddit.com/r/androiddev/top/.rss?t=week',
+  },
+  {
+    name: 'StackOverflow',
+    category: 'StackOverflow',
+    type: 'rss',
+    url: 'https://stackoverflow.com/feeds/tag?tagnames=ios+or+swift&sort=newest',
+  },
+  {
+    name: 'StackOverflow',
+    category: 'StackOverflow',
+    type: 'stackoverflow',
+    url: 'css;html;accessibility',
+  },
+
+  // =================================================
+  // 2. YouTube (Grouped by Platform)
+  // =================================================
+  // 유튜브는 채널이 많고 개별 채널보다는 '유튜브 영상'이라는 포맷이 중요하므로 묶습니다.
+  {
+    name: 'Kevin Powell',
+    category: 'YouTube',
+    type: 'youtube',
+    url: 'https://www.youtube.com/feeds/videos.xml?channel_id=UCJZv4d5rbIKd4QHMPkcABCw',
+  },
+  {
+    name: 'Google Chrome Developers',
+    category: 'YouTube',
+    type: 'youtube',
+    url: 'https://www.youtube.com/feeds/videos.xml?channel_id=UCnC_tR70u9hTnp3q69_yZaQ',
+  },
+  {
+    name: 'Hyperplexed',
+    category: 'YouTube',
+    type: 'youtube',
+    url: 'https://www.youtube.com/feeds/videos.xml?channel_id=UCrumEsLojlcA6r-pBvP894g',
+  },
+  {
+    name: 'Deque Systems',
+    category: 'YouTube',
+    type: 'youtube',
+    url: 'https://www.youtube.com/feeds/videos.xml?channel_id=UCv7q9sW2X66_T3wR1uL9G_w',
+  },
+  {
+    name: 'TPGi',
+    category: 'YouTube',
+    type: 'youtube',
+    url: 'https://www.youtube.com/feeds/videos.xml?channel_id=UCZ9A4h1X73d1z733n1_M73w',
+  },
+
+  // =================================================
+  //  YouTube Keywords (API - 발굴 개념 / 비용 100)
+  // =================================================
+  // 주의: 하루 쿼터(10,000) 고려하여 너무 많이 등록하지 말 것.
+  // 예: 1시간마다 실행 시 24회 * 100점 = 2,400점 소모 (안전)
+  {
+    name: 'YouTube Search',
+    category: 'YouTube',
+    type: 'youtube_search', // API 모드
+    url: 'html | css | a11y | Web accessibility', // 검색어
+  },
+
+  // =================================================
+  // 3. Official Blogs (Each Name = Category)
+  // =================================================
+  // 블로그는 각각이 하나의 독립된 미디어이므로 이름을 카테고리로 사용합니다.
+  {
+    name: 'MDN Web Docs',
+    category: 'MDN Web Docs',
     type: 'rss',
     url: 'https://developer.mozilla.org/en-US/blog/rss.xml',
   },
   {
     name: 'CSS-Tricks',
+    category: 'CSS-Tricks',
     type: 'rss',
     url: 'https://css-tricks.com/feed/',
   },
   {
     name: 'Smashing Magazine',
+    category: 'Smashing Magazine',
     type: 'rss',
     url: 'https://www.smashingmagazine.com/feed/',
   },
-
-  // =========================
-  // 2. iOS & Swift (애플 생태계)
-  // =========================
   {
-    name: 'Apple Developer News', // 공식 뉴스 (AR/VR, iOS 19 등)
+    name: 'Apple Developer',
+    category: 'Apple Developer',
     type: 'rss',
     url: 'https://developer.apple.com/news/rss/news.rss',
   },
   {
-    name: 'iOS Dev Weekly', // 주간 요약 뉴스레터 RSS
+    name: 'iOS Dev Weekly',
+    category: 'iOS Dev Weekly',
     type: 'rss',
     url: 'https://iosdevweekly.com/issues.rss',
   },
   {
-    name: 'Swift.org', // 공식 블로그
+    name: 'Swift.org',
+    category: 'Swift.org',
     type: 'rss',
     url: 'https://www.swift.org/atom.xml',
   },
   {
-    name: 'StackOverflow (iOS/Swift)', // iOS 또는 Swift 태그가 달린 인기 질문
-    type: 'rss',
-    url: 'https://stackoverflow.com/feeds/tag?tagnames=ios+or+swift&sort=newest',
-  },
-
-  // =========================
-  // 3. Android & Kotlin
-  // =========================
-  {
-    name: 'Android Developers Blog', // 구글 공식
+    name: 'Android Developers',
+    category: 'Android Developers',
     type: 'rss',
     url: 'http://feeds.feedburner.com/blogspot/hsDu',
   },
   {
-    name: 'Android Weekly', // 안드로이드 주간 뉴스
+    name: 'Android Weekly',
+    category: 'Android Weekly',
     type: 'rss',
     url: 'https://androidweekly.net/rss.xml',
   },
   {
-    name: 'Kotlin Blog', // 코틀린 공식
+    name: 'Kotlin Blog',
+    category: 'Kotlin Blog',
     type: 'rss',
     url: 'https://blog.jetbrains.com/kotlin/feed/',
   },
   {
-    name: 'Reddit r/androiddev', // 안드로이드 개발자 서브레딧 (주간 Top)
-    type: 'rss',
-    url: 'https://www.reddit.com/r/androiddev/top/.rss?t=week',
-  },
-  {
-    name: 'XDA Developers', // 모바일 하드웨어/소프트웨어 딥다이브
+    name: 'XDA Developers',
+    category: 'XDA Developers',
     type: 'rss',
     url: 'https://www.xda-developers.com/feed/',
   },
-
-  // =========================
-  // 4. Official Framework Blogs
-  // =========================
   {
     name: 'React Blog',
+    category: 'React Blog',
     type: 'rss',
     url: 'https://react.dev/feed.xml',
   },
   {
     name: 'Vercel Blog',
+    category: 'Vercel Blog',
     type: 'rss',
     url: 'https://vercel.com/atom',
   },
