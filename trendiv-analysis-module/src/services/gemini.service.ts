@@ -29,76 +29,23 @@ export class GeminiService {
   }
 
   /**
-   * Generate content with exponential backoff retry
+   * 공통 프롬프트 생성기 (변수로 추출)
    */
-  async analyze(prompt: string): Promise<GeminiAnalysisResponse> {
-    const { maxRetries, initialRetryDelay } = CONFIG.gemini;
-    let waitTime = initialRetryDelay;
-    let lastError: unknown;
-
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        const result = await this.model.generateContent(prompt);
-        const response = await result.response;
-        const text = response.text();
-
-        return parseGeminiResponse<GeminiAnalysisResponse>(text);
-      } catch (error) {
-        lastError = error;
-
-        // Check if error is retryable
-        if (!isRetryableError(error)) {
-          throw new GeminiAPIError(
-            `Non-retryable error during analysis`,
-            attempt,
-            error,
-          );
-        }
-
-        // Last attempt - throw error
-        if (attempt === maxRetries) {
-          throw new GeminiAPIError(
-            `Max retries (${maxRetries}) reached`,
-            attempt,
-            error,
-          );
-        }
-
-        // Retry with exponential backoff
-        console.warn(
-          `      ⚠️ Gemini retry ${attempt}/${maxRetries} (waiting ${waitTime}ms)...`,
-        );
-        await delay(waitTime);
-        waitTime *= 2; // Exponential backoff
-      }
-    }
-
-    // Should never reach here, but TypeScript needs it
-    throw new GeminiAPIError(
-      'Unexpected error in retry loop',
-      maxRetries,
-      lastError,
-    );
-  }
-
-  /**
-   * Build analysis prompt
-   */
-  buildPrompt(
+  private generateSystemPrompt(
     title: string,
     source: string,
     category: string,
-    content: string,
+    contentBody: string,
   ): string {
     return `
 당신은 'Trendiv' 뉴스레터의 **수석 마크업(Markup) 기술 에디터**입니다.
 당신의 독자는 **HTML, CSS, 웹 접근성, 모바일 웹 렌더링**에 미쳐있는 프론트엔드 개발자들입니다.
-아래 글을 분석하여 독자에게 가치가 있는지를 **매우 엄격하게(Strictly)** 평가하세요.
+아래 내용을 분석하여 독자에게 가치가 있는지를 **매우 엄격하게(Strictly)** 평가하세요.
 
 [분석 대상]
 - 제목: ${title}
 - 출처: ${source} (${category})
-- 내용: ${content.substring(0, CONFIG.gemini.maxContentLength)}
+- 내용: ${contentBody}
 
 [🔥 채점 기준표 (Scoring Criteria)]
 
@@ -131,5 +78,117 @@ export class GeminiService {
   "tags": ["CSS", "A11y", "iOS", ...]
 }
     `.trim();
+  }
+
+  /**
+   * 📝 텍스트 분석 (기존 유지)
+   */
+  async analyze(prompt: string): Promise<GeminiAnalysisResponse> {
+    // 재시도 로직을 공통 함수(generateWithRetry)로 위임하여 코드 중복 제거
+    return this.generateWithRetry(prompt);
+  }
+
+  /**
+   * 📸 이미지 분석
+   */
+  async analyzeImage(
+    base64Image: string,
+    title: string,
+    category: string,
+  ): Promise<GeminiAnalysisResponse> {
+    // 공통 프롬프트 생성 (이미지 분석용 멘트 삽입)
+    const promptText = this.generateSystemPrompt(
+      title,
+      'Screenshot Analysis',
+      category,
+      '(아래 첨부된 스크린샷 이미지를 분석하여 내용을 파악하세요)',
+    );
+
+    const parts = [
+      promptText,
+      {
+        inlineData: {
+          data: base64Image,
+          mimeType: 'image/jpeg',
+        },
+      },
+    ];
+
+    return this.generateWithRetry(parts);
+  }
+
+  /**
+   * 재시도 로직이 포함된 실행기 (공통 함수)
+   * 텍스트든 이미지든 에러 나면 알아서 재시도합니다.
+   */
+  private async generateWithRetry(
+    content: string | any[],
+  ): Promise<GeminiAnalysisResponse> {
+    const { maxRetries, initialRetryDelay } = CONFIG.gemini;
+    let waitTime = initialRetryDelay;
+    let lastError: unknown;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        // Gemini에게 요청 발사 🚀
+        const result = await this.model.generateContent(content);
+        const response = await result.response;
+        const text = response.text();
+
+        // 지저분한 문자열을 깔끔한 JSON 객체로 변환 (ParseResponse)
+        return parseGeminiResponse<GeminiAnalysisResponse>(text);
+      } catch (error) {
+        lastError = error;
+
+        // 재시도 불가능한 에러면 즉시 중단 (예: API 키 오류)
+        if (!isRetryableError(error)) {
+          throw new GeminiAPIError(
+            `Non-retryable error (${this.modelName})`,
+            attempt,
+            error,
+          );
+        }
+
+        // 마지막 시도였으면 에러 던짐
+        if (attempt === maxRetries) {
+          throw new GeminiAPIError(
+            `Max retries (${maxRetries}) reached`,
+            attempt,
+            error,
+          );
+        }
+
+        // 잠시 대기 후 재시도 (Exponential Backoff)
+        console.warn(
+          `      ⚠️ Gemini retry ${attempt}/${maxRetries} (waiting ${waitTime}ms)...`,
+        );
+        await delay(waitTime);
+        waitTime *= 2;
+      }
+    }
+
+    throw new GeminiAPIError(
+      'Unexpected error in retry loop',
+      maxRetries,
+      lastError,
+    );
+  }
+
+  /**
+   * Build analysis prompt
+   */
+  buildPrompt(
+    title: string,
+    source: string,
+    category: string,
+    content: string,
+  ): string {
+    // 내용이 너무 길면 자르기
+    const truncatedContent = content.substring(
+      0,
+      CONFIG.gemini.maxContentLength,
+    );
+    // 공통 함수 호출
+    return this.generateSystemPrompt(title, source, category, truncatedContent);
   }
 }

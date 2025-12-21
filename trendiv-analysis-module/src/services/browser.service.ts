@@ -15,6 +15,44 @@ export class BrowserService {
   }
 
   /**
+   * 📸 스크린샷 촬영 함수 (새로 추가)
+   */
+  async captureScreenshot(url: string): Promise<string | null> {
+    let context: BrowserContext | null = null;
+    let page: Page | null = null;
+
+    try {
+      context = await this.browser.newContext({
+        userAgent: CONFIG.browser.userAgent,
+        viewport: { width: 1280, height: 800 }, // 적절한 해상도 설정
+      });
+
+      page = await context.newPage();
+
+      await page.goto(url, {
+        waitUntil: 'networkidle', // 리소스 로딩이 어느 정도 끝날 때까지 대기
+        timeout: CONFIG.browser.timeout,
+      });
+
+      // 스크린샷 촬영 (Base64)
+      const buffer = await page.screenshot({
+        type: 'jpeg',
+        quality: 80,
+        fullPage: true,
+      });
+
+      return buffer.toString('base64');
+    } catch (error) {
+      // 에러 로그는 남기되 null 반환 (분석 건너뛰기)
+      console.error(`📸 Screenshot failed for ${url}:`, error);
+      return null;
+    } finally {
+      if (page) await page.close().catch(() => {});
+      if (context) await context.close().catch(() => {});
+    }
+  }
+
+  /**
    * Fetch page content with proper resource cleanup
    */
   async fetchPageContent(
@@ -49,11 +87,8 @@ export class BrowserService {
 
       return sanitizeText(content, CONFIG.content.maxLength);
     } catch (error) {
-      throw new ContentFetchError(
-        `Failed to fetch page content`,
-        url,
-        error,
-      );
+      console.error(`Fetch error for ${url}:`, error);
+      return null;
     } finally {
       // ✅ Proper cleanup: page -> context 순서
       if (page) {

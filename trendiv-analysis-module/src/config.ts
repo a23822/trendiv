@@ -5,7 +5,7 @@
 export const CONFIG = {
   // Gemini API
   gemini: {
-    defaultModel: 'gemini-3.0-pro',
+    defaultModel: 'gemini-3-pro-preview',
     maxRetries: 3,
     initialRetryDelay: 2000,
     maxContentLength: 25000,
