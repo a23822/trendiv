@@ -72,7 +72,9 @@
 - [ ] **범용 웹 분석기 (Web Analyzer):**
   - [ ] 텍스트 전용 분석기(X/SO용)와 HTML 분석기(블로그용) 분리 구현.
   - [ ] YouTube 자막 추출 및 요약 로직 최적화 (Gemini Context Caching 활용 고려).
+- [ ] StackOverflow 에서 cloudflare 에 쉽게 막히는 현상 제거
+      playwright-extra + stealth
 
-### 4. githun
+### 4. github
 
 - [ ] 변경사항을 참조해서 모든 파일을 훑어서 빠진 게 있는지 체크하는 ai 루틴 추가

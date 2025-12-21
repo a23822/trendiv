@@ -6,7 +6,10 @@ import { Browser, BrowserContext, Page } from 'playwright';
 import { CONFIG } from '../config';
 import { ContentFetchError } from '../utils/errors';
 import { sanitizeText } from '../utils/helpers';
-import { chromium } from 'playwright';
+import { chromium } from 'playwright-extra';
+import stealth from 'puppeteer-extra-plugin-stealth';
+
+chromium.use(stealth());
 
 export class BrowserService {
   private browser: Browser;
@@ -36,6 +39,8 @@ export class BrowserService {
         userAgent:
           'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         viewport: { width: 1920, height: 1080 }, // 데스크탑 해상도
+        locale: 'en-US', // 봇 의심 피하기 위해 로케일 설정
+        timezoneId: 'America/New_York',
       });
 
       const page = await context.newPage();
@@ -78,8 +83,10 @@ export class BrowserService {
       // 2. 페이지 이동 (타임아웃 처리 강화)
       await page.goto(url, {
         waitUntil: 'domcontentloaded',
-        timeout: 30000,
+        timeout: 60000,
       });
+
+      await page.waitForTimeout(3000);
 
       // 팝업/쿠키 배너 자동 닫기 (스택오버플로우 등)
       await page
