@@ -24,6 +24,7 @@ export class BrowserService {
       // 1. 브라우저 실행 시 User-Agent 설정 (봇 탐지 회피)
       browser = await chromium.launch({
         headless: true,
+        // headless: false, // 로컬 디버깅용
         args: [
           '--no-sandbox',
           '--disable-setuid-sandbox',
