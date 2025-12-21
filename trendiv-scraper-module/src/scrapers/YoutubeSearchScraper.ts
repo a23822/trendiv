@@ -27,7 +27,6 @@ export class YoutubeSearchScraper implements Scraper {
             key: apiKey,
             type: 'video',
 
-            // ✨ 핵심 전략 수정 ✨
             order: 'relevance', // 1. 정확도순 정렬 (기본값)
             publishedAfter: publishedAfter, // 2. 단, 최근 7일 이내 영상만!
 

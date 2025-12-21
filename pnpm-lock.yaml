@@ -214,7 +214,7 @@ importers:
         specifier: ^1.7.0
         version: 1.13.2
       dotenv:
-        specifier: ^16.4.0
+        specifier: ^16.6.1
         version: 16.6.1
       playwright:
         specifier: ^1.56.1
@@ -224,7 +224,7 @@ importers:
         version: 3.13.0
     devDependencies:
       '@types/node':
-        specifier: ^20.11.0
+        specifier: ^20.19.25
         version: 20.19.25
       '@typescript-eslint/eslint-plugin':
         specifier: ^8.0.0

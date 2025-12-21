@@ -55,25 +55,25 @@ export const TARGETS: ScraperConfig[] = [
     name: 'Google Chrome Developers',
     category: 'YouTube',
     type: 'youtube',
-    url: 'https://www.youtube.com/feeds/videos.xml?channel_id=UCnC_tR70u9hTnp3q69_yZaQ',
+    url: 'https://www.youtube.com/feeds/videos.xml?channel_id=UCnUYZLuoy1rq1aVMwx4aTzw',
   },
   {
     name: 'Hyperplexed',
     category: 'YouTube',
     type: 'youtube',
-    url: 'https://www.youtube.com/feeds/videos.xml?channel_id=UCrumEsLojlcA6r-pBvP894g',
+    url: 'https://www.youtube.com/feeds/videos.xml?channel_id=UCmEzz-dPBVrsy4ZluSsYHDg',
   },
   {
     name: 'Deque Systems',
     category: 'YouTube',
     type: 'youtube',
-    url: 'https://www.youtube.com/feeds/videos.xml?channel_id=UCv7q9sW2X66_T3wR1uL9G_w',
+    url: 'https://www.youtube.com/feeds/videos.xml?channel_id=UCvNQ5aJllZ5Oi49jtMKeb0Q',
   },
   {
     name: 'TPGi',
     category: 'YouTube',
     type: 'youtube',
-    url: 'https://www.youtube.com/feeds/videos.xml?channel_id=UCZ9A4h1X73d1z733n1_M73w',
+    url: 'https://www.youtube.com/feeds/videos.xml?channel_id=UCmZe7GiM8tY5M8YHSg-Robg',
   },
 
   // =================================================
