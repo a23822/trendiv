@@ -6,6 +6,7 @@ import { Browser, BrowserContext, Page } from 'playwright';
 import { CONFIG } from '../config';
 import { ContentFetchError } from '../utils/errors';
 import { sanitizeText } from '../utils/helpers';
+import { chromium } from 'playwright';
 
 export class BrowserService {
   private browser: Browser;
@@ -18,37 +19,92 @@ export class BrowserService {
    * 📸 스크린샷 촬영 함수 (새로 추가)
    */
   async captureScreenshot(url: string): Promise<string | null> {
-    let context: BrowserContext | null = null;
-    let page: Page | null = null;
-
+    let browser;
     try {
-      context = await this.browser.newContext({
-        userAgent: CONFIG.browser.userAgent,
-        viewport: { width: 1280, height: 800 }, // 적절한 해상도 설정
+      // 1. 브라우저 실행 시 User-Agent 설정 (봇 탐지 회피)
+      browser = await chromium.launch({
+        headless: true,
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-blink-features=AutomationControlled', // 자동화 탐지 우회
+        ],
       });
 
-      page = await context.newPage();
+      const context = await browser.newContext({
+        userAgent:
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        viewport: { width: 1920, height: 1080 }, // 데스크탑 해상도
+      });
 
+      const page = await context.newPage();
+
+      // 🚫 광고 및 불필요한 리소스 차단 (로딩 속도 향상 + 광고 회피)
+      await page.route('**/*', (route) => {
+        const request = route.request();
+        const resourceType = request.resourceType();
+        const url = request.url();
+
+        // 1. 차단할 리소스 타입 (이미지는 허용해야 함!)
+        const blockedTypes = ['media', 'font', 'stylesheet'];
+        // stylesheet도 막으면 레이아웃이 깨지므로 상황 봐서 뺄 것.
+        // 보통 폰트와 미디어만 막아도 충분합니다.
+
+        // 2. 차단할 키워드 (광고/트래킹 도메인)
+        const adKeywords = [
+          'doubleclick',
+          'googlesyndication',
+          'adservice',
+          'google-analytics',
+          'facebook',
+          'adnxs',
+          'criteo',
+        ];
+
+        // 조건 검사
+        const isBlockedType = blockedTypes.includes(resourceType);
+        const isAd = adKeywords.some((keyword) => url.includes(keyword));
+
+        if (isBlockedType || isAd) {
+          route.abort();
+        } else {
+          route.continue();
+        }
+      });
+
+      console.log(`📸 Navigating to: ${url}`);
+
+      // 2. 페이지 이동 (타임아웃 처리 강화)
       await page.goto(url, {
-        waitUntil: 'networkidle', // 리소스 로딩이 어느 정도 끝날 때까지 대기
-        timeout: CONFIG.browser.timeout,
+        waitUntil: 'domcontentloaded',
+        timeout: 30000,
       });
 
-      // 스크린샷 촬영 (Base64)
+      // 팝업/쿠키 배너 자동 닫기 (스택오버플로우 등)
+      await page
+        .click('[aria-label*="close"], .js-consent-banner button', {
+          timeout: 2000,
+        })
+        .catch(() => {}); // 없으면 무시
+
+      // 콘텐츠 렌더링 대기
+      await page.waitForTimeout(2000);
+
+      // 스크린샷 캡처 (viewport 기준)
       const buffer = await page.screenshot({
-        type: 'jpeg',
+        fullPage: false,
+        type: 'jpeg', // PNG보다 용량 작음
         quality: 80,
-        fullPage: true,
       });
 
       return buffer.toString('base64');
-    } catch (error) {
-      // 에러 로그는 남기되 null 반환 (분석 건너뛰기)
-      console.error(`📸 Screenshot failed for ${url}:`, error);
+    } catch (error: any) {
+      console.error(`📸 Screenshot failed for ${url}:`, error.message);
       return null;
     } finally {
-      if (page) await page.close().catch(() => {});
-      if (context) await context.close().catch(() => {});
+      if (browser) {
+        await browser.close().catch(() => {});
+      }
     }
   }
 

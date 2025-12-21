@@ -84,8 +84,9 @@ export async function scrapeAll(days: number = 7): Promise<TrendItem[]> {
   }
   console.log(`\n📦 전체 수집량: ${allResults.length}개`);
 
-  const finalResults = filterRecentTrends(allResults, days);
+  // const finalResults = filterRecentTrends(allResults, days);
 
-  console.log(`✨ 필터링 적용 후: ${finalResults.length}개`);
-  return finalResults;
+  // console.log(`✨ 필터링 적용 후: ${finalResults.length}개`);
+  // return finalResults;
+  return allResults;
 }
