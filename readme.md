@@ -87,10 +87,17 @@ pnpm dev
 #### Backend (Google Cloud Run)
 
 ```bash
-gcloud run deploy trendiv-backend \
-  --image asia-northeast3-docker.pkg.dev/trendiv/trendiv-repo/trendiv-backend:latest \
-  --env-vars-file env.yaml
+./deploy.sh
+deploy.sh 참고
 ```
+
+or
+
+```bash
+pnpm run deploy
+```
+
+env 변경 시 https://console.cloud.google.com/compute/instances?chat=true&project=trendiv&supportedpurview=folder 에서 ssh 통해 변경
 
 #### Frontend (Cloudflare Pages)
 
