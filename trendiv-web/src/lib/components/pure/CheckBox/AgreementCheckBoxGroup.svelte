@@ -68,7 +68,7 @@
 				'absolute inset-0',
 				'h-4 w-4 p-0.5',
 				'transition-all duration-300 ease-in-out',
-				`${checked ? 'text-gray-fixed-0 scale-90' : 'text-gray-fixed-0/30 scale-50 opacity-0'}`
+				`${checked ? 'text-gray-0-fixed scale-90' : 'text-gray-0-fixed/30 scale-50 opacity-0'}`
 			)}
 			viewBox="0 0 24 24"
 			fill="none"
@@ -186,7 +186,7 @@
 
 						<span
 							class={cn(
-								'flex-1 select-none text-xs text-gray-700/90',
+								'flex-1 text-xs text-gray-700/90 select-none',
 								'transition-all duration-300 ease-in-out',
 								'group-hover:text-gray-900'
 							)}

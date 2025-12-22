@@ -46,7 +46,7 @@
 
 <div
 	class="
-    bg-gray-0 group cursor-pointer overflow-hidden rounded-2xl border border-gray-100 shadow-sm transition-all hover:shadow-xl
+    bg-gray-0 group cursor-pointer overflow-hidden rounded-2xl border border-gray-100 shadow-xs transition-all hover:shadow-xl
   "
 	{onclick}
 	onkeydown={(e) => e.key === 'Enter' && onclick?.()}
@@ -65,7 +65,7 @@
 			</div>
 
 			<span
-				class="rounded bg-violet-100 px-2 py-0.5 text-[10px] font-medium text-violet-600"
+				class="rounded-sm bg-violet-100 px-2 py-0.5 text-[10px] font-medium text-violet-600"
 			>
 				{displayModel}
 			</span>

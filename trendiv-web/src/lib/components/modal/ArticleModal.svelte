@@ -66,7 +66,7 @@
 		'max-h-[70vh] w-full max-w-2xl',
 		'm-auto overflow-hidden rounded-2xl p-0',
 		'bg-gray-0',
-		'backdrop:bg-black/50 backdrop:backdrop-blur-sm'
+		'backdrop:bg-black/50 backdrop:backdrop-blur-xs'
 	)}
 	onclose={handleNativeClose}
 	onclick={handleBackdropClick}
@@ -76,7 +76,7 @@
 			<!-- 헤더 -->
 			<header
 				class={cn(
-					'flex flex-shrink-0 items-center justify-between',
+					'flex shrink-0 items-center justify-between',
 					'px-5 py-4 sm:px-6',
 					'border-b border-gray-100'
 				)}
@@ -113,7 +113,7 @@
 			{#if results.length > 1}
 				<div
 					class={cn(
-						'flex flex-shrink-0 gap-2 overflow-x-auto',
+						'flex shrink-0 gap-2 overflow-x-auto',
 						'px-5 py-3 sm:px-6',
 						'border-b border-gray-100',
 						'bg-gray-50'
@@ -187,7 +187,7 @@
 							<ul class="space-y-1.5">
 								{#each displayKeyPoints as point}
 									<li class="flex gap-2 text-sm text-gray-700">
-										<span class="text-mint-500 flex-shrink-0 font-bold">•</span>
+										<span class="text-mint-500 shrink-0 font-bold">•</span>
 										<span>{point}</span>
 									</li>
 								{/each}
@@ -217,7 +217,7 @@
 
 			<!-- 푸터 -->
 			<footer
-				class={cn('flex-shrink-0 p-4 sm:px-6', 'border-t border-gray-100')}
+				class={cn('shrink-0 p-4 sm:px-6', 'border-t border-gray-100')}
 			>
 				<div class="flex items-center gap-3">
 					<a

@@ -91,18 +91,10 @@
 		<h2>
 			<IconLogoHero aria-hidden="true" />
 		</h2>
-		<p
-			class={cn(
-				'mt-4 leading-8',
-				'text-lg font-bold  text-gray-300 dark:text-gray-600'
-			)}
-		>
-			트렌디한 <span class="text-gray-100 dark:text-gray-900"
-				>HTML, CSS, A11y</span
-			>
+		<p class={cn('mt-4 leading-8', 'text-gray-300-fixed text-lg  font-bold')}>
+			트렌디한 <span class="text-gray-100-fixed">HTML, CSS, A11y</span>
 			정보를<br />
-			<span class="text-gray-100 dark:text-gray-900">AI</span>가 분석해서
-			보여드립니다.
+			<span class="text-gray-100-fixed">AI</span>가 분석해서 보여드립니다.
 		</p>
 		<form
 			class={cn(
@@ -169,12 +161,12 @@
 	</div>
 
 	<div
-		class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 transform-gpu blur-3xl"
+		class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 transform-gpu blur-3xl"
 		aria-hidden="true"
 		class:aurora_paused={!isVisible || uiState.isSideMenuOpen}
 	>
 		<div
-			class="to-primary aspect-[1155/678] w-[72.1875rem] bg-gradient-to-tr from-[#ff80b5] opacity-20"
+			class="to-primary aspect-1155/678 w-288.75 bg-linear-to-tr from-[#ff80b5] opacity-20"
 			style="clip-path: polygon(74.1% 44.1%, 100% 61.6%, 97.5% 26.9%, 85.5% 0.1%, 80.7% 2%, 72.5% 32.5%, 60.2% 62.4%, 52.4% 68.1%, 47.5% 58.3%, 45.2% 34.5%, 27.5% 76.7%, 0.1% 64.9%, 17.9% 100%, 27.6% 76.8%, 76.1% 97.7%, 74.1% 44.1%)"
 		></div>
 	</div>
@@ -233,7 +225,7 @@
 		transition: opacity 0.3s ease;
 		will-change: transform, opacity;
 	}
-	@media (min-width: theme('spacing.sidemenu')) {
+	@media (min-width: var(--spacing-sidemenu)) {
 		.animate-mesh1,
 		.animate-mesh2,
 		.animate-mesh3,
@@ -262,7 +254,7 @@
 		animation: none;
 		opacity: 0;
 	}
-	@media (min-width: theme('spacing.sidemenu')) {
+	@media (min-width: var(--spacing-sidemenu)) {
 		.paused .animate-mesh1,
 		.paused .animate-mesh2,
 		.paused .animate-mesh3,

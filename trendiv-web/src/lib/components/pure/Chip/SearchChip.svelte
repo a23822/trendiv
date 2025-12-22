@@ -30,14 +30,14 @@
 <button
 	type="button"
 	class={cn(
-		'group/chip min-h-[40px] px-4',
+		'group/chip min-h-10 px-4',
 		'rounded-full border border-gray-200',
 		'bg-gray-300/40',
 		CommonStyles.DEFAULT_TRANSITION,
 		'bg-gray-300/50 text-sm font-semibold text-gray-700',
 		'sm:hover:border-gray-500 sm:hover:text-gray-900',
 		'disabled:cursor-not-allowed disabled:opacity-50',
-		`${active && 'bg-forest-300 sm:bg-forest-300/80 text-gray-fixed-0 sm:hover:bg-forest-300 sm:hover:text-gray-fixed-0'}`
+		`${active && 'bg-forest-300 sm:bg-forest-300/80 text-gray-0-fixed sm:hover:bg-forest-300 sm:hover:text-gray-0-fixed'}`
 	)}
 	aria-pressed={active}
 	{disabled}

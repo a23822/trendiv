@@ -59,8 +59,9 @@
 <dialog
 	bind:this={dialog}
 	class={cn(
-		'w-[400px] max-w-[calc(100%_-_32px)] overflow-hidden overflow-y-auto rounded-2xl p-4',
+		'w-100 max-w-[calc(100%-32px)] overflow-hidden overflow-y-auto rounded-2xl p-4',
 		'bg-bg-body backdrop:bg-black/50',
+		'm-auto',
 		'sm:rounded-3xl sm:p-6'
 	)}
 	onclose={handleNativeClose}
@@ -102,10 +103,10 @@
 		<div
 			class={cn(
 				'relative -mx-4 sm:-mx-6',
-				'before:pointer-events-none before:absolute before:left-0 before:right-[var(--scrollbar-gap)] before:top-0 before:z-10 before:h-8',
-				'before:from-bg-body before:bg-gradient-to-b before:from-[0.5rem] before:to-transparent',
-				'after:pointer-events-none after:absolute after:bottom-0 after:left-0 after:right-[var(--scrollbar-gap)] after:z-10 after:h-8',
-				'after:from-bg-body after:bg-gradient-to-t after:from-[0.5rem] after:to-transparent'
+				'before:pointer-events-none before:absolute before:top-0 before:right-(--scrollbar-gap) before:left-0 before:z-10 before:h-8',
+				'before:from-bg-body before:bg-linear-to-b before:from-[0.5rem] before:to-transparent',
+				'after:pointer-events-none after:absolute after:right-(--scrollbar-gap) after:bottom-0 after:left-0 after:z-10 after:h-8',
+				'after:from-bg-body after:bg-linear-to-t after:from-[0.5rem] after:to-transparent'
 			)}
 		>
 			<div

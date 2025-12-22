@@ -67,7 +67,7 @@
 			CommonStyles.DEFAULT_TRANSITION,
 			isActive
 				? [
-						'bottom-[100%] left-3 translate-y-1/2',
+						'bottom-full left-3 translate-y-1/2',
 						'text-mint-600 text-xs font-semibold',
 						'bg-gray-0 px-1'
 					]
@@ -96,7 +96,7 @@
 			onblur={() => (isFocused = false)}
 			onkeydown={handleKeydown}
 			class={cn(
-				'w-full truncate bg-transparent py-4 text-base text-gray-800 outline-none',
+				'w-full truncate bg-transparent py-4 text-base text-gray-800 outline-hidden',
 				'placeholder:transition-colors placeholder:duration-300 placeholder:ease-in-out',
 				isActive ? 'placeholder:text-gray-500' : 'placeholder:text-transparent'
 			)}

@@ -28,8 +28,17 @@ class ThemeStore {
 
 		document.documentElement.classList.add('theme-transitioning');
 
-		this.isDark = !this.isDark;
-		this.applyTheme();
+		const update = () => {
+			this.isDark = !this.isDark;
+			this.applyTheme();
+		};
+
+		if (!document.startViewTransition) {
+			update();
+			return;
+		} else {
+			document.startViewTransition(update);
+		}
 
 		setTimeout(() => {
 			document.documentElement.classList.remove('theme-transitioning');

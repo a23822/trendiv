@@ -1,20 +1,258 @@
-@import 'tailwindcss/base';
-@import 'tailwindcss/components';
-@import 'tailwindcss/utilities';
+@import 'tailwindcss';
+
+@plugin '@tailwindcss/typography';
 
 @import './lib/constants/variables_color.scss';
 
-.theme-transitioning,
-.theme-transitioning *,
-.theme-transitioning *::before,
-.theme-transitioning *::after {
-	transition:
-		background-color 0.3s ease-out,
-		border-color 0.3s ease-out,
-		color 0.3s ease-out,
-		fill 0.3s ease-out,
-		stroke 0.3s ease-out,
-		box-shadow 0.3s ease-out;
+@theme {
+	/* --- 폰트 설정 --- */
+	--font-sans:
+		'Pretendard', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif';
+	--font-serif: 'Merriweather', 'serif';
+	--font-mono: 'Fira Code', 'monospace';
+
+	/* --- 간격(Spacing) 설정 --- */
+	--spacing-scrollbar-gap: var(--scrollbar-gap);
+	--spacing-sidemenu: 460px;
+	--spacing-header-height: 60px;
+
+	/* --- 색상 설정 (CSS 변수 매핑) --- */
+	/* v4에서는 rgb() 함수 안에 var()를 넣으면 자동으로 Opacity 기능이 지원됩니다 */
+
+	/* BG */
+	--color-bg-body: rgb(var(--bg-body));
+	--color-bg-main: rgb(var(--bg-main));
+	--color-bg-surface: rgb(var(--bg-surface));
+	--color-bg-elevated: rgb(var(--bg-elevated));
+	--color-bg-hover: rgb(var(--bg-hover));
+	--color-bg-active: rgb(var(--bg-active));
+	--color-bg-selected: rgb(var(--bg-selected));
+
+	/* Border */
+	--color-border-default: rgb(var(--border-default));
+	--color-border-subtle: rgb(var(--border-subtle));
+	--color-border-strong: rgb(var(--border-strong));
+	--color-border-focus: rgb(var(--border-focus));
+
+	/* Primary */
+	--color-primary: rgb(var(--primary));
+	--color-primary-hover: rgb(var(--primary-hover));
+	--color-primary-active: rgb(var(--primary-active));
+	--color-primary-subtle: rgb(var(--primary-subtle));
+	--color-primary-text: rgb(var(--primary-text));
+
+	/* Confirm */
+	--color-confirm: rgb(var(--confirm));
+	--color-confirm-hover: rgb(var(--confirm-hover));
+	--color-confirm-subtle: rgb(var(--confirm-subtle));
+	--color-confirm-text: rgb(var(--confirm-text));
+
+	/* Caution */
+	--color-caution: rgb(var(--caution));
+	--color-caution-hover: rgb(var(--caution-hover));
+	--color-caution-subtle: rgb(var(--caution-subtle));
+	--color-caution-text: rgb(var(--caution-text));
+
+	/* Alert */
+	--color-alert: rgb(var(--alert));
+	--color-alert-hover: rgb(var(--alert-hover));
+	--color-alert-subtle: rgb(var(--alert-subtle));
+	--color-alert-text: rgb(var(--alert-text));
+
+	/* Info */
+	--color-info: rgb(var(--info));
+	--color-info-hover: rgb(var(--info-hover));
+	--color-info-subtle: rgb(var(--info-subtle));
+	--color-info-text: rgb(var(--info-text));
+
+	/* Shadow (색상 변수로 등록) */
+	--shadow-sm: var(--shadow-sm);
+	--shadow-md: var(--shadow-md);
+	--shadow-lg: var(--shadow-lg);
+	--shadow-xl: var(--shadow-xl);
+
+	/* Mint Palette */
+	--color-mint-0: rgb(var(--mint-0));
+	--color-mint-50: rgb(var(--mint-50));
+	--color-mint-100: rgb(var(--mint-100));
+	--color-mint-200: rgb(var(--mint-200));
+	--color-mint-300: rgb(var(--mint-300));
+	--color-mint-400: rgb(var(--mint-400));
+	--color-mint-500: rgb(var(--mint-500));
+	--color-mint-600: rgb(var(--mint-600));
+	--color-mint-700: rgb(var(--mint-700));
+	--color-mint-800: rgb(var(--mint-800));
+	--color-mint-900: rgb(var(--mint-900));
+	--color-mint-1000: rgb(var(--mint-1000));
+
+	/* Forest Palette */
+	--color-forest-0: rgb(var(--forest-0));
+	--color-forest-50: rgb(var(--forest-50));
+	--color-forest-100: rgb(var(--forest-100));
+	--color-forest-200: rgb(var(--forest-200));
+	--color-forest-300: rgb(var(--forest-300));
+	--color-forest-400: rgb(var(--forest-400));
+	--color-forest-500: rgb(var(--forest-500));
+	--color-forest-600: rgb(var(--forest-600));
+	--color-forest-700: rgb(var(--forest-700));
+	--color-forest-800: rgb(var(--forest-800));
+	--color-forest-900: rgb(var(--forest-900));
+	--color-forest-1000: rgb(var(--forest-1000));
+
+	/* Gray Palette */
+	--color-gray-0: rgb(var(--gray-0));
+	--color-gray-100: rgb(var(--gray-100));
+	--color-gray-200: rgb(var(--gray-200));
+	--color-gray-300: rgb(var(--gray-300));
+	--color-gray-400: rgb(var(--gray-400));
+	--color-gray-500: rgb(var(--gray-500));
+	--color-gray-600: rgb(var(--gray-600));
+	--color-gray-700: rgb(var(--gray-700));
+	--color-gray-800: rgb(var(--gray-800));
+	--color-gray-900: rgb(var(--gray-900));
+	--color-gray-1000: rgb(var(--gray-1000));
+
+	/* Neutral Palette */
+	--color-neutral-0: rgb(var(--neutral-0));
+	--color-neutral-100: rgb(var(--neutral-100));
+	--color-neutral-200: rgb(var(--neutral-200));
+	--color-neutral-300: rgb(var(--neutral-300));
+	--color-neutral-400: rgb(var(--neutral-400));
+	--color-neutral-500: rgb(var(--neutral-500));
+	--color-neutral-600: rgb(var(--neutral-600));
+	--color-neutral-700: rgb(var(--neutral-700));
+	--color-neutral-800: rgb(var(--neutral-800));
+	--color-neutral-900: rgb(var(--neutral-900));
+	--color-neutral-1000: rgb(var(--neutral-1000));
+
+	/* --- Fixed Colors (다크모드 영향 안 받음) --- */
+
+	/* Mint Fixed */
+	--color-mint-0-fixed: rgb(var(--mint-0-fixed));
+	--color-mint-50-fixed: rgb(var(--mint-50-fixed));
+	--color-mint-100-fixed: rgb(var(--mint-100-fixed));
+	--color-mint-200-fixed: rgb(var(--mint-200-fixed));
+	--color-mint-300-fixed: rgb(var(--mint-300-fixed));
+	--color-mint-400-fixed: rgb(var(--mint-400-fixed));
+	--color-mint-500-fixed: rgb(var(--mint-500-fixed));
+	--color-mint-600-fixed: rgb(var(--mint-600-fixed));
+	--color-mint-700-fixed: rgb(var(--mint-700-fixed));
+	--color-mint-800-fixed: rgb(var(--mint-800-fixed));
+	--color-mint-900-fixed: rgb(var(--mint-900-fixed));
+	--color-mint-1000-fixed: rgb(var(--mint-1000-fixed));
+
+	/* Forest Fixed */
+	--color-forest-0-fixed: rgb(var(--forest-0-fixed));
+	--color-forest-50-fixed: rgb(var(--forest-50-fixed));
+	--color-forest-100-fixed: rgb(var(--forest-100-fixed));
+	--color-forest-200-fixed: rgb(var(--forest-200-fixed));
+	--color-forest-300-fixed: rgb(var(--forest-300-fixed));
+	--color-forest-400-fixed: rgb(var(--forest-400-fixed));
+	--color-forest-500-fixed: rgb(var(--forest-500-fixed));
+	--color-forest-600-fixed: rgb(var(--forest-600-fixed));
+	--color-forest-700-fixed: rgb(var(--forest-700-fixed));
+	--color-forest-800-fixed: rgb(var(--forest-800-fixed));
+	--color-forest-900-fixed: rgb(var(--forest-900-fixed));
+	--color-forest-1000-fixed: rgb(var(--forest-1000-fixed));
+
+	/* Gray Fixed */
+	--color-gray-0-fixed: rgb(var(--gray-0-fixed));
+	--color-gray-100-fixed: rgb(var(--gray-100-fixed));
+	--color-gray-200-fixed: rgb(var(--gray-200-fixed));
+	--color-gray-300-fixed: rgb(var(--gray-300-fixed));
+	--color-gray-400-fixed: rgb(var(--gray-400-fixed));
+	--color-gray-500-fixed: rgb(var(--gray-500-fixed));
+	--color-gray-600-fixed: rgb(var(--gray-600-fixed));
+	--color-gray-700-fixed: rgb(var(--gray-700-fixed));
+	--color-gray-800-fixed: rgb(var(--gray-800-fixed));
+	--color-gray-900-fixed: rgb(var(--gray-900-fixed));
+	--color-gray-1000-fixed: rgb(var(--gray-1000-fixed));
+
+	/* Neutral Fixed */
+	--color-neutral-0-fixed: rgb(var(--neutral-0-fixed));
+	--color-neutral-100-fixed: rgb(var(--neutral-100-fixed));
+	--color-neutral-200-fixed: rgb(var(--neutral-200-fixed));
+	--color-neutral-300-fixed: rgb(var(--neutral-300-fixed));
+	--color-neutral-400-fixed: rgb(var(--neutral-400-fixed));
+	--color-neutral-500-fixed: rgb(var(--neutral-500-fixed));
+	--color-neutral-600-fixed: rgb(var(--neutral-600-fixed));
+	--color-neutral-700-fixed: rgb(var(--neutral-700-fixed));
+	--color-neutral-800-fixed: rgb(var(--neutral-800-fixed));
+	--color-neutral-900-fixed: rgb(var(--neutral-900-fixed));
+	--color-neutral-1000-fixed: rgb(var(--neutral-1000-fixed));
+
+	/* --- Hex Code Colors (직접 입력된 색상) --- */
+
+	/* Teal */
+	--color-teal-0: #ffffff;
+	--color-teal-50: #e0f5f5;
+	--color-teal-100: #b0e4e6;
+	--color-teal-200: #7dd3d6;
+	--color-teal-300: #4abfc4;
+	--color-teal-400: #22a9b0;
+	--color-teal-500: #17909a;
+	--color-teal-600: #117580;
+	--color-teal-700: #0b5b65;
+	--color-teal-800: #07434a;
+	--color-teal-900: #042b30;
+
+	/* Emerald */
+	--color-emerald-0: #ffffff;
+	--color-emerald-50: #e0f7ed;
+	--color-emerald-100: #b0ebcf;
+	--color-emerald-200: #7ddeb0;
+	--color-emerald-300: #4acf90;
+	--color-emerald-400: #24bf75;
+	--color-emerald-500: #18a162;
+	--color-emerald-600: #128450;
+	--color-emerald-700: #0c663e;
+	--color-emerald-800: #084b2e;
+	--color-emerald-900: #04301d;
+
+	/* Petrol */
+	--color-petrol-0: #ffffff;
+	--color-petrol-50: #e0f2f4;
+	--color-petrol-100: #b0dde4;
+	--color-petrol-200: #7dc8d4;
+	--color-petrol-300: #4ab0c2;
+	--color-petrol-400: #2297ad;
+	--color-petrol-500: #177d94;
+	--color-petrol-600: #11647a;
+	--color-petrol-700: #0b4c5e;
+	--color-petrol-800: #073845;
+	--color-petrol-900: #04242d;
+}
+
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+	*,
+	::after,
+	::before,
+	::backdrop,
+	::file-selector-button {
+		border-color: var(--color-gray-200, currentcolor);
+	}
+
+	button:not(:disabled),
+	[role='button']:not(:disabled) {
+		cursor: pointer;
+	}
+}
+
+@layer utilities {
+	.theme-transitioning,
+	.theme-transitioning *,
+	.theme-transitioning *::before,
+	.theme-transitioning *::after {
+		transition: none;
+	}
 }
 
 @layer base {
