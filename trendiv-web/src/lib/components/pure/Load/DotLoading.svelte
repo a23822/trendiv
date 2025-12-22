@@ -39,9 +39,9 @@
 	role="status"
 	aria-label="로딩 중"
 >
-	<span class="typing-dot {config.dot} rounded-full bg-mint-500 dark:bg-mint-400"></span>
-	<span class="typing-dot {config.dot} rounded-full bg-mint-500 dark:bg-mint-400"></span>
-	<span class="typing-dot {config.dot} rounded-full bg-mint-500 dark:bg-mint-400"></span>
+	<span class="typing-dot {config.dot} rounded-full bg-mint-500"></span>
+	<span class="typing-dot {config.dot} rounded-full bg-mint-500"></span>
+	<span class="typing-dot {config.dot} rounded-full bg-mint-500"></span>
 </div>
 
 <style lang="scss">

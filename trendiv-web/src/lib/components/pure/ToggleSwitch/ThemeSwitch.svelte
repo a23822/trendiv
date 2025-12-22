@@ -48,14 +48,14 @@
 	.toggle {
 		position: relative;
 		width: 100%;
-		height: theme('spacing.header-height');
+		height: var(--spacing-header-height);
 		border: none;
 		cursor: pointer;
 		overflow: hidden;
 		padding: 0;
 		border-radius: 0;
 		--mask-size: 0%;
-		transition: --mask-size 0.5s ease-in-out;
+		transition: --mask-size 0.5s ease-in-out !important;
 	}
 
 	.toggle.dark {
@@ -74,7 +74,7 @@
 		inset: 0;
 		background: linear-gradient(180deg, #0f0f23 0%, #16213e 60%, #1a1a2e 100%);
 		opacity: 0;
-		transition: opacity 0.8s ease;
+		transition: opacity 0.8s ease !important;
 	}
 
 	.dark .bg::after {
@@ -85,7 +85,7 @@
 		position: absolute;
 		transition:
 			opacity 0.5s ease-in-out,
-			transform 0.5s ease-in-out;
+			transform 0.5s ease-in-out !important;
 		opacity: 0.9;
 	}
 
@@ -183,7 +183,7 @@
 		transform: scale(0);
 		transition:
 			opacity 0.5s ease,
-			transform 0.5s ease;
+			transform 0.5s ease !important;
 		box-shadow: 0 0 4px rgba(255, 215, 0, 0.8);
 	}
 
@@ -265,7 +265,7 @@
 		width: 48px;
 		height: 48px;
 		transform: translate(-50%, -50%);
-		transition: filter 0.5s ease;
+		transition: filter 0.5s ease !important;
 		filter: drop-shadow(0 0 12px rgba(255, 200, 50, 0.7));
 		z-index: 10;
 	}
@@ -281,7 +281,7 @@
 		background: linear-gradient(135deg, #ffd93d 0%, #ff9f1c 50%, #ff6b35 100%);
 		background-size: 200% 200%;
 		animation: sunGlow 3s ease-in-out infinite;
-		transition: background 0.5s ease;
+		transition: background 0.5s ease !important;
 		mask-image: radial-gradient(
 			circle at 85% 15%,
 			transparent var(--mask-size),

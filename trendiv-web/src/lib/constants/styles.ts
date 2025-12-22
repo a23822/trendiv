@@ -8,7 +8,7 @@ export const CommonStyles = {
 		'bg-gray-0 rounded-xl',
 		'p-4 sm:p-6',
 		'border border-gray-300/60',
-		'hover:border-gray-400 hover:shadow-sm',
+		'hover:border-gray-400 hover:shadow-xs',
 		BASE_TRANSITION
 	),
 	DEFAULT_TRANSTION_COLOR: cn(BASE_TRANSITION_COLOR),

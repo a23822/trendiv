@@ -25,7 +25,7 @@
 			class={cn(
 				'absolute inset-y-0',
 				'border-mint-200 rounded-md border',
-				'shadow-mint-100 bg-gray-fixed-0 shadow-sm',
+				'shadow-mint-100 bg-gray-0-fixed shadow-xs',
 				'transition-all duration-300 ease-out'
 			)}
 			style="width: {tabWidth}%; left: {leftPos}%;"
@@ -40,7 +40,7 @@
 					'truncate text-sm font-medium',
 					'transition-colors duration-300',
 					current === i
-						? 'text-forest-fixed-800 font-bold'
+						? 'text-forest-800-fixed font-bold'
 						: 'text-neutral-700 hover:font-bold hover:text-neutral-800'
 				)}
 			>

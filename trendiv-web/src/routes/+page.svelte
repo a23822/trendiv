@@ -14,7 +14,7 @@
 	import { onMount } from 'svelte';
 
 	let { data }: { data: PageData } = $props();
-	let trends = $state<Trend[]>(data.trends || []);
+	let trends = $state<Trend[]>([]);
 	let page = $state(1);
 	let isLoadingMore = $state(false);
 	let hasMore = $state(true);
@@ -39,6 +39,12 @@
 	$effect(() => {
 		if (auth.user?.email) {
 			email = auth.user.email;
+		}
+	});
+
+	$effect(() => {
+		if (data.trends) {
+			trends = data.trends;
 		}
 	});
 

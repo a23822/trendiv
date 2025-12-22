@@ -74,7 +74,7 @@
 		{onsearch}
 		{onclear}
 	/>
-	<div class="border-default mt-4 border-t-2">
+	<div class="border-border-default mt-4 border-t-2">
 		<div>
 			{#if hasSelected}
 				<div

@@ -48,7 +48,7 @@
 		onclick={handleLogout}
 	>
 		<div
-			class="bg-gray-0 before:rounded-inherit relative h-[40px] w-[40px] shrink-0 rounded-full shadow-sm before:absolute before:inset-0 before:border before:border-gray-500/30"
+			class="bg-gray-0 before:rounded-inherit relative h-[40px] w-[40px] shrink-0 rounded-full shadow-xs before:absolute before:inset-0 before:border before:border-gray-500/30"
 			style:background={userAvatar ? '#fff' : auth.avatarColor}
 		>
 			{#if userAvatar}
@@ -76,7 +76,7 @@
 	</button>
 {:else}
 	<button
-		class="border-border-default bg-gray-0 duration-400 flex w-full items-center justify-center gap-3 rounded-xl border px-4 py-3 transition-all hover:bg-gray-100 hover:shadow-sm {className}"
+		class="border-border-default bg-gray-0 duration-400 flex w-full items-center justify-center gap-3 rounded-xl border px-4 py-3 transition-all hover:bg-gray-100 hover:shadow-xs {className}"
 		onclick={handleLogin}
 	>
 		<IconLogoGoogle />
