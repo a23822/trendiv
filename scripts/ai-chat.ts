@@ -219,14 +219,20 @@ ${fullFileContent ? `[파일 전체 내용]\n\`\`\`\n${fullFileContent}\n\`\`\``
   // 일반 코멘트인 경우: PR Diff 전체
   console.log("📂 PR 변경사항(Diff) 가져오는 중...");
 
-  const { data: diffData } = await octokit.pulls.get({
-    owner: OWNER,
-    repo: REPO,
-    pull_number: PR_NUMBER,
-    mediaType: { format: "diff" },
-  });
+  // 🔴 Octokit Diff 호출 수정: request 메서드로 명시적 텍스트 응답 받기
+  const { data: diffData } = await octokit.request(
+    "GET /repos/{owner}/{repo}/pulls/{pull_number}",
+    {
+      owner: OWNER,
+      repo: REPO,
+      pull_number: PR_NUMBER,
+      headers: {
+        accept: "application/vnd.github.v3.diff",
+      },
+    }
+  );
 
-  let diffString = String(diffData);
+  let diffString = typeof diffData === "string" ? diffData : String(diffData);
   if (diffString.length > 80000) {
     diffString = diffString.slice(0, 80000) + "\n... (truncated)";
   }

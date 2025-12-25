@@ -242,8 +242,11 @@ async function checkSingleFile(
   targetFile: string,
   rules: string = ""
 ) {
-  const content =
+  const rawContent =
     fileContentCache.get(targetFile) || fs.readFileSync(targetFile, "utf-8");
+
+  // 🔴 백틱 이스케이프 적용
+  const content = escapeCodeForPrompt(rawContent);
 
   const prompt = `
 당신은 시니어 개발자로서 코드 리뷰를 수행합니다.
@@ -304,10 +307,14 @@ async function checkPairCompatibility(
 ) {
   if (!fs.existsSync(relatedFile)) return;
 
-  const targetContent =
+  const rawTargetContent =
     fileContentCache.get(targetFile) || fs.readFileSync(targetFile, "utf-8");
-  const relatedContent =
+  const rawRelatedContent =
     fileContentCache.get(relatedFile) || fs.readFileSync(relatedFile, "utf-8");
+
+  // 🔴 백틱 이스케이프 적용
+  const targetContent = escapeCodeForPrompt(rawTargetContent);
+  const relatedContent = escapeCodeForPrompt(rawRelatedContent);
 
   const prompt = `
 당신은 코드 간의 호환성을 검증하는 시니어 개발자입니다.
@@ -512,6 +519,12 @@ async function postReviewSummary() {
 // ==========================================
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// 🔴 프롬프트 인젝션 방지: 코드 내 백틱 이스케이프
+function escapeCodeForPrompt(code: string): string {
+  // 연속된 백틱 3개를 유니코드 대체 문자로 변환
+  return code.replace(/```/g, "'''");
 }
 
 // 🟡 동시성 제한 병렬 실행 (p-limit 대체)

@@ -18,16 +18,21 @@
 		trend ? bookmarks.isBookmarked(trend.link) : false
 	);
 
-	$effect(() => {
-		if (trend) {
-			// trend가 바뀌면 실행됨 (반응형 의존성 자동 추적)
-			selectedIndex = 0;
-		}
-	});
-
 	// 분석 결과
 	const results = $derived(trend?.analysis_results || []);
 	let selectedIndex = $state(0);
+
+	// 🟡 trend 또는 results 변경 시 selectedIndex 초기화
+	$effect(() => {
+		if (trend || results) {
+			// results.length가 줄어들었을 때 인덱스 오버플로우 방지
+			if (selectedIndex >= results.length && results.length > 0) {
+				selectedIndex = 0;
+			} else if (results.length === 0) {
+				selectedIndex = 0;
+			}
+		}
+	});
 
 	const currentData = $derived(
 		trend?.analysis_results?.[selectedIndex] ?? trend?.analysis_results?.[0]
@@ -51,9 +56,9 @@
 		}
 	});
 
+	// 💡 중복 호출 제거: dialog.close()만 호출하면 onclose 이벤트가 트리거되어 modal.close() 실행됨
 	function requestClose() {
 		dialog?.close();
-		modal.close();
 	}
 
 	function handleNativeClose() {
@@ -130,7 +135,8 @@
 						'bg-gray-50'
 					)}
 				>
-					{#each results as res, index}
+					<!-- 🟡 #each 키 추가 + 기본값 처리 -->
+					{#each results as res, index (res.aiModel || index)}
 						<button
 							type="button"
 							class={cn(
@@ -141,7 +147,7 @@
 							)}
 							onclick={() => (selectedIndex = index)}
 						>
-							{res.aiModel} ({res.score}점)
+							{res.aiModel || '모델'} ({res.score ?? 0}점)
 						</button>
 					{/each}
 				</div>
@@ -196,7 +202,8 @@
 								Key Takeaways
 							</h3>
 							<ul class="space-y-1.5">
-								{#each displayKeyPoints as point}
+								<!-- 💡 #each 키 추가 -->
+								{#each displayKeyPoints as point, i (point + i)}
 									<li class="flex gap-2 text-sm text-gray-700">
 										<span class="text-mint-500 shrink-0 font-bold">•</span>
 										<span>{point}</span>
@@ -209,7 +216,8 @@
 					<!-- 태그 -->
 					{#if displayTags.length > 0}
 						<div class="flex flex-wrap gap-1.5">
-							{#each displayTags as tag, i}
+							<!-- 💡 #each 키 추가 -->
+							{#each displayTags as tag, i (tag + i)}
 								<span
 									class={cn(
 										'rounded-full px-2.5 py-1 text-xs font-medium',
