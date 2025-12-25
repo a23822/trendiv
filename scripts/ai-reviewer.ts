@@ -523,8 +523,8 @@ function sleep(ms: number) {
 
 // 🔴 프롬프트 인젝션 방지: 코드 내 백틱 이스케이프
 function escapeCodeForPrompt(code: string): string {
-  // 연속된 백틱 3개를 유니코드 대체 문자로 변환
-  return code.replace(/```/g, "'''");
+  // 연속된 백틱 3개를 유니코드 GRAVE ACCENT 대체
+  return code.replace(/`{3,}/g, (match) => "′".repeat(match.length));
 }
 
 // 🟡 동시성 제한 병렬 실행 (p-limit 대체)

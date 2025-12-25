@@ -44,13 +44,13 @@ class AuthStore {
 	openLoginModal() {
 		modal.open(NoticeModal, {
 			title: '서비스 이용 동의',
+			confirmText: 'Google로 시작하기',
 			tabs: [
 				{ title: '이용약관', content: TERMS_TEXT },
 				{ title: '개인정보처리방침', content: PRIVACY_TEXT }
 			],
 			bottomComponent: AgreementModalBottom,
 			bottomProps: {
-				confirmText: 'Google로 시작하기',
 				confirmIcon: IconLogoGoogle,
 				agreements: [
 					{ id: 'terms', text: '[필수] 이용약관 동의', required: true },

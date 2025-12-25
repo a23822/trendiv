@@ -22,15 +22,10 @@
 	const results = $derived(trend?.analysis_results || []);
 	let selectedIndex = $state(0);
 
-	// 🟡 trend 또는 results 변경 시 selectedIndex 초기화
+	// 🟡 trend 변경 시 무조건 selectedIndex 초기화 (새 기사는 항상 첫 번째 모델부터)
 	$effect(() => {
-		if (trend || results) {
-			// results.length가 줄어들었을 때 인덱스 오버플로우 방지
-			if (selectedIndex >= results.length && results.length > 0) {
-				selectedIndex = 0;
-			} else if (results.length === 0) {
-				selectedIndex = 0;
-			}
+		if (trend) {
+			selectedIndex = 0;
 		}
 	});
 
