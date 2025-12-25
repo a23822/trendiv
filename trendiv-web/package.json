@@ -53,6 +53,7 @@
 	"dependencies": {
 		"@supabase/supabase-js": "^2.86.0",
 		"clsx": "^2.1.1",
+		"isomorphic-dompurify": "^2.34.0",
 		"tailwind-merge": "^3.4.0"
 	}
 }

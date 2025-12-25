@@ -8,6 +8,12 @@
     "start:backend": "pnpm --filter trendiv-pipeline-controller start"
   },
   "devDependencies": {
-    "typescript": "^5.0.0"
+    "@google/generative-ai": "^0.24.1",
+    "@octokit/rest": "^22.0.1",
+    "dotenv": "^17.2.3",
+    "glob": "^13.0.0",
+    "minimatch": "^10.1.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
   }
 }

@@ -14,14 +14,23 @@
 
 	let dialog: HTMLDialogElement;
 
-	const isBookmarked = $derived(bookmarks.isBookmarked(trend.link));
+	const isBookmarked = $derived(
+		trend ? bookmarks.isBookmarked(trend.link) : false
+	);
 
 	// 분석 결과
 	const results = $derived(trend?.analysis_results || []);
 	let selectedIndex = $state(0);
 
+	// 🟡 trend 변경 시 무조건 selectedIndex 초기화 (새 기사는 항상 첫 번째 모델부터)
+	$effect(() => {
+		if (trend) {
+			selectedIndex = 0;
+		}
+	});
+
 	const currentData = $derived(
-		results.length > 0 ? results[selectedIndex] : undefined
+		trend?.analysis_results?.[selectedIndex] ?? trend?.analysis_results?.[0]
 	);
 
 	const displayTitle = $derived(currentData?.title_ko || trend?.title || '');
@@ -31,7 +40,9 @@
 	const displayScore = $derived(currentData?.score ?? 0);
 	const displayModel = $derived(currentData?.aiModel || '');
 	const displayDate = $derived(
-		trend ? new Date(trend.date).toLocaleDateString('ko-KR') : ''
+		trend?.date && !isNaN(new Date(trend.date).getTime())
+			? new Date(trend.date).toLocaleDateString('ko-KR')
+			: ''
 	);
 
 	$effect(() => {
@@ -40,9 +51,9 @@
 		}
 	});
 
+	// 💡 중복 호출 제거: dialog.close()만 호출하면 onclose 이벤트가 트리거되어 modal.close() 실행됨
 	function requestClose() {
 		dialog?.close();
-		modal.close();
 	}
 
 	function handleNativeClose() {
@@ -65,7 +76,7 @@
 	class={cn(
 		'max-h-[70vh] w-full max-w-2xl',
 		'm-auto overflow-hidden rounded-2xl p-0',
-		'bg-gray-0',
+		'bg-bg-main',
 		'backdrop:bg-black/50 backdrop:backdrop-blur-xs'
 	)}
 	onclose={handleNativeClose}
@@ -119,18 +130,19 @@
 						'bg-gray-50'
 					)}
 				>
-					{#each results as res, index}
+					<!-- 🟡 #each 키 추가 + 기본값 처리 -->
+					{#each results as res, index (res.aiModel || index)}
 						<button
 							type="button"
 							class={cn(
-								'whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-bold transition-colors',
+								'rounded-full px-3 py-1.5 text-xs font-bold whitespace-nowrap transition-colors',
 								selectedIndex === index
 									? 'bg-mint-500 text-white'
 									: 'bg-gray-200 text-gray-600 hover:bg-gray-300'
 							)}
 							onclick={() => (selectedIndex = index)}
 						>
-							{res.aiModel} ({res.score}점)
+							{res.aiModel || '모델'} ({res.score ?? 0}점)
 						</button>
 					{/each}
 				</div>
@@ -144,7 +156,7 @@
 				<div class="p-5 sm:p-6">
 					<h2
 						class={cn(
-							'mb-2 text-lg font-bold leading-tight sm:text-xl',
+							'mb-2 text-lg leading-tight font-bold sm:text-xl',
 							'text-gray-900'
 						)}
 					>
@@ -185,7 +197,8 @@
 								Key Takeaways
 							</h3>
 							<ul class="space-y-1.5">
-								{#each displayKeyPoints as point}
+								<!-- 💡 #each 키 추가 -->
+								{#each displayKeyPoints as point, i (point + i)}
 									<li class="flex gap-2 text-sm text-gray-700">
 										<span class="text-mint-500 shrink-0 font-bold">•</span>
 										<span>{point}</span>
@@ -198,7 +211,8 @@
 					<!-- 태그 -->
 					{#if displayTags.length > 0}
 						<div class="flex flex-wrap gap-1.5">
-							{#each displayTags as tag, i}
+							<!-- 💡 #each 키 추가 -->
+							{#each displayTags as tag, i (tag + i)}
 								<span
 									class={cn(
 										'rounded-full px-2.5 py-1 text-xs font-medium',
@@ -216,9 +230,7 @@
 			</div>
 
 			<!-- 푸터 -->
-			<footer
-				class={cn('shrink-0 p-4 sm:px-6', 'border-t border-gray-100')}
-			>
+			<footer class={cn('shrink-0 p-4 sm:px-6', 'border-t border-gray-100')}>
 				<div class="flex items-center gap-3">
 					<a
 						href={trend.link}
@@ -256,7 +268,7 @@
 								: 'border-gray-200 text-gray-600 hover:bg-gray-50'
 						)}
 					>
-						<IconBookmark filled={isBookmarked ? true : false} />
+						<IconBookmark filled={isBookmarked} />
 					</button>
 				</div>
 			</footer>
