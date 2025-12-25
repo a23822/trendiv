@@ -6,11 +6,9 @@
 	import Header from '$lib/components/layout/Header/Header.svelte';
 	import ArticleModal from '$lib/components/modal/ArticleModal.svelte';
 	import { auth } from '$lib/stores/auth.svelte.js';
-	import { supabase } from '$lib/stores/db';
 	import { modal } from '$lib/stores/modal.svelte.js';
 	import type { Trend } from '$lib/types';
 	import type { PageData } from './$types';
-	import { type Subscription } from '@supabase/supabase-js';
 	import { onMount } from 'svelte';
 
 	let { data }: { data: PageData } = $props();

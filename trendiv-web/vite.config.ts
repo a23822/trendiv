@@ -4,5 +4,10 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
 	plugins: [sveltekit(), tailwindcss()],
-	envDir: '../'
+	envDir: '../',
+	server: {
+		fs: {
+			allow: ['..']
+		}
+	}
 });
