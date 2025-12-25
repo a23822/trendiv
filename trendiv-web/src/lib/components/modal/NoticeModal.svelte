@@ -52,6 +52,10 @@
 			requestClose();
 		}
 	}
+
+	const sanitizedContent = $derived(
+		tabs[activeIndex] ? DOMPurify.sanitize(tabs[activeIndex].content) : ''
+	);
 </script>
 
 <dialog
@@ -117,7 +121,7 @@
 				)}
 			>
 				{#if tabs[activeIndex]}
-					{@html DOMPurify.sanitize(tabs[activeIndex].content)}
+					{@html sanitizedContent}
 				{/if}
 			</div>
 		</div>

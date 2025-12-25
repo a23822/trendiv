@@ -30,7 +30,7 @@
 	let selectedIndex = $state(0);
 
 	const currentData = $derived(
-		results.length > 0 ? results[selectedIndex] : undefined
+		trend?.analysis_results?.[selectedIndex] ?? trend?.analysis_results?.[0]
 	);
 
 	const displayTitle = $derived(currentData?.title_ko || trend?.title || '');
