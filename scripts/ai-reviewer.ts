@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import type { GenerativeModel } from "@google/generative-ai";
 import { Octokit } from "@octokit/rest";
 import * as fs from "fs";
 import { minimatch } from "minimatch";
@@ -16,7 +17,6 @@ const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 const GITHUB_REPOSITORY = process.env.GITHUB_REPOSITORY;
 const GITHUB_PR_NUMBER = process.env.GITHUB_PR_NUMBER;
 
-// ✨ 하이브리드 추론 모델 'Gemini 2.5 Flash' 적용
 const MODEL_NAME = process.env.GEMINI_MODEL_LIGHT || "gemini-2.5-flash";
 
 const IGNORE_PATTERNS = [
@@ -41,6 +41,9 @@ interface ReviewResult {
 }
 
 const reviewResults: ReviewResult[] = [];
+
+// ⚡ 성능 개선: 파일 내용을 메모리에 캐싱 (중복 읽기 방지)
+const fileContentCache = new Map<string, string>();
 
 // ==========================================
 // 🚀 메인 로직
@@ -96,12 +99,23 @@ async function main() {
     nodir: true,
   });
 
+  // 전체 파일을 한 번만 읽어서 캐싱합니다. (O(N) 읽기)
+  console.log("📂 프로젝트 전체 파일 캐싱 중...");
+  for (const file of allFiles) {
+    try {
+      const content = fs.readFileSync(file, "utf-8");
+      fileContentCache.set(file, content);
+    } catch (e) {
+      // 읽기 실패 시 무시 (바이너리 파일 등)
+    }
+  }
+
   for (const file of filesToReview) {
     if (!fs.existsSync(file)) continue;
 
     console.log(`\n🔎 [Target: ${file}] 심층 분석 중...`);
 
-    // 연관 파일 찾기
+    // 연관 파일 찾기 (캐시 활용)
     const relatedFiles = findRelatedFiles(file, allFiles);
 
     if (relatedFiles.length === 0) {
@@ -138,20 +152,18 @@ function findRelatedFiles(targetFile: string, allFiles: string[]): string[] {
   for (const otherFile of allFiles) {
     if (otherFile === targetFile) continue;
 
-    try {
-      const content = fs.readFileSync(otherFile, "utf-8");
-      if (
-        content.includes(targetFileName) ||
-        content.includes(targetNameNoExt)
-      ) {
-        related.add(otherFile);
-      }
-    } catch {
-      // 파일 읽기 실패 시 건너뜀
+    // fs.readFileSync 대신 캐시 사용
+    const content = fileContentCache.get(otherFile) || "";
+
+    // 내용이 없으면 건너뜀
+    if (!content) continue;
+
+    if (content.includes(targetFileName) || content.includes(targetNameNoExt)) {
+      related.add(otherFile);
     }
   }
 
-  // review_index.md 확인
+  // review_index.md 확인 (수동 매핑 파일이 있다면)
   const indexFile = path.join(dir, "review_index.md");
   if (fs.existsSync(indexFile)) {
     try {
@@ -175,8 +187,9 @@ function findRelatedFiles(targetFile: string, allFiles: string[]): string[] {
 // ==========================================
 // 🤖 단일 파일 검사
 // ==========================================
-async function checkSingleFile(model: any, targetFile: string) {
-  const content = fs.readFileSync(targetFile, "utf-8");
+async function checkSingleFile(model: GenerativeModel, targetFile: string) {
+  const content =
+    fileContentCache.get(targetFile) || fs.readFileSync(targetFile, "utf-8");
 
   const prompt = `
 당신은 시니어 개발자로서 코드 리뷰를 수행합니다.
@@ -201,7 +214,7 @@ ${content}
   - 🟡 주의: (로직 오류, 성능 이슈)
   - 💡 제안: (개선 사항)
 - 단순 스타일 지적은 하지 마세요.
-- 한국어로 핵심만 간결하게 마크다운 형식으로 알려주세요
+- 한국어로 핵심만 간결하게 마크다운 형식으로 작성하세요.
 - 인사말은 필요없습니다.
 `;
 
@@ -235,7 +248,9 @@ async function checkPairCompatibility(
   if (!fs.existsSync(relatedFile)) return;
 
   const targetContent = fs.readFileSync(targetFile, "utf-8");
-  const relatedContent = fs.readFileSync(relatedFile, "utf-8");
+  // 캐시가 있으면 캐시 사용, 없으면 읽기
+  const relatedContent =
+    fileContentCache.get(relatedFile) || fs.readFileSync(relatedFile, "utf-8");
 
   const prompt = `
 당신은 코드 간의 호환성을 검증하는 시니어 개발자입니다.
@@ -334,16 +349,18 @@ async function postComment(body: string) {
     return;
   }
 
+  // 👇 [보안] Repository 형식 검증 추가
+  const repoParts = GITHUB_REPOSITORY.split("/");
+  if (repoParts.length !== 2) {
+    console.error(
+      "❌ GITHUB_REPOSITORY 형식이 올바르지 않습니다 (예: owner/repo)"
+    );
+    return;
+  }
+  const [owner, repo] = repoParts;
+
   try {
     const octokit = new Octokit({ auth: GITHUB_TOKEN });
-    const repoParts = GITHUB_REPOSITORY.split("/");
-    if (repoParts.length !== 2) {
-      console.error(
-        "❌ GITHUB_REPOSITORY 형식이 올바르지 않습니다 (예: owner/repo)"
-      );
-      return;
-    }
-    const [owner, repo] = repoParts;
     const prNumber = parseInt(GITHUB_PR_NUMBER, 10);
 
     if (prNumber > 0) {

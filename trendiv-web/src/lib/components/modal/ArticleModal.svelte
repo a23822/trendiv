@@ -31,7 +31,9 @@
 	const displayScore = $derived(currentData?.score ?? 0);
 	const displayModel = $derived(currentData?.aiModel || '');
 	const displayDate = $derived(
-		trend ? new Date(trend.date).toLocaleDateString('ko-KR') : ''
+		trend?.date && !isNaN(new Date(trend.date).getTime())
+			? new Date(trend.date).toLocaleDateString('ko-KR')
+			: ''
 	);
 
 	$effect(() => {
@@ -254,7 +256,7 @@
 								: 'border-gray-200 text-gray-600 hover:bg-gray-50'
 						)}
 					>
-						<IconBookmark filled={isBookmarked ? true : false} />
+						<IconBookmark filled={isBookmarked} />
 					</button>
 				</div>
 			</footer>

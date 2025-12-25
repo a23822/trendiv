@@ -57,7 +57,6 @@
 	}
 </script>
 
-{@html DOMPurify.sanitize(tabs[activeIndex].content)}
 <dialog
 	bind:this={dialog}
 	class={cn(
@@ -121,7 +120,7 @@
 				)}
 			>
 				{#if tabs[activeIndex]}
-					{@html tabs[activeIndex].content}
+					{@html DOMPurify.sanitize(tabs[activeIndex].content)}
 				{/if}
 			</div>
 		</div>

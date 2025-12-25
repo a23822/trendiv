@@ -52,6 +52,14 @@ async function main() {
     `💬 질문 감지 [${EVENT_NAME}] (${USER_LOGIN}): "${userQuestion}"`
   );
 
+  if (
+    EVENT_NAME === "pull_request_review_comment" &&
+    (!COMMENT_ID || COMMENT_ID === 0)
+  ) {
+    console.error("❌ 리뷰 코멘트 ID가 올바르지 않습니다.");
+    process.exit(1);
+  }
+
   const octokit = new Octokit({ auth: GITHUB_TOKEN });
 
   try {
