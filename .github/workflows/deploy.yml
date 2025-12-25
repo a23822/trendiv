@@ -27,11 +27,16 @@ jobs:
           cache: "pnpm"
           cache-dependency-path: pnpm-lock.yaml
 
+      # 👇 루트에서 전체 워크스페이스 설치
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # 👇 trendiv-web 패키지만 빌드
       - name: Build
         run: pnpm --filter trendiv-web build
+        env:
+          PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
+          PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PUBLIC_SUPABASE_ANON_KEY }}
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
