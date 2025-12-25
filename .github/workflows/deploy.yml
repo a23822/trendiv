@@ -10,9 +10,6 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./trendiv-web
 
     steps:
       - name: Checkout code
@@ -28,13 +25,13 @@ jobs:
         with:
           node-version: 22
           cache: "pnpm"
-          cache-dependency-path: trendiv-web/pnpm-lock.yaml
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Build
-        run: pnpm build
+        run: pnpm --filter trendiv-web build
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
