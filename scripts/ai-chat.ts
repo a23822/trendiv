@@ -142,25 +142,26 @@ ${fullFileContent ? `[파일 전체 내용]\n\`\`\`\n${fullFileContent}\n\`\`\``
   // 일반 코멘트인 경우: PR Diff 전체
   console.log("📂 PR 변경사항(Diff) 가져오는 중...");
 
-  const { data: diffData } = await octokit.pulls.get({
-    owner: OWNER,
-    repo: REPO,
-    pull_number: PR_NUMBER,
-    mediaType: { format: "diff" },
-  });
+  const [diffResponse, prResponse] = await Promise.all([
+    octokit.pulls.get({
+      owner: OWNER,
+      repo: REPO,
+      pull_number: PR_NUMBER,
+      mediaType: { format: "diff" },
+    }),
+    octokit.pulls.get({
+      owner: OWNER,
+      repo: REPO,
+      pull_number: PR_NUMBER,
+    }),
+  ]);
 
-  // Diff가 너무 크면 자르기
-  let diffString = String(diffData);
+  let diffString = String(diffResponse.data);
   if (diffString.length > 80000) {
     diffString = diffString.slice(0, 80000) + "\n... (truncated)";
   }
 
-  // PR 정보도 가져오기
-  const { data: prData } = await octokit.pulls.get({
-    owner: OWNER,
-    repo: REPO,
-    pull_number: PR_NUMBER,
-  });
+  const prData = prResponse.data;
 
   return `
 [PR 정보]
