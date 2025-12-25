@@ -65,7 +65,7 @@
 	class={cn(
 		'max-h-[70vh] w-full max-w-2xl',
 		'm-auto overflow-hidden rounded-2xl p-0',
-		'bg-gray-0',
+		'bg-bg-main',
 		'backdrop:bg-black/50 backdrop:backdrop-blur-xs'
 	)}
 	onclose={handleNativeClose}
@@ -123,7 +123,7 @@
 						<button
 							type="button"
 							class={cn(
-								'whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-bold transition-colors',
+								'rounded-full px-3 py-1.5 text-xs font-bold whitespace-nowrap transition-colors',
 								selectedIndex === index
 									? 'bg-mint-500 text-white'
 									: 'bg-gray-200 text-gray-600 hover:bg-gray-300'
@@ -144,7 +144,7 @@
 				<div class="p-5 sm:p-6">
 					<h2
 						class={cn(
-							'mb-2 text-lg font-bold leading-tight sm:text-xl',
+							'mb-2 text-lg leading-tight font-bold sm:text-xl',
 							'text-gray-900'
 						)}
 					>
@@ -216,9 +216,7 @@
 			</div>
 
 			<!-- 푸터 -->
-			<footer
-				class={cn('shrink-0 p-4 sm:px-6', 'border-t border-gray-100')}
-			>
+			<footer class={cn('shrink-0 p-4 sm:px-6', 'border-t border-gray-100')}>
 				<div class="flex items-center gap-3">
 					<a
 						href={trend.link}

@@ -1,0 +1,60 @@
+name: Custom Context-Aware Reviewer
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+# 중복 실행 방지 (새 커밋이 오면 이전 AI 리뷰는 취소)
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ai-review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # 1. pnpm 설치 (이게 없으면 pnpm install이 안 됩니다)
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "pnpm"
+
+      # 2. 의존성 설치
+      # 모노레포 루트에서 개발 의존성 설치 (-w)
+      - name: Install Dependencies
+        run: pnpm install
+
+      # 3. 변경된 파일 목록 추출
+      - name: Get Changed Files
+        id: changed-files
+        uses: tj-actions/changed-files@v45 # v44.5.1 supply chain 공격 보안 수정
+        with:
+          separator: " " # 파일 이름 사이를 공백으로 구분
+
+      # 4. AI 스크립트 실행
+      # 추출한 파일 목록(${{ ... }})을 스크립트 뒤에 붙여서 실행합니다.
+      - name: Run AI Reviewer Script
+        if: steps.changed-files.outputs.any_changed == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL_LIGHT: ${{ vars.GEMINI_MODEL_LIGHT || 'gemini-2.5-flash' }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
+        # 안전한 실행 명령어 (esm 옵션 추가)
+        run: npx tsx scripts/ai-reviewer.ts ${{ steps.changed-files.outputs.all_changed_files }}
