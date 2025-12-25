@@ -14,7 +14,16 @@
 
 	let dialog: HTMLDialogElement;
 
-	const isBookmarked = $derived(bookmarks.isBookmarked(trend.link));
+	const isBookmarked = $derived(
+		trend ? bookmarks.isBookmarked(trend.link) : false
+	);
+
+	$effect(() => {
+		if (trend) {
+			// trend가 바뀌면 실행됨 (반응형 의존성 자동 추적)
+			selectedIndex = 0;
+		}
+	});
 
 	// 분석 결과
 	const results = $derived(trend?.analysis_results || []);

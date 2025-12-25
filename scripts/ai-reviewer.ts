@@ -1,5 +1,4 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import type { GenerativeModel } from "@google/generative-ai";
 import { Octokit } from "@octokit/rest";
 import * as fs from "fs";
 import { minimatch } from "minimatch";
@@ -17,7 +16,9 @@ const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 const GITHUB_REPOSITORY = process.env.GITHUB_REPOSITORY;
 const GITHUB_PR_NUMBER = process.env.GITHUB_PR_NUMBER;
 
-const MODEL_NAME = process.env.GEMINI_MODEL_LIGHT || "gemini-2.5-flash";
+// ✨ 환경변수에서 모델명을 가져오거나 기본값 사용
+// (gemini-3-flash-preview 사용 시 환경변수에 설정하세요)
+const MODEL_NAME = process.env.GEMINI_MODEL_LIGHT || "gemini-2.0-flash";
 
 const IGNORE_PATTERNS = [
   "**/node_modules/**",
@@ -32,7 +33,10 @@ const IGNORE_PATTERNS = [
   "**/*.yaml",
 ];
 
-// 리뷰 결과 수집용
+// 규칙 파일 경로 (.github/ai-review-rules.md)
+const RULES_FILE_PATH = path.join(process.cwd(), ".github/ai-review-rules.md");
+
+// 리뷰 결과 수집용 인터페이스
 interface ReviewResult {
   file: string;
   status: "pass" | "issue" | "error";
@@ -42,9 +46,6 @@ interface ReviewResult {
 
 const reviewResults: ReviewResult[] = [];
 
-// ⚡ 성능 개선: 파일 내용을 메모리에 캐싱 (중복 읽기 방지)
-const fileContentCache = new Map<string, string>();
-
 // ==========================================
 // 🚀 메인 로직
 // ==========================================
@@ -52,6 +53,19 @@ async function main() {
   if (!API_KEY) {
     console.error("❌ GEMINI_API_KEY가 설정되지 않았습니다.");
     process.exit(1);
+  }
+
+  // 0. 커스텀 규칙 로드
+  let customRules = "";
+  if (fs.existsSync(RULES_FILE_PATH)) {
+    try {
+      customRules = fs.readFileSync(RULES_FILE_PATH, "utf-8");
+      console.log(
+        "📜 커스텀 리뷰 규칙(.github/ai-review-rules.md)을 적용합니다."
+      );
+    } catch (e) {
+      console.warn("⚠️ 규칙 파일을 읽을 수 없습니다:", e);
+    }
   }
 
   const genAI = new GoogleGenerativeAI(API_KEY);
@@ -93,43 +107,41 @@ async function main() {
 
   console.log(`📝 [${MODEL_NAME}] 리뷰 시작 (${filesToReview.length}개 파일)`);
 
-  // 전체 프로젝트 파일 인덱싱
+  // 전체 프로젝트 파일 경로 인덱싱 (내용은 읽지 않음 - 메모리 절약)
   const allFiles = await glob("**/*.{ts,js,svelte,css,scss,html,tsx,jsx}", {
     ignore: IGNORE_PATTERNS,
     nodir: true,
   });
-
-  // 전체 파일을 한 번만 읽어서 캐싱합니다. (O(N) 읽기)
-  console.log("📂 프로젝트 전체 파일 캐싱 중...");
-  for (const file of allFiles) {
-    try {
-      const content = fs.readFileSync(file, "utf-8");
-      fileContentCache.set(file, content);
-    } catch (e) {
-      // 읽기 실패 시 무시 (바이너리 파일 등)
-    }
-  }
 
   for (const file of filesToReview) {
     if (!fs.existsSync(file)) continue;
 
     console.log(`\n🔎 [Target: ${file}] 심층 분석 중...`);
 
-    // 연관 파일 찾기 (캐시 활용)
+    // 연관 파일 찾기
     const relatedFiles = findRelatedFiles(file, allFiles);
+
+    // 👇 [성능/비용 최적화] 연관 파일이 너무 많으면 상위 3개만 검사
+    if (relatedFiles.length > 3) {
+      console.log(
+        `   ⚠️ 연관 파일이 너무 많아(${relatedFiles.length}개) 상위 3개만 검사합니다.`
+      );
+      relatedFiles.length = 3;
+    }
 
     if (relatedFiles.length === 0) {
       console.log(`   - 연관 파일 없음. 단독 정밀 분석 수행.`);
-      await checkSingleFile(model, file);
+      await checkSingleFile(model, file, customRules);
     } else {
       console.log(
         `   - 연관 파일 ${relatedFiles.length}개 발견. 1:1 교차 검증 수행.`
       );
-      // 단독 분석도 수행
-      await checkSingleFile(model, file);
+      // 단독 분석 수행
+      await checkSingleFile(model, file, customRules);
+
       // 연관 파일과 호환성 검사
       for (const related of relatedFiles) {
-        await checkPairCompatibility(model, file, related);
+        await checkPairCompatibility(model, file, related, customRules);
       }
     }
   }
@@ -139,7 +151,7 @@ async function main() {
 }
 
 // ==========================================
-// 🧠 헬퍼 함수: 연관 파일 찾기
+// 🧠 헬퍼 함수: 연관 파일 찾기 (최적화됨)
 // ==========================================
 function findRelatedFiles(targetFile: string, allFiles: string[]): string[] {
   const dir = path.dirname(targetFile);
@@ -152,14 +164,23 @@ function findRelatedFiles(targetFile: string, allFiles: string[]): string[] {
   for (const otherFile of allFiles) {
     if (otherFile === targetFile) continue;
 
-    // fs.readFileSync 대신 캐시 사용
-    const content = fileContentCache.get(otherFile) || "";
+    try {
+      // 👇 [성능 최적화] 파일 크기가 100KB 이상이면 건너뜀 (메모리/시간 절약)
+      const stats = fs.statSync(otherFile);
+      if (stats.size > 100 * 1024) continue;
 
-    // 내용이 없으면 건너뜀
-    if (!content) continue;
+      // 파일 읽기 (Lazy Loading)
+      const content = fs.readFileSync(otherFile, "utf-8");
 
-    if (content.includes(targetFileName) || content.includes(targetNameNoExt)) {
-      related.add(otherFile);
+      // 단순 문자열 포함 여부 확인 (가장 빠름)
+      if (
+        content.includes(targetFileName) ||
+        content.includes(targetNameNoExt)
+      ) {
+        related.add(otherFile);
+      }
+    } catch {
+      // 읽기 실패 시 건너뜀
     }
   }
 
@@ -187,12 +208,17 @@ function findRelatedFiles(targetFile: string, allFiles: string[]): string[] {
 // ==========================================
 // 🤖 단일 파일 검사
 // ==========================================
-async function checkSingleFile(model: GenerativeModel, targetFile: string) {
-  const content =
-    fileContentCache.get(targetFile) || fs.readFileSync(targetFile, "utf-8");
+async function checkSingleFile(
+  model: any,
+  targetFile: string,
+  rules: string = ""
+) {
+  const content = fs.readFileSync(targetFile, "utf-8");
 
   const prompt = `
 당신은 시니어 개발자로서 코드 리뷰를 수행합니다.
+
+${rules ? `[🚨 프로젝트 필수 규칙]\n${rules}\n` : ""}
 
 [분석 대상: ${targetFile}]
 \`\`\`
@@ -205,7 +231,6 @@ ${content}
 3. 보안 취약점 (XSS, injection 등)
 4. 성능 이슈 (불필요한 리렌더링, 메모리 누수 등)
 5. 타입 안전성 문제 (TypeScript인 경우)
-6. 오탈자
 
 [응답 규칙]
 - 문제가 없으면 "PASS"라고만 답하세요.
@@ -214,8 +239,8 @@ ${content}
   - 🟡 주의: (로직 오류, 성능 이슈)
   - 💡 제안: (개선 사항)
 - 단순 스타일 지적은 하지 마세요.
-- 한국어로 핵심만 간결하게 마크다운 형식으로 작성하세요.
-- 인사말은 필요없습니다.
+- 한국어로 핵심만 간결하게 작성하세요.
+- 인사말은 필요없습니다
 `;
 
   const result = await callGemini(model, prompt, targetFile);
@@ -243,17 +268,18 @@ ${content}
 async function checkPairCompatibility(
   model: any,
   targetFile: string,
-  relatedFile: string
+  relatedFile: string,
+  rules: string = ""
 ) {
   if (!fs.existsSync(relatedFile)) return;
 
   const targetContent = fs.readFileSync(targetFile, "utf-8");
-  // 캐시가 있으면 캐시 사용, 없으면 읽기
-  const relatedContent =
-    fileContentCache.get(relatedFile) || fs.readFileSync(relatedFile, "utf-8");
+  const relatedContent = fs.readFileSync(relatedFile, "utf-8");
 
   const prompt = `
 당신은 코드 간의 호환성을 검증하는 시니어 개발자입니다.
+
+${rules ? `[🚨 프로젝트 필수 규칙]\n${rules}\n` : ""}
 
 [상황]
 '${targetFile}'(수정됨)이 '${relatedFile}'에서 참조되고 있습니다.

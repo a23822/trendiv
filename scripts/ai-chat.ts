@@ -108,7 +108,7 @@ async function gatherContext(octokit: Octokit): Promise<string> {
         owner: OWNER,
         repo: REPO,
         path: FILE_PATH,
-        ref: `pull/${PR_NUMBER}/head`, // PR의 최신 커밋
+        ref: `refs/pull/${PR_NUMBER}/head`,
       });
 
       if ("content" in fileData && fileData.content) {
@@ -157,8 +157,10 @@ ${fullFileContent ? `[파일 전체 내용]\n\`\`\`\n${fullFileContent}\n\`\`\``
   ]);
 
   let diffString = String(diffResponse.data);
-  if (diffString.length > 80000) {
-    diffString = diffString.slice(0, 80000) + "\n... (truncated)";
+  if (diffString.length > 60000) {
+    diffString =
+      diffString.slice(0, 60000) +
+      "\n\n... (Diff가 너무 길어서 생략되었습니다)";
   }
 
   const prData = prResponse.data;

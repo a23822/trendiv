@@ -56,5 +56,6 @@ jobs:
           GEMINI_MODEL_LIGHT: ${{ vars.GEMINI_MODEL_LIGHT || 'gemini-2.5-flash' }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
+          AI_REVIEW_RULES_PATH: .github/ai-review-rules.md
         # 안전한 실행 명령어 (esm 옵션 추가)
         run: npx tsx scripts/ai-reviewer.ts ${{ steps.changed-files.outputs.all_changed_files }}

@@ -34,10 +34,7 @@
 	});
 
 	function requestClose() {
-		// 1. 다이얼로그 닫기 애니메이션 등을 위해 먼저 native close 호출
 		dialog?.close();
-		// 2. 전역 스토어 상태 초기화
-		modal.close();
 	}
 
 	function handleNativeClose() {
