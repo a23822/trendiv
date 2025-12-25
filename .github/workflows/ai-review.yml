@@ -51,6 +51,7 @@ jobs:
       - name: Run AI Reviewer Script
         if: steps.changed-files.outputs.any_changed == 'true'
         env:
+          AI_REVIEW_CONCURRENCY: "3"
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_MODEL_LIGHT: ${{ vars.GEMINI_MODEL_LIGHT || 'gemini-2.5-flash' }}

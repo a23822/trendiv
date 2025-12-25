@@ -24,6 +24,15 @@ const RULES_FILE_PATH = process.env.AI_REVIEW_RULES_PATH
   ? path.join(process.cwd(), process.env.AI_REVIEW_RULES_PATH)
   : path.join(process.cwd(), ".github/ai-review-rules.md");
 
+// 🟡 동시 처리 개수 (CI 타임아웃 방지)
+const CONCURRENCY_LIMIT = parseInt(
+  process.env.AI_REVIEW_CONCURRENCY || "3",
+  10
+);
+
+// GitHub 코멘트 글자수 제한 (여유 있게 60000자로 설정)
+const MAX_COMMENT_LENGTH = 60000;
+
 const IGNORE_PATTERNS = [
   "**/node_modules/**",
   "**/dist/**",
@@ -114,47 +123,59 @@ async function main() {
     nodir: true,
   });
 
-  // 100KB 미만 파일만 캐싱 (메모리 효율)
+  // 🟡 메모리 관리: 50KB 미만, 최대 500개 파일만 캐싱
+  let cachedCount = 0;
+  const MAX_CACHED_FILES = 500;
+  const MAX_FILE_SIZE = 50 * 1024; // 50KB
+
   for (const file of allFiles) {
+    if (cachedCount >= MAX_CACHED_FILES) break;
     try {
       const stats = fs.statSync(file);
-      if (stats.size < 100 * 1024) {
+      if (stats.size < MAX_FILE_SIZE) {
         fileContentCache.set(file, fs.readFileSync(file, "utf-8"));
+        cachedCount++;
       }
     } catch {
       // 읽기 실패 시 무시
     }
   }
 
-  console.log(`📝 [${MODEL_NAME}] 리뷰 시작 (${filesToReview.length}개 파일)`);
+  console.log(
+    `📝 [${MODEL_NAME}] 리뷰 시작 (${filesToReview.length}개 파일, 동시성: ${CONCURRENCY_LIMIT})`
+  );
 
-  // 4. 파일별 리뷰 수행
+  // 4. 🟡 병렬 처리로 성능 개선 (p-limit 대신 직접 구현)
+  const tasks: Array<() => Promise<void>> = [];
+
   for (const file of filesToReview) {
     if (!fs.existsSync(file)) continue;
 
-    console.log(`\n🔎 [Target: ${file}] 심층 분석 중...`);
+    tasks.push(async () => {
+      console.log(`\n🔎 [Target: ${file}] 심층 분석 중...`);
 
-    // 연관 파일 찾기 (캐시 활용)
-    let relatedFiles = findRelatedFiles(file, allFiles);
-
-    // 최대 3개로 제한 (API 비용 절감)
-    if (relatedFiles.length > 3) {
-      relatedFiles = relatedFiles.slice(0, 3);
-    }
-
-    if (relatedFiles.length === 0) {
-      console.log(`   - 연관 파일 없음. 단독 분석 수행.`);
-      await checkSingleFile(model, file, customRules);
-    } else {
-      console.log(
-        `   - 연관 파일 ${relatedFiles.length}개 발견. 교차 검증 수행.`
-      );
-      await checkSingleFile(model, file, customRules);
-      for (const related of relatedFiles) {
-        await checkPairCompatibility(model, file, related, customRules);
+      let relatedFiles = findRelatedFiles(file, allFiles);
+      if (relatedFiles.length > 3) {
+        relatedFiles = relatedFiles.slice(0, 3);
       }
-    }
+
+      if (relatedFiles.length === 0) {
+        console.log(`   - 연관 파일 없음. 단독 분석 수행.`);
+        await checkSingleFile(model, file, customRules);
+      } else {
+        console.log(
+          `   - 연관 파일 ${relatedFiles.length}개 발견. 교차 검증 수행.`
+        );
+        await checkSingleFile(model, file, customRules);
+        for (const related of relatedFiles) {
+          await checkPairCompatibility(model, file, related, customRules);
+        }
+      }
+    });
   }
+
+  // 동시성 제한 병렬 실행
+  await runWithConcurrency(tasks, CONCURRENCY_LIMIT);
 
   // 5. PR 코멘트 작성
   await postReviewSummary();
@@ -182,7 +203,7 @@ function findRelatedFiles(targetFile: string, allFiles: string[]): string[] {
     }
   }
 
-  // review_index.md 확인 (수동 매핑)
+  // 💡 review_index.md 파싱 강화
   const indexFile = path.join(dir, "review_index.md");
   if (fs.existsSync(indexFile)) {
     try {
@@ -190,9 +211,19 @@ function findRelatedFiles(targetFile: string, allFiles: string[]): string[] {
       const jsonMatch = content.match(/```json([\s\S]*?)```/);
       if (jsonMatch) {
         const indexData = JSON.parse(jsonMatch[1]);
-        if (Array.isArray(indexData[targetFileName])) {
+        // 키 존재 여부 및 배열 타입 검증 강화
+        if (
+          indexData &&
+          typeof indexData === "object" &&
+          targetFileName in indexData &&
+          Array.isArray(indexData[targetFileName])
+        ) {
           console.log(`   📌 review_index.md 규칙 추가 적용됨`);
-          indexData[targetFileName].forEach((f: string) => related.add(f));
+          indexData[targetFileName].forEach((f: unknown) => {
+            if (typeof f === "string") {
+              related.add(f);
+            }
+          });
         }
       }
     } catch {
@@ -340,18 +371,41 @@ async function callGemini(
   for (let i = 0; i < retries; i++) {
     try {
       const result = await model.generateContent(prompt);
-      const response = result.response.text().trim();
 
-      if (response === "PASS" || response.toUpperCase() === "PASS") {
+      // 🔴 응답 객체 상태 체크 강화
+      const response = result.response;
+      if (!response) {
+        throw new Error("AI 응답이 비어있습니다.");
+      }
+
+      // Safety ratings 체크
+      const candidates = response.candidates;
+      if (!candidates || candidates.length === 0) {
+        const blockReason = response.promptFeedback?.blockReason;
+        throw new Error(
+          `AI 응답이 차단되었습니다. 사유: ${blockReason || "알 수 없음"}`
+        );
+      }
+
+      const responseText = response.text();
+      if (!responseText) {
+        throw new Error("AI 응답 텍스트가 비어있습니다.");
+      }
+
+      const trimmedResponse = responseText.trim();
+
+      // 🟡 PASS 판정 로직 개선: 정규식 사용
+      // "PASS", "PASS ", "PASS\n", "PASS." 등 다양한 형태 허용
+      if (/^PASS\b/i.test(trimmedResponse)) {
         console.log("✅ PASS");
         return { status: "pass" };
       } else {
         console.log("⚠️ 이슈 발견");
         console.log("---------------------------------------------------");
         console.log(`[AI Review: ${contextLabel}]`);
-        console.log(response);
+        console.log(trimmedResponse);
         console.log("---------------------------------------------------");
-        return { status: "issue", message: response };
+        return { status: "issue", message: trimmedResponse };
       }
     } catch (e) {
       if (i === retries - 1) {
@@ -390,15 +444,25 @@ async function postComment(body: string) {
     const octokit = new Octokit({ auth: GITHUB_TOKEN });
     const prNumber = parseInt(GITHUB_PR_NUMBER, 10);
 
-    if (prNumber > 0) {
-      await octokit.issues.createComment({
-        owner,
-        repo,
-        issue_number: prNumber,
-        body,
-      });
-      console.log("✅ PR 코멘트 작성 완료");
+    if (isNaN(prNumber) || prNumber <= 0) {
+      console.error("❌ PR_NUMBER가 유효하지 않습니다.");
+      return;
     }
+
+    // 💡 코멘트 길이 제한
+    let finalBody = body;
+    if (finalBody.length > MAX_COMMENT_LENGTH) {
+      finalBody = finalBody.slice(0, MAX_COMMENT_LENGTH - 100);
+      finalBody += "\n\n... (리뷰 내용이 너무 길어 일부가 생략되었습니다)";
+    }
+
+    await octokit.issues.createComment({
+      owner,
+      repo,
+      issue_number: prNumber,
+      body: finalBody,
+    });
+    console.log("✅ PR 코멘트 작성 완료");
   } catch (e) {
     console.error("❌ PR 코멘트 작성 실패:", e);
   }
@@ -448,6 +512,27 @@ async function postReviewSummary() {
 // ==========================================
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// 🟡 동시성 제한 병렬 실행 (p-limit 대체)
+async function runWithConcurrency(
+  tasks: Array<() => Promise<void>>,
+  limit: number
+): Promise<void> {
+  const executing: Promise<void>[] = [];
+
+  for (const task of tasks) {
+    const p = task().then(() => {
+      executing.splice(executing.indexOf(p), 1);
+    });
+    executing.push(p);
+
+    if (executing.length >= limit) {
+      await Promise.race(executing);
+    }
+  }
+
+  await Promise.all(executing);
 }
 
 main().catch(console.error);
