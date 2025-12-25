@@ -3,6 +3,7 @@
 	import MenuTab from '$lib/components/pure/Tab/MenuTab.svelte';
 	import { modal } from '$lib/stores/modal.svelte.js';
 	import { cn } from '$lib/utils/ClassMerge';
+	import DOMPurify from 'isomorphic-dompurify';
 	import type { Component } from 'svelte';
 
 	interface Props {
@@ -56,6 +57,7 @@
 	}
 </script>
 
+{@html DOMPurify.sanitize(tabs[activeIndex].content)}
 <dialog
 	bind:this={dialog}
 	class={cn(

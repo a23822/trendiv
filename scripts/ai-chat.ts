@@ -12,6 +12,14 @@ const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 const MODEL_NAME = process.env.GEMINI_MODEL_LIGHT || "gemini-2.5-flash";
 
 const [OWNER, REPO] = (process.env.GITHUB_REPOSITORY || "").split("/");
+
+// 👇 [AI 리뷰 반영] 필수 환경변수 검증 로직 추가
+if (!OWNER || !REPO) {
+  console.error(
+    "❌ GITHUB_REPOSITORY 환경변수가 올바르지 않습니다. (format: owner/repo)"
+  );
+  process.exit(1);
+}
 const PR_NUMBER = parseInt(process.env.PR_NUMBER || "0", 10);
 const COMMENT_BODY = process.env.COMMENT_BODY || "";
 const COMMENT_ID = parseInt(process.env.COMMENT_ID || "0", 10);

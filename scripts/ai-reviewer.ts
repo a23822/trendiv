@@ -192,6 +192,7 @@ ${content}
 3. 보안 취약점 (XSS, injection 등)
 4. 성능 이슈 (불필요한 리렌더링, 메모리 누수 등)
 5. 타입 안전성 문제 (TypeScript인 경우)
+6. 오탈자
 
 [응답 규칙]
 - 문제가 없으면 "PASS"라고만 답하세요.
@@ -200,7 +201,8 @@ ${content}
   - 🟡 주의: (로직 오류, 성능 이슈)
   - 💡 제안: (개선 사항)
 - 단순 스타일 지적은 하지 마세요.
-- 한국어로 핵심만 간결하게 작성하세요.
+- 한국어로 핵심만 간결하게 마크다운 형식으로 알려주세요
+- 인사말은 필요없습니다.
 `;
 
   const result = await callGemini(model, prompt, targetFile);
@@ -334,7 +336,14 @@ async function postComment(body: string) {
 
   try {
     const octokit = new Octokit({ auth: GITHUB_TOKEN });
-    const [owner, repo] = GITHUB_REPOSITORY.split("/");
+    const repoParts = GITHUB_REPOSITORY.split("/");
+    if (repoParts.length !== 2) {
+      console.error(
+        "❌ GITHUB_REPOSITORY 형식이 올바르지 않습니다 (예: owner/repo)"
+      );
+      return;
+    }
+    const [owner, repo] = repoParts;
     const prNumber = parseInt(GITHUB_PR_NUMBER, 10);
 
     if (prNumber > 0) {
