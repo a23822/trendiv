@@ -4,9 +4,7 @@
 	import { CommonStyles } from '$lib/constants/styles';
 	import IconRefresh from '$lib/icons/icon_refresh.svelte';
 	import { cn } from '$lib/utils/ClassMerge';
-	import { flip } from 'svelte/animate';
-	import { quintOut } from 'svelte/easing';
-	import { crossfade, fade, slide } from 'svelte/transition';
+	import { tick } from 'svelte';
 
 	interface Props {
 		tags?: string[];
@@ -28,43 +26,174 @@
 		onchange
 	}: Props = $props();
 
-	const [send, receive] = crossfade({
-		duration: 400,
-		easing: quintOut,
-		fallback(node, params) {
-			// 이동할 곳이 없을 때(초기화 등)의 기본 트랜지션
-			const style = getComputedStyle(node);
-			const transform = style.transform === 'none' ? '' : style.transform;
-			return {
-				duration: 300,
-				easing: quintOut,
-				css: (t) => `
-                transform: ${transform} scale(${t});
-                opacity: ${t}
-            `
-			};
+	type AnimatedTag = {
+		name: string;
+		is_showing: boolean;
+		is_hiding: boolean;
+		is_initial: boolean;
+	};
+
+	const ANIMATION_DURATION = 450;
+
+	let animatedSelectedTags = $state<AnimatedTag[]>([]);
+	let animatedUnselectedTags = $state<AnimatedTag[]>([]);
+
+	// 컨테이너 애니메이션 상태
+	let containerState = $state<'hidden' | 'showing' | 'visible' | 'hiding'>(
+		'hidden'
+	);
+
+	$effect(() => {
+		if (
+			animatedSelectedTags.length === 0 &&
+			animatedUnselectedTags.length === 0 &&
+			tags.length > 0
+		) {
+			animatedSelectedTags = selectedTags.map((name) => ({
+				name,
+				is_showing: false,
+				is_hiding: false,
+				is_initial: false
+			}));
+			animatedUnselectedTags = tags
+				.filter((tag) => !selectedTags.includes(tag))
+				.map((name) => ({
+					name,
+					is_showing: false,
+					is_hiding: false,
+					is_initial: false
+				}));
+
+			// 초기 상태 설정
+			containerState = selectedTags.length > 0 ? 'visible' : 'hidden';
 		}
 	});
 
-	const unselectedTags = $derived(
-		tags.filter((tag) => !selectedTags.includes(tag))
-	);
 	const hasSelected = $derived(selectedTags.length > 0);
 
-	// ✨ 로직 단순화: 그냥 상태만 바꾸면 Svelte가 알아서 이동시킵니다.
-	function selectTag(tag: string) {
-		selectedTags = [...selectedTags, tag];
-		onchange?.(selectedTags);
+	async function showContainer() {
+		containerState = 'showing';
+		await tick();
+		requestAnimationFrame(() => {
+			containerState = 'visible';
+		});
 	}
 
-	function unselectTag(tag: string) {
-		selectedTags = selectedTags.filter((t) => t !== tag);
-		onchange?.(selectedTags);
+	async function selectTag(tag: string) {
+		const isFirstTag =
+			animatedSelectedTags.length === 0 ||
+			animatedSelectedTags.every((t) => t.is_hiding);
+
+		if (isFirstTag) {
+			await showContainer();
+		}
+
+		animatedUnselectedTags = animatedUnselectedTags.map((t) =>
+			t.name === tag ? { ...t, is_hiding: true, is_showing: false } : t
+		);
+
+		animatedSelectedTags = [
+			...animatedSelectedTags,
+			{ name: tag, is_showing: false, is_hiding: false, is_initial: true }
+		];
+
+		await tick();
+		requestAnimationFrame(() => {
+			animatedSelectedTags = animatedSelectedTags.map((t) =>
+				t.name === tag ? { ...t, is_initial: false, is_showing: true } : t
+			);
+		});
+
+		setTimeout(() => {
+			selectedTags = [...selectedTags, tag];
+			animatedSelectedTags = animatedSelectedTags.map((t) =>
+				t.name === tag ? { ...t, is_showing: false } : t
+			);
+			animatedUnselectedTags = animatedUnselectedTags.filter(
+				(t) => t.name !== tag
+			);
+			onchange?.(selectedTags);
+		}, ANIMATION_DURATION);
 	}
 
-	function resetAll() {
-		selectedTags = [];
-		onchange?.(selectedTags);
+	async function unselectTag(tag: string) {
+		const isLastTag =
+			animatedSelectedTags.filter((t) => !t.is_hiding).length === 1;
+
+		if (isLastTag) {
+			containerState = 'hiding';
+		}
+
+		animatedSelectedTags = animatedSelectedTags.map((t) =>
+			t.name === tag ? { ...t, is_hiding: true, is_showing: false } : t
+		);
+
+		animatedUnselectedTags = [
+			...animatedUnselectedTags,
+			{ name: tag, is_showing: false, is_hiding: false, is_initial: true }
+		];
+
+		await tick();
+		requestAnimationFrame(() => {
+			animatedUnselectedTags = animatedUnselectedTags.map((t) =>
+				t.name === tag ? { ...t, is_initial: false, is_showing: true } : t
+			);
+		});
+
+		setTimeout(() => {
+			selectedTags = selectedTags.filter((t) => t !== tag);
+			animatedUnselectedTags = animatedUnselectedTags.map((t) =>
+				t.name === tag ? { ...t, is_showing: false } : t
+			);
+			animatedSelectedTags = animatedSelectedTags.filter((t) => t.name !== tag);
+			onchange?.(selectedTags);
+
+			if (isLastTag) {
+				containerState = 'hidden';
+			}
+		}, ANIMATION_DURATION);
+	}
+
+	async function resetAll() {
+		const currentSelectedNames = selectedTags.slice();
+
+		containerState = 'hiding';
+
+		animatedSelectedTags = animatedSelectedTags.map((tag) => ({
+			...tag,
+			is_hiding: true,
+			is_showing: false
+		}));
+
+		const tagsToMove = currentSelectedNames.map((name) => ({
+			name,
+			is_showing: false,
+			is_hiding: false,
+			is_initial: true
+		}));
+
+		animatedUnselectedTags = [...animatedUnselectedTags, ...tagsToMove];
+
+		await tick();
+		requestAnimationFrame(() => {
+			animatedUnselectedTags = animatedUnselectedTags.map((t) =>
+				currentSelectedNames.includes(t.name) && t.is_initial
+					? { ...t, is_initial: false, is_showing: true }
+					: t
+			);
+		});
+
+		setTimeout(() => {
+			selectedTags = [];
+			animatedSelectedTags = [];
+			animatedUnselectedTags = animatedUnselectedTags.map((t) => ({
+				...t,
+				is_showing: false
+			}));
+			onchange?.(selectedTags);
+
+			containerState = 'hidden';
+		}, ANIMATION_DURATION);
 	}
 </script>
 
@@ -75,43 +204,65 @@
 		{onclear}
 	/>
 	<div class="border-border-default mt-4 border-t-2">
-		<div>
-			{#if hasSelected}
-				<div
-					in:slide={{ duration: 300, easing: quintOut }}
-					out:slide={{ duration: 300, easing: quintOut, delay: 200 }}
-				>
-					<div
-						transition:fade={{ duration: 200 }}
-						class="border-default mb-4 flex items-center gap-2 border-b-2 py-4"
-					>
-						<div
-							in:fade={{ duration: 300, delay: 200 }}
-							out:fade={{ duration: 200 }}
-							class="flex flex-wrap gap-2"
-						>
-							{#each selectedTags as tag (tag)}
+		<div class={cn()}>
+			<!-- Selected Tags -->
+			<div
+				class={cn(
+					'grid overflow-hidden',
+					'transition-[grid-template-rows] duration-150 ease-out',
+					(containerState === 'hidden' ||
+						containerState === 'showing' ||
+						containerState === 'hiding') &&
+						'grid-rows-[0fr]',
+					containerState === 'visible' && 'grid-rows-[1fr]'
+				)}
+			>
+				<div class="overflow-hidden">
+					<div class="border-default flex items-center border-b-2 py-4">
+						<div class="-ml-2 flex flex-wrap gap-y-2">
+							{#each animatedSelectedTags as tag (tag.name)}
 								<div
-									animate:flip={{ duration: 300, delay: 100 }}
-									in:receive={{ key: tag }}
-									out:send={{ key: tag }}
+									class={cn(
+										'inline-grid overflow-hidden',
+										'transition-[grid-template-columns,margin] duration-150 ease-out',
+										(tag.is_initial || tag.is_hiding) && 'ml-0 grid-cols-[0fr]',
+										tag.is_showing && 'ml-2 grid-cols-[1fr]',
+										!tag.is_initial &&
+											!tag.is_hiding &&
+											!tag.is_showing &&
+											'ml-2 grid-cols-[1fr]'
+									)}
 								>
-									<SearchChip
-										active={true}
-										onclick={() => unselectTag(tag)}
-										hasClose={true}
+									<div
+										class={cn(
+											'self-center overflow-hidden',
+											'transition-[opacity,transform] duration-400 ease-out',
+											(tag.is_initial || tag.is_hiding) && 'scale-0 opacity-0',
+											tag.is_showing && 'scale-100 opacity-100 delay-150',
+											!tag.is_initial &&
+												!tag.is_hiding &&
+												!tag.is_showing &&
+												'scale-100 opacity-100'
+										)}
 									>
-										{tag}
-									</SearchChip>
+										<SearchChip
+											active={true}
+											onclick={() => unselectTag(tag.name)}
+											hasClose={true}
+										>
+											{tag.name}
+										</SearchChip>
+									</div>
 								</div>
 							{/each}
 						</div>
 					</div>
 				</div>
-			{/if}
+			</div>
 
-			<div class="mt-4 flex flex-wrap gap-2">
-				<div transition:fade={{ duration: 200 }}>
+			<!-- Unselected Tags -->
+			<div class="mt-4 -ml-2 flex flex-wrap gap-y-2">
+				<div class="ml-2">
 					<SearchChip
 						onclick={resetAll}
 						active={false}
@@ -122,66 +273,41 @@
 						</span>
 					</SearchChip>
 				</div>
-				{#each unselectedTags as tag (tag)}
+				{#each animatedUnselectedTags as tag (tag.name)}
 					<div
-						animate:flip={{ duration: 300, delay: 100 }}
-						in:receive={{ key: tag }}
-						out:send={{ key: tag }}
+						class={cn(
+							'inline-grid overflow-hidden',
+							'transition-[grid-template-columns,margin] duration-150 ease-out',
+							(tag.is_initial || tag.is_hiding) && 'ml-0 grid-cols-[0fr]',
+							tag.is_showing && 'ml-2 grid-cols-[1fr]',
+							!tag.is_initial &&
+								!tag.is_hiding &&
+								!tag.is_showing &&
+								'ml-2 grid-cols-[1fr]'
+						)}
 					>
-						<SearchChip
-							active={false}
-							onclick={() => selectTag(tag)}
+						<div
+							class={cn(
+								'self-center overflow-hidden',
+								'transition-[opacity,transform] duration-400 ease-out',
+								(tag.is_initial || tag.is_hiding) && 'scale-0 opacity-0',
+								tag.is_showing && 'scale-100 opacity-100 delay-150',
+								!tag.is_initial &&
+									!tag.is_hiding &&
+									!tag.is_showing &&
+									'scale-100 opacity-100'
+							)}
 						>
-							{tag}
-						</SearchChip>
+							<SearchChip
+								active={false}
+								onclick={() => selectTag(tag.name)}
+							>
+								{tag.name}
+							</SearchChip>
+						</div>
 					</div>
 				{/each}
 			</div>
 		</div>
 	</div>
 </section>
-
-<style lang="scss">
-	@keyframes move-up {
-		0% {
-			opacity: 0;
-			transform: translateY(16px) scale(0.9);
-		}
-		100% {
-			opacity: 1;
-			transform: translateY(0) scale(1);
-		}
-	}
-
-	@keyframes move-down {
-		0% {
-			opacity: 0;
-			transform: translateY(-16px) scale(0.9);
-		}
-		100% {
-			opacity: 1;
-			transform: translateY(0) scale(1);
-		}
-	}
-
-	@keyframes fade-in {
-		0% {
-			opacity: 0;
-		}
-		100% {
-			opacity: 1;
-		}
-	}
-
-	.animate-move-up {
-		animation: move-up 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-	}
-
-	.animate-move-down {
-		animation: move-down 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-	}
-
-	.animate-fade-in {
-		animation: fade-in 0.2s ease-out;
-	}
-</style>
