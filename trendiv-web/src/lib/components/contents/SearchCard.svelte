@@ -202,6 +202,7 @@
 	<SearchBar
 		{onsearch}
 		{onclear}
+		bind:value={searchKeyword}
 	/>
 	<div class="border-border-default mt-4 border-t-2">
 		<div class={cn()}>
