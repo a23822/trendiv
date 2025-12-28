@@ -15,8 +15,8 @@ export const IDs = {
 		SEARCH_INPUT: 'card-search-input'
 	},
 	ICONS: {
-		LOGO_HERE_TAG_GRAD: 'icon-logo-here-tag-grad',
+		LOGO_HERO_TAG_GRAD: 'icon-logo-hero-tag-grad',
 		LOGO_HERO_GLOW: 'icon-logo-hero-glow',
 		LOGO_GEMINI: 'icon-logo-gemini'
 	}
-};
+} as const;
