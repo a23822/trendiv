@@ -13,5 +13,10 @@ export const IDs = {
 	},
 	CARD: {
 		SEARCH_INPUT: 'card-search-input'
+	},
+	ICONS: {
+		LOGO_HERO_TAG_GRAD: 'icon-logo-hero-tag-grad',
+		LOGO_HERO_GLOW: 'icon-logo-hero-glow',
+		LOGO_GEMINI: 'icon-logo-gemini'
 	}
-};
+} as const;
