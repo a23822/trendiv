@@ -13,7 +13,7 @@
 >
 	<defs>
 		<linearGradient
-			id={IDs.ICONS.LOGO_HERE_TAG_GRAD}
+			id={IDs.ICONS.LOGO_HERO_TAG_GRAD}
 			x1="0%"
 			y1="0%"
 			x2="100%"
@@ -60,8 +60,8 @@
 		font-family="'Fira Code', monospace"
 		font-size="38"
 		font-weight="700"
-		fill="url(#${IDs.ICONS.LOGO_HERE_TAG_GRAD})"
-		filter="url(#${IDs.ICONS.LOGO_HERO_GLOW})"
+		fill={`url(#${IDs.ICONS.LOGO_HERO_TAG_GRAD})`}
+		filter={`url(#${IDs.ICONS.LOGO_HERO_GLOW})`}
 	>
 		&lt;div&gt;
 	</text>
@@ -73,7 +73,7 @@
 		font-size="38"
 		font-weight="700"
 		fill="#ffffff"
-		filter="url(#${IDs.ICONS.LOGO_HERO_GLOW})"
+		filter={`url(#${IDs.ICONS.LOGO_HERO_GLOW})`}
 	>
 		Trend
 	</text>
@@ -86,7 +86,7 @@
 		height="38"
 		rx="2"
 		fill="#4DD0BD"
-		filter="url(#${IDs.ICONS.LOGO_HERO_GLOW})"
+		filter={`url(#${IDs.ICONS.LOGO_HERO_GLOW})`}
 	/>
 
 	<text
@@ -95,8 +95,8 @@
 		font-family="'Fira Code', monospace"
 		font-size="38"
 		font-weight="700"
-		fill="url(#${IDs.ICONS.LOGO_HERE_TAG_GRAD})"
-		filter="url(#${IDs.ICONS.LOGO_HERO_GLOW})"
+		fill={`url(#${IDs.ICONS.LOGO_HERO_TAG_GRAD})`}
+		filter={`url(#${IDs.ICONS.LOGO_HERO_GLOW})`}
 	>
 		&lt;/div&gt;
 	</text>
