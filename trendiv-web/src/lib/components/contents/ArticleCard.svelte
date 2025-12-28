@@ -1,5 +1,6 @@
 <script lang="ts">
 	import IconBookmark from '$lib/icons/icon_bookmark.svelte';
+	import IconLogoGemini from '$lib/icons/icon_logo_gemini.svelte';
 	import { bookmarks } from '$lib/stores/bookmarks.svelte';
 	import type { Trend, AnalysisResult } from '$lib/types';
 
@@ -63,7 +64,7 @@
 					{displayScore}점
 				</span>
 			</div>
-
+			<IconLogoGemini class="h-3 w-3" />
 			<span
 				class="rounded-sm bg-violet-100 px-2 py-0.5 text-[10px] font-medium text-violet-600"
 			>
@@ -89,7 +90,7 @@
 
 	<div class="p-5">
 		<h3
-			class="group-hover:text-mint-600 mb-2 line-clamp-2 text-xl font-bold leading-snug text-gray-900 transition-colors"
+			class="group-hover:text-mint-600 mb-2 line-clamp-2 text-xl leading-snug font-bold text-gray-900 transition-colors"
 		>
 			{displayTitle}
 		</h3>
