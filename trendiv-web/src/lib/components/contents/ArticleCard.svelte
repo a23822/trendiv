@@ -58,7 +58,12 @@
     bg-gray-0 group cursor-pointer overflow-hidden rounded-2xl border border-gray-100 shadow-xs transition-all hover:shadow-xl
   "
 	{onclick}
-	onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && onclick?.()}
+	onkeydown={(e) => {
+		if (e.key === 'Enter' || e.key === ' ') {
+			e.preventDefault();
+			onclick?.();
+		}
+	}}
 	tabindex="0"
 	role="button"
 >
@@ -73,7 +78,7 @@
 				</span>
 			</div>
 			<IconLogoGemini
-				instanceId={geminiIconId}
+				id={geminiIconId}
 				class="h-3 w-3"
 			/>
 			<span
@@ -87,6 +92,7 @@
 		<button
 			type="button"
 			onclick={handleBookmark}
+			onkeydown={(e) => e.stopPropagation()}
 			class="
 				flex items-center gap-1 rounded-lg px-2 py-1
 				text-xs font-medium transition-all
