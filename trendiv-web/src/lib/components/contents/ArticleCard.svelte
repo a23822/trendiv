@@ -20,6 +20,9 @@
 			: undefined
 	);
 
+	// 아이콘용 고유 ID
+	const geminiIconId = $derived(`article-${trend.id}`);
+
 	// ✨ [데이터 매핑] analysis 객체가 있으면 그걸 쓰고, 없으면 trend 원본 필드 사용
 	const displayTitle = $derived(analysis?.title_ko || '');
 	const displaySummary = $derived(analysis?.oneLineSummary || '');
@@ -40,13 +43,13 @@
 		const parsed = new Date(date);
 		if (isNaN(parsed.getTime())) return '';
 
-		const diff = Date.now() - new Date(date).getTime();
+		const diff = Date.now() - parsed.getTime();
 		const hours = Math.floor(diff / (1000 * 60 * 60));
 		if (hours < 1) return '방금 전';
 		if (hours < 24) return `${hours}시간 전`;
 		const days = Math.floor(hours / 24);
 		if (days < 7) return `${days}일 전`;
-		return new Date(date).toLocaleDateString('ko-KR');
+		return parsed.toLocaleDateString('ko-KR');
 	}
 </script>
 
@@ -69,7 +72,10 @@
 					{displayScore}점
 				</span>
 			</div>
-			<IconLogoGemini class="h-3 w-3" />
+			<IconLogoGemini
+				instanceId={geminiIconId}
+				class="h-3 w-3"
+			/>
 			<span
 				class="rounded-sm bg-violet-100 px-2 py-0.5 text-[10px] font-medium text-violet-600"
 			>

@@ -1,24 +1,16 @@
-<script
-	lang="ts"
-	module
->
-	// 모듈 스코프에서 카운터 관리 - SSR/CSR 모두 동일한 순서로 증가
-	let instanceCounter = 0;
-</script>
-
 <script lang="ts">
 	import { IDs } from '$lib/constants/ids';
 
 	interface Props {
 		class?: string;
+		id: string;
 	}
 
-	let { class: className = 'w-6 h-6' }: Props = $props();
+	let { class: className = 'w-6 h-6', id: instanceId }: Props = $props();
 
-	// 유니크 ID 생성
-	const uid = `${instanceCounter++}`;
-	const maskId = `${IDs.ICONS.LOGO_GEMINI}-mask-${uid}`;
-	const filterId = (n: number) => `${IDs.ICONS.LOGO_GEMINI}-filter${n}-${uid}`;
+	const maskId = $derived(`${IDs.ICONS.LOGO_GEMINI}-mask-${instanceId}`);
+	const filterIdPrefix = $derived(`${IDs.ICONS.LOGO_GEMINI}-filter`);
+	const filterId = (n: number) => `${filterIdPrefix}-${n}-${instanceId}`;
 </script>
 
 <svg
