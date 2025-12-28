@@ -34,7 +34,12 @@
 		bookmarks.toggle(trend);
 	}
 
+	const displayDate = $derived(formatDate(trend.date));
+
 	function formatDate(date: string) {
+		const parsed = new Date(date);
+		if (isNaN(parsed.getTime())) return '';
+
 		const diff = Date.now() - new Date(date).getTime();
 		const hours = Math.floor(diff / (1000 * 60 * 60));
 		if (hours < 1) return '방금 전';
@@ -50,7 +55,7 @@
     bg-gray-0 group cursor-pointer overflow-hidden rounded-2xl border border-gray-100 shadow-xs transition-all hover:shadow-xl
   "
 	{onclick}
-	onkeydown={(e) => e.key === 'Enter' && onclick?.()}
+	onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && onclick?.()}
 	tabindex="0"
 	role="button"
 >
@@ -84,7 +89,7 @@
 				hover:bg-mint-50
 			"
 		>
-			<IconBookmark filled={isBookmarked && true} />
+			<IconBookmark filled={isBookmarked} />
 		</button>
 	</div>
 
@@ -113,7 +118,7 @@
 					</span>
 				{/each}
 			</div>
-			<span class="text-xs text-gray-400">{formatDate(trend.date)}</span>
+			<span class="text-xs text-gray-400">{displayDate}</span>
 		</div>
 	</div>
 </div>
