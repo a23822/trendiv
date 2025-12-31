@@ -8,18 +8,18 @@ on:
 
 jobs:
   ai-chat:
-    # 1. PR에 달린 댓글이고
-    # 2. 봇이 쓴 글이 아니며
-    # 3. 댓글에 '@trendiv'가 포함된 경우에만 실행
-    if: >
-      ${{ 
-        github.event.comment.user.type != 'Bot' && 
-        contains(github.event.comment.body, '@trendiv') &&
-        (
-          (github.event_name == 'issue_comment' && github.event.issue.pull_request) ||
-          github.event_name == 'pull_request_review_comment'
-        )
-      }}
+    if: |
+      github.event.comment.performed_via_github_app == null &&
+      github.event.comment.user.type != 'Bot' &&
+      !contains(github.event.comment.user.login, '[bot]') &&
+      contains(github.event.comment.body, '@trendiv-chat') &&
+      (
+
+        (github.event_name == 'issue_comment' && github.event.issue.pull_request) ||
+
+        github.event_name == 'pull_request_review_comment'
+
+      )
 
     runs-on: ubuntu-latest
     permissions:
