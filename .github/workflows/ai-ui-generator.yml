@@ -1,0 +1,138 @@
+name: 🎨 AI UI Generator
+
+on:
+  pull_request:
+    types: [labeled]
+
+jobs:
+  generate:
+    if: |
+      github.event.action == 'labeled' && 
+      github.event.label.name == 'ui-generate'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout PR Branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+
+      - name: Generate Bot Token
+        id: generate-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.BOT_APP_ID }}
+          private-key: ${{ secrets.BOT_PRIVATE_KEY }}
+
+      - name: Get Changed Scaffold Files
+        id: changed-files
+        uses: tj-actions/changed-files@v45
+        with:
+          files: |
+            **/*.scaffold.svelte
+
+      - name: Check Scaffold Files
+        id: check
+        run: |
+          if [ "${{ steps.changed-files.outputs.any_changed }}" == "true" ]; then
+            echo "found=true" >> $GITHUB_OUTPUT
+            echo "📁 변경된 scaffold 파일:"
+            echo "${{ steps.changed-files.outputs.all_changed_files }}"
+          else
+            echo "found=false" >> $GITHUB_OUTPUT
+            echo "⚠️ 변경된 scaffold 파일 없음"
+          fi
+
+      - name: Install pnpm
+        if: steps.check.outputs.found == 'true'
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        if: steps.check.outputs.found == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "pnpm"
+
+      - name: Install Dependencies
+        if: steps.check.outputs.found == 'true'
+        run: pnpm install
+
+      - name: Run AI UI Generator
+        if: steps.check.outputs.found == 'true'
+        id: generate
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL_PRO: ${{ vars.GEMINI_MODEL_PRO || 'gemini-2.5-pro-preview-06-05' }}
+          FIGMA_ACCESS_TOKEN: ${{ secrets.FIGMA_ACCESS_TOKEN }}
+          CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
+        run: npx tsx scripts/ai-ui-generator.ts
+
+      - name: Remove Label
+        if: always()
+        uses: actions/github-script@v7
+        continue-on-error: true
+        with:
+          github-token: ${{ steps.generate-token.outputs.token }}
+          script: |
+            await github.rest.issues.removeLabel({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              name: 'ui-generate'
+            });
+
+      - name: Commit & Push
+        if: steps.generate.outputs.generated == 'true'
+        run: |
+          git config user.name "trendiv-ui[bot]"
+          git config user.email "trendiv-ui[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "🎨 AI Generated: ${{ steps.generate.outputs.files }}"
+          git push
+
+      - name: Comment Success
+        if: steps.generate.outputs.generated == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ steps.generate-token.outputs.token }}
+          script: |
+            const files = `${{ steps.generate.outputs.files }}`.split(',').map(f => `- \`${f.trim()}\``).join('\n');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `## ✅ AI 코드 생성 완료!\n\n### 생성된 파일\n${files}\n\n> 💡 배포하려면 \`preview\` 라벨을 붙여주세요.`
+            });
+
+      - name: Comment No Scaffold
+        if: steps.check.outputs.found == 'false'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ steps.generate-token.outputs.token }}
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `## ⚠️ Scaffold 파일 없음\n\n이 PR에 \`.scaffold.svelte\` 파일 변경사항이 없습니다.\n\n### 사용법\n1. \`ComponentName.scaffold.svelte\` 파일 생성\n2. 파일 상단에 Figma URL 주석 추가\n3. \`ui-generate\` 라벨 추가\n\n### 예시\n\`\`\`svelte\n<!--\nhttps://www.figma.com/design/xxx?node-id=123-456\n-->\n<script>\n  // ...\n</script>\n\`\`\``
+            });
+
+      - name: Comment Failure
+        if: failure() && steps.check.outputs.found == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ steps.generate-token.outputs.token }}
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `## ❌ AI 코드 생성 실패\n\nScaffold 파일 상단에 Figma URL이 있는지 확인해주세요.\n\n### Scaffold 파일 형식\n\`\`\`svelte\n<!--\nhttps://www.figma.com/design/xxx?node-id=123-456\n-->\n<script lang="ts">\n  let { prop } = $props();\n</script>\n\n<div>\n  ...\n</div>\n\`\`\``
+            });
