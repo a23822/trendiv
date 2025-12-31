@@ -6,6 +6,9 @@ on:
   pull_request_review_comment:
     types: [created]
 
+concurrency:
+  group: ai-chat-${{ github.event.issue.number || github.event.pull_request.number }}-${{ github.event.comment.id }}
+
 jobs:
   ai-chat:
     if: |
@@ -14,11 +17,8 @@ jobs:
       !contains(github.event.comment.user.login, '[bot]') &&
       contains(github.event.comment.body, '@trendiv-chat') &&
       (
-
         (github.event_name == 'issue_comment' && github.event.issue.pull_request) ||
-
         github.event_name == 'pull_request_review_comment'
-
       )
 
     runs-on: ubuntu-latest
@@ -58,18 +58,13 @@ jobs:
           GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_MODEL_LIGHT: ${{ vars.GEMINI_MODEL_LIGHT || 'gemini-2.5-flash' }}
-
-          # 공통 정보
           PR_NUMBER: ${{ github.event.issue.number || github.event.pull_request.number }}
           COMMENT_BODY: ${{ github.event.comment.body }}
           COMMENT_ID: ${{ github.event.comment.id }}
           USER_LOGIN: ${{ github.event.comment.user.login }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_EVENT_NAME: ${{ github.event_name }}
-
-          # 리뷰 코멘트 전용 (코드 라인 컨텍스트)
           DIFF_HUNK: ${{ github.event.comment.diff_hunk || '' }}
           FILE_PATH: ${{ github.event.comment.path || '' }}
           LINE_NUMBER: ${{ github.event.comment.line || github.event.comment.original_line || '' }}
-
         run: npx tsx scripts/ai-chat.ts

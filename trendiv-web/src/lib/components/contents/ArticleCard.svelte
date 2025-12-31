@@ -1,5 +1,6 @@
 <script lang="ts">
 	import IconBookmark from '$lib/icons/icon_bookmark.svelte';
+	import IconLink from '$lib/icons/icon_link.svelte';
 	import IconLogoGemini from '$lib/icons/icon_logo_gemini.svelte';
 	import { bookmarks } from '$lib/stores/bookmarks.svelte';
 	import type { Trend, AnalysisResult } from '$lib/types';
@@ -29,6 +30,7 @@
 	const displayScore = $derived(analysis?.score ?? 0);
 	const displayTags = $derived(analysis?.tags || []);
 	const displayModel = $derived(analysis?.aiModel || '');
+	const displayLink = $derived(trend.link || '');
 
 	const isBookmarked = $derived(bookmarks.isBookmarked(trend.link));
 
@@ -103,6 +105,12 @@
 		>
 			<IconBookmark filled={isBookmarked} />
 		</button>
+		<a
+			href={displayLink}
+			target="_blank"
+			class="text-mint-800 flex items-center gap-2"
+			><span>원문</span><IconLink /></a
+		>
 	</div>
 
 	<div class="p-5">
