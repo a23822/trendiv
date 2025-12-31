@@ -117,24 +117,61 @@ async function getFigmaSpec(fileKey: string, nodeId: string): Promise<string> {
     if (!res.ok) throw new Error(`Status ${res.status}`);
 
     const data: any = await res.json();
+
+    // Figma 파일 내 정의된 스타일 메타데이터 (ID -> 이름 매핑용)
+    const stylesMetadata = data.styles || {};
+
     const node =
       data.nodes?.[nodeId]?.document ||
       data.nodes?.[nodeId.replace(":", "-")]?.document;
 
     if (!node) return "";
 
+    // 노드에 적용된 Shared Style 이름을 찾아서 매핑
+    // 예: { effect: "Shadow/Card", fill: "Brand/Primary" }
+    const mappedStyles: Record<string, string> = {};
+    if (node.styles) {
+      for (const [key, styleId] of Object.entries(node.styles)) {
+        // styleId가 string인지 확인 (타입 안전성)
+        if (typeof styleId === "string" && stylesMetadata[styleId]) {
+          mappedStyles[key] = stylesMetadata[styleId].name;
+        }
+      }
+    }
+
     // AI에게 줄 핵심 정보 요약
     const summary = {
       name: node.name,
       type: node.type,
+      // 스타일 변수명 (AI가 이를 보고 Tailwind 클래스를 유추함)
+      // 예: "effect": "Shadow/Drop lg" -> "shadow-lg"
+      sharedStyles: mappedStyles,
+
+      // 크기 및 위치
       width: node.absoluteBoundingBox?.width,
       height: node.absoluteBoundingBox?.height,
+
+      // 스타일
       fills: node.fills,
       strokes: node.strokes,
       strokeWeight: node.strokeWeight,
       effects: node.effects,
+      opacity: node.opacity,
       style: node.style,
+
       layoutMode: node.layoutMode,
+
+      primaryAxisAlignItems: node.primaryAxisAlignItems, // justify-content (MIN, CENTER, MAX, SPACE_BETWEEN)
+      counterAxisAlignItems: node.counterAxisAlignItems, // align-items (MIN, CENTER, MAX, BASELINE)
+
+      primaryAxisSizingMode: node.primaryAxisSizingMode, // FIXED vs AUTO
+      counterAxisSizingMode: node.counterAxisSizingMode, // FIXED vs AUTO
+
+      // 부모 내에서의 배치 (Self Layout)
+      layoutAlign: node.layoutAlign, // align-self (STRETCH 등)
+      layoutGrow: node.layoutGrow, // flex-grow (1 등)
+
+      // 패딩 및 간격
       padding: {
         top: node.paddingTop,
         bottom: node.paddingBottom,
@@ -344,6 +381,8 @@ ${figmaSpec || "스펙 데이터 없음 (이미지 참고)"}
 
 ## 작성 규칙
 - **Tailwind v4 문법**: \`bg-(--color-bg-surface)\`, \`shadow-(--shadow-sm)\` 처럼 괄호 구문 적극 사용.
+- 하지만 기존 tailwind 에 유효한 클래스명이 있을 경우 해당 클래스를 사용
+  예를 들면 text-[12px] 는 text-xs 로 사용
 - **주석 확인**: 반응형이나 애니메이션은 주석으로 처리하니 주석내용들은 꼭 확인할것
 - **출력**: 마크다운 코드 블록 안에 **완성된 Svelte 코드만** 출력.
 
