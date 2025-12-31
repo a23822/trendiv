@@ -124,7 +124,7 @@ if (process.env.BATCH_MODE === "true") {
       // 1. 기본 쿼리 (점수가 0보다 큰 것만)
       let query = supabase
         .from("trend")
-        .select("id, title, link, date, source, analysis_results", {
+        .select("id, title, link, date, source, analysis_results, category", {
           count: "exact",
         })
         .eq("status", "ANALYZED")
