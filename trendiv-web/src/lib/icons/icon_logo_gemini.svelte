@@ -3,10 +3,11 @@
 
 	interface Props {
 		class?: string;
-		id: string;
+		size?: number;
+		id?: string;
 	}
 
-	let { class: className = 'w-6 h-6', id: instanceId }: Props = $props();
+	let { class: className, size = 12, id: instanceId }: Props = $props();
 
 	const maskId = $derived(`${IDs.ICONS.LOGO_GEMINI}-mask-${instanceId}`);
 	const filterIdPrefix = $derived(`${IDs.ICONS.LOGO_GEMINI}-filter`);
@@ -16,6 +17,8 @@
 <svg
 	xmlns="http://www.w3.org/2000/svg"
 	fill="none"
+	width={size}
+	height={size}
 	viewBox="0 0 65 65"
 	class={className}
 	aria-hidden="true"
