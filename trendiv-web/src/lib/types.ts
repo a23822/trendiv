@@ -16,7 +16,6 @@ export interface Trend {
 	date: string;
 	source: string;
 	category: string;
-
 	analysis_results?: AnalysisResult[];
 }
 

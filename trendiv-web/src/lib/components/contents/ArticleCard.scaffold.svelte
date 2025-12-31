@@ -30,7 +30,6 @@
 
 	// 아이콘용 고유 ID
 	const geminiIconId = $derived(`article-${trend.id}`);
-
 	const displayTitle = $derived(analysis?.title_ko || '');
 	const displaySummary = $derived(analysis?.oneLineSummary || '');
 	const displayScore = $derived(analysis?.score ?? 0);
@@ -79,11 +78,11 @@
 							: 'text-alert'
 				)}
 			>
-				{`${analysis?.score}점`}
+				{`${displayScore}점`}
 			</div>
 			<div>
 				<IconLogoGemini id={geminiIconId} />
-				<span>{displayScore}</span>
+				<span>{displayModel}</span>
 			</div>
 			<button
 				type="button"
