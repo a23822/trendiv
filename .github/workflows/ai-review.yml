@@ -15,7 +15,8 @@ jobs:
     runs-on: ubuntu-latest
     # ui-generate 라벨 있으면 스킵
     if: |
-      !contains(github.event.pull_request.labels.*.name, 'ui-generate')
+      !contains(github.event.pull_request.labels.*.name, 'ui-generate') && 
+      !contains(github.event.pull_request.labels.*.name, 'release')
     permissions:
       contents: read
       pull-requests: write
