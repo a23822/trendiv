@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { PUBLIC_API_URL } from '$env/static/public';
-	import ArticleCard from '$lib/components/contents/ArticleCard.scaffold.svelte';
+	import ArticleCard from '$lib/components/contents/ArticleCard.svelte';
 	import HeroSection from '$lib/components/contents/HeroSection.svelte';
 	import SearchCard from '$lib/components/contents/SearchCard.svelte';
 	import Header from '$lib/components/layout/Header/Header.svelte';
