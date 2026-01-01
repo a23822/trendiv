@@ -1,9 +1,4 @@
 import nodemailer from "nodemailer";
-import dotenv from "dotenv";
-import * as path from "path";
-
-// 환경 변수 로드
-dotenv.config({ path: path.resolve(__dirname, "../../../.env") });
 
 // 1. [수정] 발송 계정(Auth)과 수신 계정(To) 분리
 // .env에 GMAIL_USER가 없으면 수신자 이메일을 발송자로 사용 (기존 호환성 유지)

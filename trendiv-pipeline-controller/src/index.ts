@@ -100,51 +100,78 @@ if (process.env.BATCH_MODE === "true") {
     generalLimiter,
     async (req: Request, res: Response) => {
       try {
-        const page = parseInt(req.query.page as string) || 1;
-        const limit = parseInt(req.query.limit as string) || 20;
+        const page = Math.max(
+          1,
+          parseInt(parseStringQuery(req.query.page)) || 1
+        );
+        const limit = Math.min(
+          100,
+          Math.max(1, parseInt(parseStringQuery(req.query.limit)) || 20)
+        );
 
-        // 배열 에러 방지 유틸 사용
         const searchKeyword = parseStringQuery(req.query.searchKeyword);
         const tagFilter = parseStringQuery(req.query.tagFilter);
 
         const from = (page - 1) * limit;
-        const to = from + limit - 1;
 
-        let query = supabase
-          .from("trend")
-          .select("id, title, link, date, source, analysis_results, category", {
-            count: "exact",
-          })
-          .eq("status", "ANALYZED")
-          .order("date", { ascending: false });
+        // 태그 파싱
+        const tags = tagFilter
+          .split(",")
+          .map((t) => t.trim())
+          .filter((t) => t);
 
-        if (searchKeyword) query = query.ilike("title", `%${searchKeyword}%`);
+        let data: any[] = [];
+        let count: number | null = 0;
 
-        if (tagFilter) {
-          const tags = tagFilter
-            .split(",")
-            .map((t) => t.trim())
-            .filter((t) => t);
-          if (tags.length > 0) {
-            // 🟡 [참고] JSONB 구조에 따라 검색이 안 될 수 있음.
-            // 정확도를 위해선 Postgres Function을 쓰는 게 좋지만 현재 구조 유지.
-            query = query.contains(
-              "analysis_results",
-              JSON.stringify([{ tags: tags }])
-            );
+        if (tags.length > 0) {
+          // ✅ 태그 필터 있으면 RPC 사용
+          const { data: rpcData, error } = await supabase.rpc(
+            "search_trends_by_tags",
+            {
+              tag_names: tags,
+              search_keyword: searchKeyword,
+              page_limit: limit,
+              page_offset: from,
+            }
+          );
+
+          if (error) throw error;
+          data = rpcData || [];
+          count = data.length; // RPC는 total count 별도 처리 필요
+        } else {
+          // 기존 로직 유지
+          let query = supabase
+            .from("trend")
+            .select(
+              "id, title, link, date, source, analysis_results, category",
+              {
+                count: "exact",
+              }
+            )
+            .eq("status", "ANALYZED")
+            .order("date", { ascending: false });
+
+          if (searchKeyword) {
+            query = query.ilike("title", `%${searchKeyword}%`);
           }
+
+          const {
+            data: queryData,
+            error,
+            count: totalCount,
+          } = await query.range(from, from + limit - 1);
+
+          if (error) {
+            if (page > 1)
+              return res
+                .status(200)
+                .json({ success: true, data: [], page, total: 0 });
+            throw error;
+          }
+          data = queryData || [];
+          count = totalCount;
         }
 
-        const { data, error, count } = await query.range(from, to);
-
-        if (error) {
-          // 416 에러(범위 초과)는 빈 배열 반환으로 처리
-          if (page > 1)
-            return res
-              .status(200)
-              .json({ success: true, data: [], page, total: 0 });
-          throw error;
-        }
         res.status(200).json({ success: true, data, page, total: count });
       } catch (error: any) {
         console.error("❌ 트렌드 조회 실패:", error);
@@ -205,22 +232,19 @@ if (process.env.BATCH_MODE === "true") {
           return res.status(400).json({ error: "유효하지 않은 이메일" });
         }
 
-        // 1. 중복 체크 먼저 수행
-        const { data: existing } = await supabase
+        const { data, error } = await supabase
           .from("subscriber")
-          .select("id")
-          .eq("email", email)
-          .single();
+          .upsert([{ email }], { onConflict: "email", ignoreDuplicates: true })
+          .select();
 
-        if (existing) {
-          // 🟡 [수정] 이미 있으면 409 Conflict 반환 (에러 아님)
+        if (error) throw error;
+
+        // data가 빈 배열이면 이미 존재했던 것
+        if (!data || data.length === 0) {
           return res.status(409).json({ message: "Already subscribed" });
         }
 
-        const { data, error } = await supabase
-          .from("subscriber")
-          .insert([{ email }])
-          .select();
+        res.status(200).json({ success: true, data });
         if (error) throw error;
         res.status(200).json({ success: true, data });
       } catch (error) {
