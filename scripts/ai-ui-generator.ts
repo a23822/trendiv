@@ -9,7 +9,7 @@ import { glob } from "glob";
 // ==========================================
 const API_KEY = process.env.GEMINI_API_KEY;
 const FIGMA_TOKEN = process.env.FIGMA_ACCESS_TOKEN;
-const MODEL_NAME = process.env.GEMINI_MODEL_PRO || "gemini-2.0-pro-exp-02-05";
+const MODEL_NAME = process.env.GEMINI_MODEL_PRO || "gemini-3-pro-preview";
 const CHANGED_FILES = process.env.CHANGED_FILES || "";
 
 // GitHub Actions Output Helper
