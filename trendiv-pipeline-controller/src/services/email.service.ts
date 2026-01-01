@@ -2,48 +2,52 @@ import nodemailer from "nodemailer";
 import dotenv from "dotenv";
 import * as path from "path";
 
-// 환경 변수 로드 (이 파일이 독립적으로 쓰일 때를 대비)
+// 환경 변수 로드
 dotenv.config({ path: path.resolve(__dirname, "../../../.env") });
 
-// 🟡 [Nodemailer 최적화] Transporter를 전역에서 한 번만 생성 (재사용)
-const emailUser = process.env.TEST_EMAIL_RECIPIENT;
+// 1. [수정] 발송 계정(Auth)과 수신 계정(To) 분리
+// .env에 GMAIL_USER가 없으면 수신자 이메일을 발송자로 사용 (기존 호환성 유지)
+const emailAuthUser =
+  process.env.GMAIL_USER || process.env.TEST_EMAIL_RECIPIENT;
 const emailPass = process.env.GMAIL_PASS;
+const emailRecipient = process.env.TEST_EMAIL_RECIPIENT;
 
 let transporter: nodemailer.Transporter | null = null;
 
-if (emailUser && emailPass) {
+if (emailAuthUser && emailPass) {
   transporter = nodemailer.createTransport({
     service: "gmail",
     auth: {
-      user: emailUser,
+      user: emailAuthUser,
       pass: emailPass,
     },
   });
 } else {
-  console.warn("⚠️ 이메일 설정이 없어 메일 기능을 사용할 수 없습니다.");
+  console.warn("⚠️ 이메일 설정 누락 (GMAIL_USER/PASS)");
 }
 
 export async function sendEmailReport(status: string, details: any) {
-  if (!transporter || !emailUser) {
-    console.log("❌ 메일 전송 실패: 설정 누락");
+  if (!transporter || !emailRecipient) {
+    console.log("❌ 메일 전송 스킵: 설정 없음");
     return;
   }
 
+  // 2. [수정] HTML 이스케이프 강화 (XSS 방지)
+  const safeDetails = JSON.stringify(details, null, 2)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+
   const mailOptions = {
-    from: `"Trendiv Bot" <${emailUser}>`,
-    to: emailUser,
+    from: `"Trendiv Bot" <${emailAuthUser}>`,
+    to: emailRecipient,
     subject: `[Trendiv] 수집 결과 보고: ${status}`,
     html: `
       <h2>${status === "SUCCESS" ? "✅ 수집 성공" : "❌ 수집 실패"}</h2>
       <p>오늘의 트렌드 수집 작업 결과입니다.</p>
-      <pre style="background:#f4f4f4; padding:10px; white-space: pre-wrap;">${JSON.stringify(
-        details,
-        null,
-        2
-      )
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")}</pre>
+      <pre style="background:#f4f4f4; padding:10px; white-space: pre-wrap;">${safeDetails}</pre>
     `,
   };
 
