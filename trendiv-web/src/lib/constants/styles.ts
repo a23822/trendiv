@@ -11,6 +11,6 @@ export const CommonStyles = {
 		'hover:border-gray-400 hover:shadow-xs',
 		BASE_TRANSITION
 	),
-	DEFAULT_TRANSTION_COLOR: cn(BASE_TRANSITION_COLOR),
+	DEFAULT_TRANSITION_COLOR: cn(BASE_TRANSITION_COLOR),
 	DEFAULT_TRANSITION: cn(BASE_TRANSITION)
 } as const;

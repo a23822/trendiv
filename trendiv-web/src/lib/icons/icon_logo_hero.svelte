@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { IDs } from '$lib/constants/ids';
+
 	let { ...rest } = $props();
 </script>
 
@@ -11,7 +13,7 @@
 >
 	<defs>
 		<linearGradient
-			id="tagGrad"
+			id={IDs.ICONS.LOGO_HERO_TAG_GRAD}
 			x1="0%"
 			y1="0%"
 			x2="100%"
@@ -27,7 +29,7 @@
 			/>
 		</linearGradient>
 		<filter
-			id="glow"
+			id={IDs.ICONS.LOGO_HERO_GLOW}
 			x="-50%"
 			y="-50%"
 			width="200%"
@@ -58,8 +60,8 @@
 		font-family="'Fira Code', monospace"
 		font-size="38"
 		font-weight="700"
-		fill="url(#tagGrad)"
-		filter="url(#glow)"
+		fill={`url(#${IDs.ICONS.LOGO_HERO_TAG_GRAD})`}
+		filter={`url(#${IDs.ICONS.LOGO_HERO_GLOW})`}
 	>
 		&lt;div&gt;
 	</text>
@@ -71,7 +73,7 @@
 		font-size="38"
 		font-weight="700"
 		fill="#ffffff"
-		filter="url(#glow)"
+		filter={`url(#${IDs.ICONS.LOGO_HERO_GLOW})`}
 	>
 		Trend
 	</text>
@@ -84,7 +86,7 @@
 		height="38"
 		rx="2"
 		fill="#4DD0BD"
-		filter="url(#glow)"
+		filter={`url(#${IDs.ICONS.LOGO_HERO_GLOW})`}
 	/>
 
 	<text
@@ -93,8 +95,8 @@
 		font-family="'Fira Code', monospace"
 		font-size="38"
 		font-weight="700"
-		fill="url(#tagGrad)"
-		filter="url(#glow)"
+		fill={`url(#${IDs.ICONS.LOGO_HERO_TAG_GRAD})`}
+		filter={`url(#${IDs.ICONS.LOGO_HERO_GLOW})`}
 	>
 		&lt;/div&gt;
 	</text>

@@ -88,16 +88,16 @@ pnpm dev
 
 ```bash
 ./deploy.sh
-deploy.sh 참고
+# deploy.sh 참고
 ```
 
-or
+또는
 
 ```bash
 pnpm run deploy
 ```
 
-env 변경 시 https://console.cloud.google.com/compute/instances?chat=true&project=trendiv&supportedpurview=folder 에서 ssh 통해 변경
+> env 변경 시 [GCP Console](https://console.cloud.google.com/compute/instances?chat=true&project=trendiv&supportedpurview=folder)에서 SSH를 통해 변경하세요.
 
 #### Frontend (Cloudflare Pages)
 
@@ -106,6 +106,23 @@ cd trendiv-web
 pnpm build
 npx wrangler pages deploy
 ```
+
+## 🤝 기여 가이드 (Contributing)
+
+이 프로젝트는 **Conventional Commits** 규칙에 따라 버전 관리 및 배포가 **100% 자동화**되어 있습니다.
+PR 생성 또는 머지 시 아래의 커밋 메시지 규칙을 반드시 준수해주세요.
+
+### 커밋 메시지 규칙 (Commit Convention)
+
+| 태그 (Prefix) | 설명 (Description)     | 버전 변경 (SemVer)          | 예시                           |
+| :------------ | :--------------------- | :-------------------------- | :----------------------------- |
+| **`feat`**    | 새로운 기능 추가       | **Minor** (v1.0.0 → v1.1.0) | `feat: 검색 필터 기능 추가`    |
+| **`fix`**     | 버그 수정              | **Patch** (v1.0.0 → v1.0.1) | `fix: 로그인 토큰 에러 수정`   |
+| **`docs`**    | 문서 수정              | **Patch** (v1.0.0 → v1.0.1) | `docs: README 설치법 업데이트` |
+| **`chore`**   | 설정/패키지 변경       | **Patch** (v1.0.0 → v1.0.1) | `chore: tailwindcss 버전 업`   |
+| **`major`**   | 중대한 변경 (Breaking) | **Major** (v1.0.0 → v2.0.0) | `major: API v2 마이그레이션`   |
+
+> ⚠️ **주의:** `master` 브랜치로 머지될 때의 **Squash Commit 메시지**가 위 규칙을 따라야 릴리즈가 정상적으로 생성됩니다.
 
 ## 📝 라이선스
 

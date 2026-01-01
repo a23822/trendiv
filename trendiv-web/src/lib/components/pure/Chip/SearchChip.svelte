@@ -53,7 +53,7 @@
 					'flex shrink-0 items-center justify-center',
 					'h-4 w-4 rounded-full',
 					'bg-gray-200/40',
-					CommonStyles.DEFAULT_TRANSTION_COLOR,
+					CommonStyles.DEFAULT_TRANSITION_COLOR,
 					'group-hover/chip:bg-gray-0/40'
 				)}
 			>
