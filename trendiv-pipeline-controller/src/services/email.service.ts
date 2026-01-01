@@ -1,12 +1,15 @@
 import nodemailer from "nodemailer";
 
 // 1. [수정] 발송 계정(Auth)과 수신 계정(To) 분리
-// .env에 GMAIL_USER가 없으면 수신자 이메일을 발송자로 사용 (기존 호환성 유지)
 const emailAuthUser =
   process.env.GMAIL_USER || process.env.TEST_EMAIL_RECIPIENT;
 const emailPass = process.env.GMAIL_PASS;
 const emailRecipient = process.env.TEST_EMAIL_RECIPIENT;
+
 type PipelineStatus = "SUCCESS" | "FAILURE";
+
+// ✅ 타입 개선: any 대신 Record 사용
+type PipelineDetails = Record<string, unknown>;
 
 let transporter: nodemailer.Transporter | null = null;
 
@@ -17,19 +20,56 @@ if (emailAuthUser && emailPass) {
       user: emailAuthUser,
       pass: emailPass,
     },
+    // ✅ 타임아웃 설정 추가 (네트워크 지연 방지)
+    connectionTimeout: 10000, // 10초
+    greetingTimeout: 10000,
+    socketTimeout: 30000,
   });
 } else {
   console.warn("⚠️ 이메일 설정 누락 (GMAIL_USER/PASS)");
 }
 
-export async function sendEmailReport(status: PipelineStatus, details: any) {
+// ✅ 안전한 JSON 직렬화 (순환 참조 방지)
+function safeStringify(obj: unknown): string {
+  const seen = new WeakSet();
+  try {
+    return JSON.stringify(
+      obj,
+      (key, value) => {
+        if (typeof value === "object" && value !== null) {
+          if (seen.has(value)) {
+            return "[Circular Reference]";
+          }
+          seen.add(value);
+        }
+        // Error 객체 처리
+        if (value instanceof Error) {
+          return {
+            name: value.name,
+            message: value.message,
+            stack: value.stack,
+          };
+        }
+        return value;
+      },
+      2
+    );
+  } catch (e) {
+    return `[Serialization Failed: ${String(e)}]`;
+  }
+}
+
+export async function sendEmailReport(
+  status: PipelineStatus,
+  details: PipelineDetails
+) {
   if (!transporter || !emailRecipient) {
     console.log("❌ 메일 전송 스킵: 설정 없음");
     return;
   }
 
-  // 2. [수정] HTML 이스케이프 강화 (XSS 방지)
-  const safeDetails = JSON.stringify(details, null, 2)
+  // ✅ 안전한 직렬화 사용 + HTML 이스케이프
+  const safeDetails = safeStringify(details)
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
