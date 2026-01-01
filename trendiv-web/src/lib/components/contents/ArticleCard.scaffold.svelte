@@ -16,17 +16,11 @@
 	let { trend, onclick }: Props = $props();
 
 	// 분석 결과 가져오기
-	// 1. analysis_results 배열이 있으면 가장 마지막(최신) 것을 가져옵니다.
-	// 2. 없으면 null (또는 기존 trend 필드 Fallback)
-	const { analysis, extraModelCount } = $derived.by(() => {
-		const results = trend.analysis_results;
-		const count = results?.length ?? 0;
+	const analysis = $derived(trend.analysis_results?.at(-1) ?? null);
 
-		return {
-			analysis: count > 0 ? results![count - 1] : undefined,
-			extraModelCount: count > 1 ? count - 1 : 0
-		};
-	});
+	const extraModelCount = $derived(
+		Math.max(0, (trend.analysis_results?.length ?? 0) - 1)
+	);
 
 	// 아이콘용 고유 ID
 	const geminiIconId = $derived(`article-${trend.id}`);
@@ -61,7 +55,7 @@
 	}
 </script>
 
-<div>
+<div class={cn(CommonStyles.CARD)}>
 	<!-- articleCard - header -->
 	<div>
 		<!-- aiInfoArea -->
@@ -80,7 +74,7 @@
 			>
 				{`${displayScore}점`}
 			</div>
-			<div>
+			<div class="truncate">
 				<IconLogoGemini id={geminiIconId} />
 				<span>{displayModel}</span>
 			</div>
@@ -88,7 +82,7 @@
 				type="button"
 				onclick={handleBookmark}
 				class={cn(
-					'ml-auto',
+					'ml-auto shrink-0',
 					'sm:hover:bg-forest-200/60 h-5 w-5 rounded-full',
 					CommonStyles.DEFAULT_TRANSTION_COLOR
 				)}
@@ -101,8 +95,7 @@
 		</div>
 		<!-- metaInfoArea -->
 		<div class="flex items-center">
-			<!-- 한줄 말줄임 적용 -->
-			<strong>{displayCategory}</strong>
+			<strong class="truncate">{displayCategory}</strong>
 			<span class="shrink-0">{displayDate}</span>
 		</div>
 	</div>
@@ -114,8 +107,7 @@
 	<!-- articleCard - footer -->
 	<div>
 		<!-- tagGroup -->
-		<!-- 넘치면 개행되지않고 숨김처리 -->
-		<div class="overflow-hidden whitespace-nowrap">
+		<div>
 			{#each displayTags as tag}
 				<span>{tag}</span>
 			{/each}
@@ -125,6 +117,7 @@
 			<a
 				href={displayLink}
 				target="_blank"
+				rel="noopener noreferrer"
 			>
 				<span>링크</span>
 				<IconLink />
