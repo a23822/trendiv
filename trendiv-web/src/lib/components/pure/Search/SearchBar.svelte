@@ -109,7 +109,7 @@
 			type="button"
 			class={cn(
 				'flex h-9 w-9 items-center justify-center rounded-lg',
-				CommonStyles.DEFAULT_TRANSTION_COLOR,
+				CommonStyles.DEFAULT_TRANSITION_COLOR,
 				'bg-gray-300/50 text-gray-700',
 				'sm:bg-transparent sm:text-gray-500',
 				'sm:hover:bg-gray-300/50 sm:hover:text-gray-700',
@@ -128,7 +128,7 @@
 			type="button"
 			class={cn(
 				'flex h-12 w-12 items-center justify-center rounded-xl',
-				CommonStyles.DEFAULT_TRANSTION_COLOR,
+				CommonStyles.DEFAULT_TRANSITION_COLOR,
 				'bg-forest-200/80 text-forest-700',
 				'active:scale-95 sm:hover:translate-x-0.5',
 				'disabled:bg-forest-200/50 disabled:text-forest-500/70 disabled:hover:cursor-not-allowed sm:hover:disabled:transform-none'

@@ -16,7 +16,11 @@
 	let { trend, onclick }: Props = $props();
 
 	// 분석 결과 가져오기
-	const analysis = $derived(trend.analysis_results?.at(-1) ?? null);
+	const analysis = $derived(
+		trend.analysis_results?.length
+			? trend.analysis_results[trend.analysis_results.length - 1]
+			: null
+	);
 
 	const extraModelCount = $derived(
 		Math.max(0, (trend.analysis_results?.length ?? 0) - 1)
@@ -84,7 +88,7 @@
 				class={cn(
 					'ml-auto shrink-0',
 					'sm:hover:bg-forest-200/60 h-5 w-5 rounded-full',
-					CommonStyles.DEFAULT_TRANSTION_COLOR
+					CommonStyles.DEFAULT_TRANSITION_COLOR
 				)}
 			>
 				<span class="sr-only">
