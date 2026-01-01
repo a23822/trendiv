@@ -17,6 +17,4 @@
 
 ---
 
-> 💡 **AI UI 생성이 필요하면?**
-> PR 생성 URL 뒤에 `?template=ui-generate.md` 추가
-> 또는 [여기서 새 PR 만들기](../compare?template=ui-generate.md)
+> 💡 **AI UI 생성이 필요하면?** > [ui-generate 템플릿으로 PR 만들기](../compare?template=ui-generate.md)
