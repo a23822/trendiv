@@ -193,8 +193,17 @@ if (process.env.BATCH_MODE === "true") {
     "/api/pipeline/run",
     adminLimiter,
     async (req: Request, res: Response) => {
+      const getHeaderValue = (
+        header: string | string[] | undefined
+      ): string => {
+        if (Array.isArray(header)) return header[0] || "";
+        return header || "";
+      };
+
       const clientKey =
-        req.headers["x-api-key"] || req.headers["authorization"];
+        getHeaderValue(req.headers["x-api-key"]) ||
+        getHeaderValue(req.headers["authorization"]);
+
       const isValid =
         clientKey === PIPELINE_API_KEY ||
         clientKey === `Bearer ${PIPELINE_API_KEY}`;
