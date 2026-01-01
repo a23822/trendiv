@@ -12,13 +12,16 @@
 	import { onMount } from 'svelte';
 
 	let { data }: { data: PageData } = $props();
-	let trends = $state<Trend[]>([]);
+
+	let trends = $state<Trend[]>(data.trends ?? []);
 	let page = $state(1);
 	let isLoadingMore = $state(false);
 	let hasMore = $state(true);
 	let searchKeyword = $state('');
 	let selectedTags = $state<string[]>([]);
 	let isSearching = $state(false);
+
+	let abortController: AbortController | null = null;
 
 	const API_URL = PUBLIC_API_URL || 'http://127.0.0.1:3000';
 	const popularTags = [
@@ -37,12 +40,6 @@
 	$effect(() => {
 		if (auth.user?.email) {
 			email = auth.user.email;
-		}
-	});
-
-	$effect(() => {
-		if (data.trends) {
-			trends = data.trends;
 		}
 	});
 
@@ -81,6 +78,12 @@
 
 	async function fetchTrends(reset = false) {
 		if (isLoadingMore && !reset) return;
+
+		if (abortController) {
+			abortController.abort();
+		}
+		abortController = new AbortController();
+
 		if (reset) isSearching = true;
 		else isLoadingMore = true;
 
@@ -99,7 +102,9 @@
 				searchKeyword: searchKeyword,
 				tagFilter: selectedTags.join(',')
 			});
-			const res = await fetch(`${API_URL}/api/trends?${params}`);
+			const res = await fetch(`${API_URL}/api/trends?${params}`, {
+				signal: abortController.signal
+			});
 
 			if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
 
@@ -119,6 +124,10 @@
 				hasMore = false;
 			}
 		} catch (e) {
+			// abort된 요청은 에러 처리 스킵
+			if (e instanceof Error && e.name === 'AbortError') {
+				return;
+			}
 			console.error('API 호출 중 오류 발생:', e);
 			hasMore = false;
 		} finally {
@@ -150,8 +159,14 @@
 
 	function infiniteScroll(node: HTMLElement) {
 		const observer = new IntersectionObserver((entries) => {
-			if (entries[0].isIntersecting && hasMore && !isSearching)
+			if (
+				entries[0].isIntersecting &&
+				hasMore &&
+				!isSearching &&
+				!isLoadingMore
+			) {
 				fetchTrends(false);
+			}
 		});
 
 		observer.observe(node);

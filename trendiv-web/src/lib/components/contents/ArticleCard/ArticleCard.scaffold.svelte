@@ -117,6 +117,7 @@
 	<div>
 		<!-- tagGroup -->
 		<div>
+			<!-- 태그는 모두 보여줄 것 -->
 			{#each displayTags as tag}
 				<span>{tag}</span>
 			{/each}
