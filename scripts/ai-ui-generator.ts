@@ -29,6 +29,7 @@ function readProjectStyles(): string {
   const cwd = process.cwd();
 
   try {
+    // 1. SCSS 변수 읽기
     const colorVarsPath = path.resolve(
       cwd,
       "trendiv-web/src/lib/constants/variables_color.scss"
@@ -40,6 +41,7 @@ function readProjectStyles(): string {
       )}`;
     }
 
+    // 2. App CSS 읽기
     const appCssPath = path.resolve(cwd, "trendiv-web/src/app.css");
     if (fs.existsSync(appCssPath)) {
       context += `\n/* --- app.css --- */\n${fs.readFileSync(
@@ -47,6 +49,19 @@ function readProjectStyles(): string {
         "utf-8"
       )}`;
     }
+
+    // 3. Shared Styles (styles.ts) 읽기
+    const stylesTsPath = path.resolve(
+      cwd,
+      "trendiv-web/src/lib/constants/styles.ts"
+    );
+    if (fs.existsSync(stylesTsPath)) {
+      context += `\n/* --- styles.ts (Shared UI Constants) --- */\n${fs.readFileSync(
+        stylesTsPath,
+        "utf-8"
+      )}`;
+    }
+
     return context;
   } catch (e) {
     return "";
@@ -283,6 +298,7 @@ ${figmaSpec || "스펙 데이터 없음 (SVG만 참고)"}
 - SVG/Figma의 색상(#Hex)이 아래 변수와 일치하면 반드시 **CSS 변수**를 사용하세요.
   - 예: \`bg-[#1ba896]\` ❌ → \`bg-(--color-primary)\` ✅
   - 예: \`bg-[#1BA896]\` ❌ → \`bg-(--mint-500)\` ✅
+- **styles.ts**에 정의된 공통 스타일 객체(CommonStyles 등)가 있다면, 해당 객체 내부의 Tailwind 클래스 조합을 참고하여 디자인 일관성을 유지하세요.
 
 \`\`\`css
 ${cssContext}
