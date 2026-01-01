@@ -343,7 +343,7 @@ async function main() {
 
   // 변경된 파일에서 scaffold 파일 찾기
   // .scaffold.svelte 또는 .scaffold.svg 변경 감지
-  const changedFiles = CHANGED_FILES.split(" ");
+  const changedFiles = CHANGED_FILES.split(/[\s,]+/).filter(Boolean);
 
   // scaffold.svelte 파일 목록
   const scaffoldSvelteFiles = changedFiles.filter((f) =>

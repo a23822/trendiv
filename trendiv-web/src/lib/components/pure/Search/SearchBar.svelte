@@ -48,6 +48,7 @@
 		if (e.key === 'Escape') {
 			handleClear();
 		}
+		if (e.isComposing) return;
 	}
 </script>
 
