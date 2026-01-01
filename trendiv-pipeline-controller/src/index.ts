@@ -34,7 +34,7 @@ if (!PIPELINE_API_KEY) {
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 // 🛠️ 쿼리 파라미터 안전 파싱 (배열 방지)
-const parseStringQuery = (query: any): string => {
+const parseStringQuery = (query: unknown): string => {
   if (Array.isArray(query)) return String(query[0] || "").trim();
   return String(query || "").trim();
 };
@@ -75,7 +75,7 @@ if (process.env.BATCH_MODE === "true") {
     } catch (error) {
       console.error("🔥 [Batch Mode] 실패:", error);
       await sendEmailReport("FAILURE", { error: String(error) });
-      process.exit(1); // 🔴 실패 시 Exit Code 1 (CI 감지용)
+      process.exit(1);
     }
   })();
 } else {
@@ -136,17 +136,23 @@ if (process.env.BATCH_MODE === "true") {
           );
 
           if (error) throw error;
-          data = rpcData || [];
-          count = data.length; // RPC는 total count 별도 처리 필요
+
+          // ✅ total_count는 각 row에 포함되어 있음
+          if (rpcData && rpcData.length > 0) {
+            count = rpcData[0].total_count;
+            // total_count 필드 제거 후 반환
+            data = rpcData.map(({ total_count, ...rest }: any) => rest);
+          } else {
+            data = [];
+            count = 0;
+          }
         } else {
           // 기존 로직 유지
           let query = supabase
             .from("trend")
             .select(
               "id, title, link, date, source, analysis_results, category",
-              {
-                count: "exact",
-              }
+              { count: "exact" }
             )
             .eq("status", "ANALYZED")
             .order("date", { ascending: false });
@@ -162,10 +168,11 @@ if (process.env.BATCH_MODE === "true") {
           } = await query.range(from, from + limit - 1);
 
           if (error) {
-            if (page > 1)
+            if (page > 1) {
               return res
                 .status(200)
                 .json({ success: true, data: [], page, total: 0 });
+            }
             throw error;
           }
           data = queryData || [];
@@ -173,11 +180,10 @@ if (process.env.BATCH_MODE === "true") {
         }
 
         res.status(200).json({ success: true, data, page, total: count });
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("❌ 트렌드 조회 실패:", error);
-        res
-          .status(500)
-          .json({ error: "데이터 로드 실패", details: error.message });
+        const message = error instanceof Error ? error.message : String(error);
+        res.status(500).json({ error: "데이터 로드 실패", details: message });
       }
     }
   );
@@ -201,12 +207,7 @@ if (process.env.BATCH_MODE === "true") {
       console.log("👆 [Manual] 실행 요청됨 (동기 실행 모드)");
 
       try {
-        // 🔴 [중요 변경] Cloud Run에서는 응답을 보내면 CPU가 꺼집니다.
-        // 따라서 작업을 await로 기다려야 파이프라인이 끝까지 돕니다.
-        // (단, HTTP 타임아웃 60초~300초 주의 필요)
         const result = await runPipeline();
-
-        // 실행 완료 후 응답
         res.json({
           success: true,
           message: "Pipeline executed successfully",
@@ -244,12 +245,11 @@ if (process.env.BATCH_MODE === "true") {
           return res.status(409).json({ message: "Already subscribed" });
         }
 
-        res.status(200).json({ success: true, data });
-        if (error) throw error;
-        res.status(200).json({ success: true, data });
+        // ✅ 중복 응답 제거 - 한 번만 응답
+        return res.status(200).json({ success: true, data });
       } catch (error) {
         console.error("구독 에러:", error);
-        res.status(500).json({ error: "구독 처리 실패" });
+        return res.status(500).json({ error: "구독 처리 실패" });
       }
     }
   );
