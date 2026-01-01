@@ -1,8 +1,9 @@
-name: Custom Context-Aware Reviewer
+name: AI Reviewer
 
 on:
   pull_request:
     types: [opened, synchronize]
+  workflow_dispatch:
 
 # 중복 실행 방지 (새 커밋이 오면 이전 AI 리뷰는 취소)
 concurrency:
