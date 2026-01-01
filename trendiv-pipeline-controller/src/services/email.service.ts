@@ -11,6 +11,7 @@ const emailAuthUser =
   process.env.GMAIL_USER || process.env.TEST_EMAIL_RECIPIENT;
 const emailPass = process.env.GMAIL_PASS;
 const emailRecipient = process.env.TEST_EMAIL_RECIPIENT;
+type PipelineStatus = "SUCCESS" | "FAILURE";
 
 let transporter: nodemailer.Transporter | null = null;
 
@@ -26,7 +27,7 @@ if (emailAuthUser && emailPass) {
   console.warn("⚠️ 이메일 설정 누락 (GMAIL_USER/PASS)");
 }
 
-export async function sendEmailReport(status: string, details: any) {
+export async function sendEmailReport(status: PipelineStatus, details: any) {
   if (!transporter || !emailRecipient) {
     console.log("❌ 메일 전송 스킵: 설정 없음");
     return;
