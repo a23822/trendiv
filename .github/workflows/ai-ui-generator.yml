@@ -69,24 +69,10 @@ jobs:
         id: generate
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          GEMINI_MODEL_PRO: ${{ vars.GEMINI_MODEL_PRO || 'gemini-2.5-pro-preview-06-05' }}
-          FIGMA_ACCESS_TOKEN: ${{ secrets.FIGMA_ACCESS_TOKEN }}
+          GEMINI_MODEL_PRO: ${{ vars.GEMINI_MODEL_PRO || 'gemini-3-pro-preview' }}
           CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
+          PR_BODY: ${{ github.event.pull_request.body }}
         run: npx tsx scripts/ai-ui-generator.ts
-
-      - name: Remove Label
-        if: always()
-        uses: actions/github-script@v7
-        continue-on-error: true
-        with:
-          github-token: ${{ steps.generate-token.outputs.token }}
-          script: |
-            await github.rest.issues.removeLabel({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-              name: 'ui-generate'
-            });
 
       - name: Commit & Push
         if: steps.generate.outputs.generated == 'true'
@@ -94,7 +80,7 @@ jobs:
           git config user.name "trendiv-ui[bot]"
           git config user.email "trendiv-ui[bot]@users.noreply.github.com"
           git add -A
-          git commit -m "🎨 AI Generated: ${{ steps.generate.outputs.files }}"
+          git commit -m "🎨 AI Generated: ${{ steps.generate.outputs.files }} [skip review]"
           git push
 
       - name: Comment Success
@@ -121,7 +107,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
-              body: `## ⚠️ Scaffold 파일 없음\n\n이 PR에 \`.scaffold.svelte\` 파일 변경사항이 없습니다.\n\n### 사용법\n1. \`ComponentName.scaffold.svelte\` 파일 생성\n2. 파일 상단에 Figma URL 주석 추가\n3. \`ui-generate\` 라벨 추가\n\n### 예시\n\`\`\`svelte\n<!--\nhttps://www.figma.com/design/xxx?node-id=123-456\n-->\n<script>\n  // ...\n</script>\n\`\`\``
+              body: `## ⚠️ Scaffold 파일 없음\n\n이 PR에 \`.scaffold.svelte\` 파일 변경사항이 없습니다.\n\n### 사용법\n1. \`ComponentName.scaffold.svelte\` 파일 생성\n2. PR description에 이미지 추가 (### ComponentName 섹션)\n3. \`ui-generate\` 라벨 추가`
             });
 
       - name: Comment Failure
@@ -134,5 +120,19 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
-              body: `## ❌ AI 코드 생성 실패\n\nScaffold 파일 상단에 Figma URL이 있는지 확인해주세요.\n\n### Scaffold 파일 형식\n\`\`\`svelte\n<!--\nhttps://www.figma.com/design/xxx?node-id=123-456\n-->\n<script lang="ts">\n  let { prop } = $props();\n</script>\n\n<div>\n  ...\n</div>\n\`\`\``
+              body: `## ❌ AI 코드 생성 실패\n\nPR description에 이미지가 있는지 확인해주세요.\n\n### PR Description 형식\n\`\`\`markdown\n### ArticleCard\n![ArticleCard](이미지 드래그앤드롭)\n\`\`\`\n\n> ⚠️ 컴포넌트명과 섹션명이 **정확히 일치**해야 합니다.`
+            });
+
+      - name: Remove Label
+        if: always()
+        uses: actions/github-script@v7
+        continue-on-error: true
+        with:
+          github-token: ${{ steps.generate-token.outputs.token }}
+          script: |
+            await github.rest.issues.removeLabel({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              name: 'ui-generate'
             });
