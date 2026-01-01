@@ -1,9 +1,11 @@
 <script lang="ts">
+	import { CommonStyles } from '$lib/constants/styles';
 	import IconBookmark from '$lib/icons/icon_bookmark.svelte';
 	import IconLink from '$lib/icons/icon_link.svelte';
 	import IconLogoGemini from '$lib/icons/icon_logo_gemini.svelte';
 	import { bookmarks } from '$lib/stores/bookmarks.svelte';
-	import type { Trend, AnalysisResult } from '$lib/types';
+	import type { Trend } from '$lib/types';
+	import { cn } from '$lib/utils/ClassMerge';
 
 	interface Props {
 		trend: Trend;
@@ -12,25 +14,26 @@
 
 	let { trend, onclick }: Props = $props();
 
-	// ✨ [핵심 로직] 분석 결과 가져오기
-	// 1. analysis_results 배열이 있으면 가장 마지막(최신) 것을 가져옵니다.
-	// 2. 없으면 null (또는 기존 trend 필드 Fallback)
+	// 분석 결과 가져오기
 	const analysis = $derived(
 		trend.analysis_results?.length
 			? trend.analysis_results[trend.analysis_results.length - 1]
-			: undefined
+			: null
+	);
+
+	const extraModelCount = $derived(
+		Math.max(0, (trend.analysis_results?.length ?? 0) - 1)
 	);
 
 	// 아이콘용 고유 ID
 	const geminiIconId = $derived(`article-${trend.id}`);
-
-	// ✨ [데이터 매핑] analysis 객체가 있으면 그걸 쓰고, 없으면 trend 원본 필드 사용
 	const displayTitle = $derived(analysis?.title_ko || '');
 	const displaySummary = $derived(analysis?.oneLineSummary || '');
 	const displayScore = $derived(analysis?.score ?? 0);
 	const displayTags = $derived(analysis?.tags || []);
 	const displayModel = $derived(analysis?.aiModel || '');
 	const displayLink = $derived(trend.link || '');
+	const displayCategory = $derived(trend.category || '');
 
 	const isBookmarked = $derived(bookmarks.isBookmarked(trend.link));
 
@@ -56,89 +59,127 @@
 </script>
 
 <div
-	class="
-    bg-gray-0 group cursor-pointer overflow-hidden rounded-2xl border border-gray-100 shadow-xs transition-all hover:shadow-xl
-  "
-	{onclick}
-	onkeydown={(e) => {
-		if (e.key === 'Enter' || e.key === ' ') {
-			e.preventDefault();
-			onclick?.();
-		}
-	}}
-	tabindex="0"
-	role="button"
+	class={cn(
+		CommonStyles.CARD,
+		'relative flex flex-col gap-4 overflow-hidden rounded-[20px] p-5 transition-all duration-300',
+		'bg-(--color-bg-elevated) border border-(--color-border-subtle)',
+		'shadow-(--shadow-sm) hover:shadow-(--shadow-md)',
+		// Gradient Overlay from SVG: linearGradient stops at ~50% height, from Mint-200/20 to transparent
+		'after:pointer-events-none after:absolute after:inset-0 after:bg-gradient-to-b after:from-(--color-mint-200)/20 after:to-transparent after:content-[""]'
+	)}
 >
-	<div
-		class="bg-gray-0 flex items-center justify-between border-b border-gray-100 px-5 py-3"
-	>
-		<div class="flex items-center gap-3">
-			<div class="flex items-center gap-1.5">
-				<div class="bg-mint-500 h-2 w-2 rounded-full"></div>
-				<span class="text-mint-600 text-xs font-bold">
-					{displayScore}점
-				</span>
+	<!-- articleCard - header -->
+	<div class="flex flex-col gap-2">
+		<!-- aiInfoArea -->
+		<div class="flex items-center justify-between">
+			<div class="flex items-center gap-2">
+				<!-- Score Indicator -->
+				<div
+					class={cn(
+						'flex items-center gap-1.5 text-sm font-bold tabular-nums',
+						'before:inline-block before:h-2 before:w-2 before:rounded-full before:bg-current',
+						displayScore >= 8
+							? 'text-(--color-primary)'
+							: displayScore >= 4
+								? 'text-(--color-caution)'
+								: 'text-(--color-alert)'
+					)}
+				>
+					{`${displayScore}점`}
+				</div>
+
+				<!-- Divider -->
+				<div class="h-3 w-px bg-(--color-gray-200)"></div>
+
+				<!-- Model Info -->
+				<div class="flex items-center gap-1.5 text-sm font-medium text-(--color-gray-900)">
+					<div class="text-(--color-primary) w-4 h-4 flex items-center justify-center">
+						<IconLogoGemini id={geminiIconId} />
+					</div>
+					<span class="opacity-80">{displayModel}</span>
+				</div>
 			</div>
-			<IconLogoGemini
-				id={geminiIconId}
-				class="h-3 w-3"
-			/>
-			<span
-				class="rounded-sm bg-violet-100 px-2 py-0.5 text-[10px] font-medium text-violet-600"
+
+			<!-- Bookmark -->
+			<button
+				type="button"
+				onclick={handleBookmark}
+				class={cn(
+					'relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors',
+					'text-(--color-gray-400) hover:bg-(--color-gray-100) hover:text-(--color-primary)',
+					isBookmarked && 'text-(--color-primary)'
+				)}
 			>
-				{displayModel}
-			</span>
+				<span class="sr-only">
+					{isBookmarked ? '북마크 해제' : '북마크 추가'}
+				</span>
+				<IconBookmark filled={isBookmarked} />
+			</button>
 		</div>
 
-		<!-- 저장 버튼 -->
-		<button
-			type="button"
-			onclick={handleBookmark}
-			onkeydown={(e) => e.stopPropagation()}
-			class="
-				flex items-center gap-1 rounded-lg px-2 py-1
-				text-xs font-medium transition-all
-				{isBookmarked ? 'text-mint-600' : 'text-gray-500'}
-				hover:text-mint-600
-				hover:bg-mint-50
-			"
-		>
-			<IconBookmark filled={isBookmarked} />
-		</button>
-		<a
-			href={displayLink}
-			target="_blank"
-			class="text-mint-800 flex items-center gap-2"
-			><span>원문</span><IconLink /></a
-		>
+		<!-- metaInfoArea -->
+		<div class="flex items-center gap-2 text-xs font-medium text-(--color-gray-500)">
+			<strong
+				class="rounded-sm bg-(--color-bg-surface) px-1.5 py-0.5 font-semibold text-(--color-gray-600)"
+			>
+				{displayCategory}
+			</strong>
+			<span>•</span>
+			<span class="shrink-0">{displayDate}</span>
+		</div>
 	</div>
 
-	<div class="p-5">
+	<!-- articleCard - body -->
+	<div class="flex flex-1 flex-col gap-2">
 		<h3
-			class="group-hover:text-mint-600 mb-2 line-clamp-2 text-xl leading-snug font-bold text-gray-900 transition-colors"
+			class="line-clamp-2 text-lg font-bold leading-snug text-(--color-gray-900) group-hover:text-(--color-primary) transition-colors"
 		>
 			{displayTitle}
 		</h3>
-
-		<p class="mb-4 line-clamp-3 text-sm leading-relaxed text-gray-600">
+		<p class="line-clamp-3 text-sm leading-relaxed text-(--color-gray-600)">
 			{displaySummary}
 		</p>
+	</div>
 
-		<div
-			class="flex items-center justify-between border-t border-gray-100 pt-4"
-		>
-			<div class="flex flex-wrap gap-1.5">
-				{#each displayTags.slice(0, 3) as tag, i}
-					<span
-						class="rounded-full px-2.5 py-1 text-xs font-medium {i === 0
-							? 'bg-mint-50 text-mint-700 border-mint-200'
-							: 'bg-gray-100 text-gray-600'}"
-					>
-						{tag}
-					</span>
-				{/each}
-			</div>
-			<span class="text-xs text-gray-400">{displayDate}</span>
+	<!-- articleCard - footer -->
+	<div class="mt-auto flex flex-col gap-4 pt-2">
+		<!-- tagGroup -->
+		<div class="flex flex-wrap gap-1.5">
+			{#each displayTags as tag}
+				<span
+					class="rounded-md bg-(--color-neutral-200) px-2.5 py-1 text-[11px] font-medium text-(--color-neutral-700) transition-colors hover:bg-(--color-neutral-300)"
+				>
+					#{tag}
+				</span>
+			{/each}
+		</div>
+
+		<!-- buttonGroup -->
+		<div class="flex items-center justify-between border-t border-(--color-border-subtle) pt-4">
+			<a
+				href={displayLink}
+				target="_blank"
+				rel="noopener noreferrer"
+				class="relative z-10 flex items-center gap-1.5 text-xs font-semibold text-(--color-forest-700) hover:underline hover:text-(--color-forest-800) transition-colors"
+			>
+				<span>원본 링크</span>
+				<IconLink />
+			</a>
+
+			<button
+				type="button"
+				{onclick}
+				class={cn(
+					'relative z-10 flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-all',
+					'bg-(--color-neutral-200) text-(--color-mint-900)',
+					'hover:bg-(--color-neutral-300) active:scale-95'
+				)}
+			>
+				<span>자세히 보기</span>
+				{#if extraModelCount > 0}
+					<span class="opacity-70 font-normal ml-0.5">+{extraModelCount}</span>
+				{/if}
+			</button>
 		</div>
 	</div>
 </div>
