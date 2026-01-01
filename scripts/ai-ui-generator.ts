@@ -281,6 +281,7 @@ SVG에서 **정확한 색상값, 그라데이션, 필터, 폰트**를 추출해�
 - 폰트: font-family, font-size, font-weight
 - 레이아웃: width, height, 각 요소의 위치
 - 참고용이지 실제 컴포넌트에 svg 태그를 넣지 말 것
+- 하지만 svg에서 나타나는 디자인 스펙들에서 크게 벗어나지 말 것
 
 \`\`\`svg
 ${svgCode}
