@@ -1,6 +1,7 @@
 import express from "express";
 import type { Request, Response } from "express";
 import cors from "cors";
+import crypto from "crypto";
 import { createClient } from "@supabase/supabase-js";
 import dotenv from "dotenv";
 import * as path from "path";
@@ -39,6 +40,28 @@ const parseStringQuery = (query: unknown): string => {
   return String(query || "").trim();
 };
 
+// 🛠️ 헤더 값 안전 추출 (배열 방지)
+const getHeaderValue = (header: string | string[] | undefined): string => {
+  if (Array.isArray(header)) return header[0] || "";
+  return header || "";
+};
+
+// 🛡️ 안전한 문자열 비교 (Timing Attack 방지)
+const safeCompare = (a: string, b: string): boolean => {
+  if (!a || !b) return false;
+
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+
+  // 길이가 다르면 바로 false지만, 타이밍 공격 방지를 위해 더미 비교 수행
+  if (bufA.length !== bufB.length) {
+    crypto.timingSafeEqual(bufA, bufA);
+    return false;
+  }
+
+  return crypto.timingSafeEqual(bufA, bufB);
+};
+
 // Rate Limiters
 const generalLimiter = rateLimit({
   windowMs: 1 * 60 * 1000,
@@ -54,10 +77,10 @@ const subscribeLimiter = rateLimit({
   message: { error: "구독 요청 제한 초과" },
 });
 
-// [추가] 관리자 API용 Rate Limit (DoS 방지)
+// 관리자 API용 Rate Limit (DoS 방지)
 const adminLimiter = rateLimit({
   windowMs: 1 * 60 * 1000,
-  max: 5, // 1분에 5번 이상 실행 금지
+  max: 5,
   message: { error: "관리자 요청 제한 초과" },
 });
 
@@ -193,20 +216,15 @@ if (process.env.BATCH_MODE === "true") {
     "/api/pipeline/run",
     adminLimiter,
     async (req: Request, res: Response) => {
-      const getHeaderValue = (
-        header: string | string[] | undefined
-      ): string => {
-        if (Array.isArray(header)) return header[0] || "";
-        return header || "";
-      };
-
+      // ✅ 헤더 값 안전 추출
       const clientKey =
         getHeaderValue(req.headers["x-api-key"]) ||
         getHeaderValue(req.headers["authorization"]);
 
+      // ✅ Timing-safe 비교
       const isValid =
-        clientKey === PIPELINE_API_KEY ||
-        clientKey === `Bearer ${PIPELINE_API_KEY}`;
+        safeCompare(clientKey, PIPELINE_API_KEY || "") ||
+        safeCompare(clientKey, `Bearer ${PIPELINE_API_KEY || ""}`);
 
       if (!PIPELINE_API_KEY || !isValid) {
         console.warn(`⛔ 미승인 접근 (IP: ${req.ip})`);
@@ -268,10 +286,14 @@ if (process.env.BATCH_MODE === "true") {
   });
 
   // Graceful Shutdown (종료 시그널 처리)
-  process.on("SIGTERM", () => {
-    console.log("SIGTERM signal received: closing HTTP server");
+  const shutdown = () => {
+    console.log("Shutdown signal received: closing HTTP server");
     server.close(() => {
       console.log("HTTP server closed");
+      process.exit(0);
     });
-  });
+  };
+
+  process.on("SIGTERM", shutdown);
+  process.on("SIGINT", shutdown);
 }
