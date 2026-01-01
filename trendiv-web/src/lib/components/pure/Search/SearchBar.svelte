@@ -42,13 +42,13 @@
 	}
 
 	function handleKeydown(e: KeyboardEvent) {
+		if (e.isComposing) return;
 		if (e.key === 'Enter') {
 			handleSearch();
 		}
 		if (e.key === 'Escape') {
 			handleClear();
 		}
-		if (e.isComposing) return;
 	}
 </script>
 
