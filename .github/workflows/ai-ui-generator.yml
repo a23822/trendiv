@@ -32,6 +32,7 @@ jobs:
         id: changed-files
         uses: tj-actions/changed-files@v45
         with:
+          separator: ","
           files: |
             **/*.scaffold.svelte
             **/*.scaffold.svg
@@ -108,19 +109,6 @@ jobs:
               repo: context.repo.repo,
               issue_number: context.issue.number,
               body: `## ⚠️ Scaffold 파일 없음\n\n이 PR에 \`.scaffold.svelte\` 파일 변경사항이 없습니다.\n\n### 사용법\n1. \`ComponentName.scaffold.svelte\` 파일 생성\n2. PR description에 이미지 추가 (### ComponentName 섹션)\n3. \`ui-generate\` 라벨 추가`
-            });
-
-      - name: Comment Failure
-        if: failure() && steps.check.outputs.found == 'true'
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ steps.generate-token.outputs.token }}
-          script: |
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-              body: `## ❌ AI 코드 생성 실패\n\nPR description에 이미지가 있는지 확인해주세요.\n\n### PR Description 형식\n\`\`\`markdown\n### ArticleCard\n![ArticleCard](이미지 드래그앤드롭)\n\`\`\`\n\n> ⚠️ 컴포넌트명과 섹션명이 **정확히 일치**해야 합니다.`
             });
 
       - name: Remove Label
