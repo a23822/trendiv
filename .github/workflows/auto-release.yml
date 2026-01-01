@@ -1,0 +1,62 @@
+name: 🚀 Auto Bump & Release
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  bump-and-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # 코드 수정 및 릴리즈 작성 권한
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # 전체 커밋 로그를 가져와야 분석 가능
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # 1. Git 사용자 설정 (봇 이름으로 커밋하기 위해)
+      - name: Setup Git User
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      # 2. 버전 자동 계산 및 package.json 업데이트
+      # 'phips28/gh-action-bump-version' 액션이 커밋 메시지를 보고 버전을 올립니다.
+      - name: Bump version in package.json
+        id: version_bump
+        uses: phips28/gh-action-bump-version@v11.0.3
+        with:
+          tag-prefix: "v"
+          minor-wording: "feat" # 커밋에 feat이 있으면 1.1.0으로
+          major-wording: "major" # 커밋에 major가 있으면 2.0.0으로
+          patch-wording: "fix,chore,refactor,docs" # 나머지는 1.0.1로
+          skip-tag: "true" # 태그는 아래 release 단계에서 만들 거라 여기서 스킵
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # 3. 변경된 package.json을 master 브랜치에 푸시
+      # (액션이 버전을 고쳤으니 저장소에도 반영해줘야 함)
+      - name: Push changes
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.ref }}
+
+      # 4. 릴리즈 생성 및 변경사항 요약 글 올리기
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version_bump.outputs.newTag }} # 새로 만든 버전
+          name: 🚀 Release v${{ steps.version_bump.outputs.newTag }}
+          generate_release_notes: true # ✅ 여기가 핵심! GitHub이 PR 제목들을 모아서 요약해줍니다.
+          draft: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
