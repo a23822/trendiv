@@ -1,4 +1,4 @@
-<!-- https://www.figma.com/design/jxEwxoZSxmKtjMzQkeKkcP/Trendiv?node-id=12-5&t=OpHyXleilZSkLFzr-4  -->
+<!-- https://www.figma.com/design/jxEwxoZSxmKtjMzQkeKkcP/Trendiv?node-id=12-5&t=OpHyXleilZSkLFzr-4 -->
 <script lang="ts">
 	import { CommonStyles } from '$lib/constants/styles';
 	import IconBookmark from '$lib/icons/icon_bookmark.svelte';
@@ -6,7 +6,7 @@
 	import IconLogoGemini from '$lib/icons/icon_logo_gemini.svelte';
 	import IconLogoSource from '$lib/icons/icon_logo_source.svelte';
 	import { bookmarks } from '$lib/stores/bookmarks.svelte';
-	import type { Trend } from '$lib/types';
+	import type { Trend, AnalysisResult } from '$lib/types';
 	import { cn } from '$lib/utils/ClassMerge';
 
 	interface Props {
@@ -60,53 +60,45 @@
 	}
 </script>
 
-<div class={cn(CommonStyles.CARD, 'relative overflow-hidden flex flex-col justify-between')}>
+<div
+	class={cn(
+		CommonStyles.CARD,
+		'relative flex flex-col justify-between overflow-hidden'
+	)}
+>
 	<!-- Background Gradient Overlay (SVG: paint0_linear_12_5) -->
-	<div 
-		class="absolute inset-0 bg-linear-to-b from-(--color-mint-200)/20 to-transparent pointer-events-none" 
+	<div
+		class="absolute inset-0 pointer-events-none bg-linear-to-b from-(--mint-200)/20 to-transparent"
 		aria-hidden="true"
 	></div>
 
-	<!-- articleCard - Content Wrapper -->
-	<div class="relative z-10 flex flex-col gap-3">
-		<!-- Header Area -->
-		<div class="flex justify-between items-start gap-4">
-			<!-- AI Info & Meta -->
-			<div class="flex flex-col gap-1.5 min-w-0">
-				<!-- AI Model & Score -->
-				<div class="flex items-center gap-2">
-					<div
-						class={cn(
-							'flex items-center gap-1.5 text-xs font-semibold',
-							displayScore >= 8
-								? 'text-(--color-primary)'
-								: displayScore >= 4
-									? 'text-(--color-caution)'
-									: 'text-(--color-alert)'
-						)}
-					>
-						<!-- SVG Circle Indicator -->
-						<span class="size-2 rounded-full bg-current shrink-0"></span>
-						<span>{displayScore}점</span>
-					</div>
-					<div class="h-3 w-px bg-(--color-gray-300)"></div>
-					<div class="flex items-center gap-1 text-xs text-(--color-gray-600) truncate">
-						<IconLogoGemini id={iconId} />
-						<span class="truncate">{displayModel}</span>
-					</div>
+	<!-- Header Group -->
+	<div class="flex flex-col gap-3">
+		<!-- AI Info & Actions -->
+		<div class="flex items-center justify-between">
+			<div class="flex items-center gap-3">
+				<!-- Score -->
+				<div
+					class={cn(
+						'flex items-center gap-1.5 text-sm font-bold',
+						displayScore >= 8
+							? 'text-(--color-primary)'
+							: displayScore >= 4
+								? 'text-(--color-caution)'
+								: 'text-(--color-alert)'
+					)}
+				>
+					<span class="h-2 w-2 rounded-full bg-current"></span>
+					<span>{displayScore}점</span>
 				</div>
 
-				<!-- Category & Date -->
-				<div class="flex items-center gap-1.5 text-xs text-(--color-gray-500)">
-					<div class="shrink-0 flex items-center justify-center">
-						<IconLogoSource
-							id={iconId}
-							category={displayCategory}
-						/>
-					</div>
-					<strong class="font-medium truncate text-(--color-gray-700)">{displayCategory}</strong>
-					<span class="text-(--color-gray-300)">•</span>
-					<span class="shrink-0">{displayDate}</span>
+				<!-- Divider -->
+				<div class="h-3 w-px bg-(--gray-300)"></div>
+
+				<!-- AI Model -->
+				<div class="flex items-center gap-1.5 text-sm font-medium text-(--gray-700)">
+					<IconLogoGemini id={iconId} />
+					<span class="truncate max-w-[100px]">{displayModel}</span>
 				</div>
 			</div>
 
@@ -115,8 +107,7 @@
 				type="button"
 				onclick={handleBookmark}
 				class={cn(
-					'shrink-0 p-1 -mr-1 rounded-full',
-					'text-(--color-gray-400) hover:text-(--color-primary) hover:bg-(--color-gray-100)',
+					'flex h-8 w-8 items-center justify-center rounded-full text-(--gray-400) hover:bg-(--bg-surface) hover:text-(--color-primary)',
 					CommonStyles.DEFAULT_TRANSITION_COLOR
 				)}
 			>
@@ -127,63 +118,69 @@
 			</button>
 		</div>
 
-		<!-- Body Area -->
-		<div class="flex flex-col gap-2 mt-1">
-			<h3 class="text-lg font-bold text-(--color-gray-900) leading-snug line-clamp-2">
-				{displayTitle}
-			</h3>
-			<p class="text-sm text-(--color-gray-600) leading-relaxed line-clamp-2">
-				{displaySummary}
-			</p>
+		<!-- Meta Info -->
+		<div class="flex items-center gap-2 text-xs">
+			<div class="flex items-center gap-1.5 text-(--gray-600) font-semibold">
+				<IconLogoSource
+					id={iconId}
+					category={displayCategory}
+				/>
+				<strong class="uppercase tracking-wide">{displayCategory}</strong>
+			</div>
+			<span class="h-0.5 w-0.5 rounded-full bg-(--gray-400)"></span>
+			<span class="text-(--gray-400)">{displayDate}</span>
 		</div>
 	</div>
 
-	<!-- Footer Area -->
-	<div class="relative z-10 flex flex-col gap-4 mt-6">
-		<!-- Tag Group (SVG colors: fill="#F2F5F4" text="#4D5955" -> neutral-200 / neutral-700) -->
+	<!-- Body Content -->
+	<div class="mt-4 mb-6 flex-1">
+		<h3 class="mb-2 text-lg font-bold leading-snug text-(--gray-900) line-clamp-2">
+			{displayTitle}
+		</h3>
+		<p class="text-sm leading-relaxed text-(--gray-600) line-clamp-3">
+			{displaySummary}
+		</p>
+	</div>
+
+	<!-- Footer -->
+	<div class="flex flex-col gap-4">
+		<!-- Tags (SVG: #F2F5F4 bg, #4D5955 text) -->
 		<div class="flex flex-wrap gap-2">
 			{#each displayTags as tag}
-				<span class={cn(
-					"inline-flex items-center px-2.5 py-1 rounded-md",
-					"bg-(--color-neutral-200) text-(--color-neutral-700)",
-					"text-xs font-medium"
-				)}>
-					{tag}
+				<span
+					class="rounded bg-(--neutral-200) px-2.5 py-1 text-xs font-medium text-(--neutral-700)"
+				>
+					#{tag}
 				</span>
 			{/each}
 		</div>
 
-		<!-- Button Group -->
-		<div class="flex items-center justify-between pt-4 border-t border-(--color-border-subtle)">
+		<!-- Action Buttons -->
+		<div class="flex items-center justify-between border-t border-(--gray-200) pt-4">
 			<a
 				href={displayLink}
 				target="_blank"
 				rel="noopener noreferrer"
 				class={cn(
-					"flex items-center gap-1.5 text-xs text-(--color-gray-500)",
-					"hover:text-(--color-primary) hover:underline decoration-auto underline-offset-2",
+					'flex items-center gap-1.5 text-xs font-medium text-(--gray-500) hover:text-(--color-primary)',
 					CommonStyles.DEFAULT_TRANSITION_COLOR
 				)}
 			>
-				<span>원문 보기</span>
 				<IconLink />
+				<span>원본 링크</span>
 			</a>
-			
+
 			<button
 				type="button"
 				{onclick}
 				class={cn(
-					"flex items-center gap-1.5 px-3 py-1.5 rounded-lg",
-					"text-xs font-semibold text-(--color-gray-700) bg-(--color-gray-100)",
-					"hover:bg-(--color-gray-200) hover:text-(--color-gray-900)",
+					'flex items-center gap-1.5 rounded-lg bg-(--gray-900) px-4 py-2 text-xs font-semibold text-white hover:bg-(--gray-700)',
 					CommonStyles.DEFAULT_TRANSITION_COLOR
 				)}
 			>
-				<span>분석 상세</span>
+				<span>자세히 보기</span>
 				{#if extraModelCount > 0}
-					<span class="text-[10px] font-normal text-(--color-gray-500)">
-						+{extraModelCount}
-					</span>
+					<span class="opacity-80 font-normal">+ {extraModelCount}</span>
 				{/if}
 			</button>
 		</div>
