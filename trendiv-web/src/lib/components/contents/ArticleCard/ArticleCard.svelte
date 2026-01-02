@@ -1,4 +1,4 @@
-<!-- https://www.figma.com/design/jxEwxoZSxmKtjMzQkeKkcP/Trendiv?node-id=12-5&t=OpHyXleilZSkLFzr-4 -->
+<!-- https://www.figma.com/design/jxEwxoZSxmKtjMzQkeKkcP/Trendiv?node-id=12-5&t=OpHyXleilZSkLFzr-4  -->
 <script lang="ts">
 	import { CommonStyles } from '$lib/constants/styles';
 	import IconBookmark from '$lib/icons/icon_bookmark.svelte';
@@ -63,24 +63,25 @@
 <div
 	class={cn(
 		CommonStyles.CARD,
-		'relative flex flex-col justify-between overflow-hidden'
+		'shadow-sm hover:shadow-md relative flex h-full flex-col justify-between overflow-hidden'
 	)}
 >
-	<!-- Background Gradient Overlay (SVG: paint0_linear_12_5) -->
+	<!-- Gradient Background (Figma & SVG Linear Gradient) -->
 	<div
-		class="absolute inset-0 pointer-events-none bg-linear-to-b from-(--mint-200)/20 to-transparent"
+		class="from-(--color-mint-200)/20 pointer-events-none absolute inset-x-0 top-0 -z-10 h-1/2 bg-linear-to-b to-transparent"
 		aria-hidden="true"
 	></div>
 
-	<!-- Header Group -->
+	<!-- articleCard - header -->
 	<div class="flex flex-col gap-3">
-		<!-- AI Info & Actions -->
+		<!-- aiInfoArea -->
 		<div class="flex items-center justify-between">
-			<div class="flex items-center gap-3">
-				<!-- Score -->
+			<div class="flex items-center gap-2">
+				<!-- 점수 앞 원형 인디케이터는 before 가상요소로 처리 -->
 				<div
 					class={cn(
-						'flex items-center gap-1.5 text-sm font-bold',
+						'flex shrink-0 items-center gap-1.5 text-sm font-bold',
+						'before:inline-block before:h-1.5 before:w-1.5 before:rounded-full before:bg-current',
 						displayScore >= 8
 							? 'text-(--color-primary)'
 							: displayScore >= 4
@@ -88,26 +89,24 @@
 								: 'text-(--color-alert)'
 					)}
 				>
-					<span class="h-2 w-2 rounded-full bg-current"></span>
-					<span>{displayScore}점</span>
+					{`${displayScore}점`}
 				</div>
 
 				<!-- Divider -->
-				<div class="h-3 w-px bg-(--gray-300)"></div>
+				<div class="bg-(--color-gray-300) h-3 w-[1px]"></div>
 
-				<!-- AI Model -->
-				<div class="flex items-center gap-1.5 text-sm font-medium text-(--gray-700)">
+				<div class="text-(--color-gray-600) flex items-center gap-1.5 text-xs font-medium">
 					<IconLogoGemini id={iconId} />
-					<span class="truncate max-w-[100px]">{displayModel}</span>
+					<span class="max-w-[120px] truncate">{displayModel}</span>
 				</div>
 			</div>
 
-			<!-- Bookmark Button -->
 			<button
 				type="button"
 				onclick={handleBookmark}
 				class={cn(
-					'flex h-8 w-8 items-center justify-center rounded-full text-(--gray-400) hover:bg-(--bg-surface) hover:text-(--color-primary)',
+					'text-(--color-gray-400) hover:text-(--color-primary) hover:bg-(--color-mint-50) shrink-0',
+					'flex h-6 w-6 items-center justify-center rounded-full',
 					CommonStyles.DEFAULT_TRANSITION_COLOR
 				)}
 			>
@@ -118,69 +117,70 @@
 			</button>
 		</div>
 
-		<!-- Meta Info -->
-		<div class="flex items-center gap-2 text-xs">
-			<div class="flex items-center gap-1.5 text-(--gray-600) font-semibold">
+		<!-- metaInfoArea -->
+		<div class="text-(--color-gray-500) flex items-center gap-2 text-xs">
+			<div class="flex items-center gap-1.5">
 				<IconLogoSource
 					id={iconId}
 					category={displayCategory}
 				/>
-				<strong class="uppercase tracking-wide">{displayCategory}</strong>
+				<strong class="text-(--color-gray-700) max-w-[140px] truncate font-semibold">
+					{displayCategory}
+				</strong>
 			</div>
-			<span class="h-0.5 w-0.5 rounded-full bg-(--gray-400)"></span>
-			<span class="text-(--gray-400)">{displayDate}</span>
+			<div class="bg-(--color-gray-300) h-0.5 w-0.5 rounded-full"></div>
+			<span class="shrink-0">{displayDate}</span>
 		</div>
 	</div>
 
-	<!-- Body Content -->
-	<div class="mt-4 mb-6 flex-1">
-		<h3 class="mb-2 text-lg font-bold leading-snug text-(--gray-900) line-clamp-2">
+	<!-- articleCard - body -->
+	<div class="mb-4 mt-3 flex flex-col gap-2">
+		<h3 class="text-(--color-gray-900) line-clamp-2 text-lg font-bold leading-snug">
 			{displayTitle}
 		</h3>
-		<p class="text-sm leading-relaxed text-(--gray-600) line-clamp-3">
+		<p class="text-(--color-gray-600) line-clamp-3 text-sm leading-relaxed">
 			{displaySummary}
 		</p>
 	</div>
 
-	<!-- Footer -->
-	<div class="flex flex-col gap-4">
-		<!-- Tags (SVG: #F2F5F4 bg, #4D5955 text) -->
-		<div class="flex flex-wrap gap-2">
+	<!-- articleCard - footer -->
+	<div class="mt-auto flex flex-col gap-4">
+		<!-- tagGroup -->
+		<div class="flex flex-wrap gap-1.5">
 			{#each displayTags as tag}
 				<span
-					class="rounded bg-(--neutral-200) px-2.5 py-1 text-xs font-medium text-(--neutral-700)"
+					class="bg-(--color-gray-100) text-(--color-gray-600) border-(--color-gray-200) rounded px-1.5 py-0.5 text-[11px] font-medium border"
 				>
 					#{tag}
 				</span>
 			{/each}
 		</div>
 
-		<!-- Action Buttons -->
-		<div class="flex items-center justify-between border-t border-(--gray-200) pt-4">
+		<!-- buttonGroup -->
+		<div
+			class="border-(--color-border-subtle) flex items-center justify-between border-t pt-3"
+		>
 			<a
 				href={displayLink}
 				target="_blank"
 				rel="noopener noreferrer"
-				class={cn(
-					'flex items-center gap-1.5 text-xs font-medium text-(--gray-500) hover:text-(--color-primary)',
-					CommonStyles.DEFAULT_TRANSITION_COLOR
-				)}
+				class="text-(--color-gray-500) hover:text-(--color-primary) flex items-center gap-1 text-xs transition-colors"
 			>
 				<IconLink />
 				<span>원본 링크</span>
 			</a>
-
 			<button
 				type="button"
 				{onclick}
-				class={cn(
-					'flex items-center gap-1.5 rounded-lg bg-(--gray-900) px-4 py-2 text-xs font-semibold text-white hover:bg-(--gray-700)',
-					CommonStyles.DEFAULT_TRANSITION_COLOR
-				)}
+				class="text-(--color-gray-700) hover:text-(--color-gray-900) flex items-center gap-1.5 text-xs font-semibold transition-colors"
 			>
 				<span>자세히 보기</span>
 				{#if extraModelCount > 0}
-					<span class="opacity-80 font-normal">+ {extraModelCount}</span>
+					<span
+						class="bg-(--color-gray-100) text-(--color-gray-600) rounded-sm px-1 py-0.5 text-[10px]"
+					>
+						+{extraModelCount}
+					</span>
 				{/if}
 			</button>
 		</div>
