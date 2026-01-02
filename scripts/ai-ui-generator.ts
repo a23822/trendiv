@@ -12,6 +12,61 @@ const FIGMA_TOKEN = process.env.FIGMA_ACCESS_TOKEN;
 const MODEL_NAME = process.env.GEMINI_MODEL_PRO || "gemini-3-pro-preview";
 const CHANGED_FILES = process.env.CHANGED_FILES || "";
 
+// ==========================================
+// 💾 Figma 스펙 캐싱
+// ==========================================
+const CACHE_DIR = ".figma-cache";
+const CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7일
+
+interface CacheEntry {
+  timestamp: number;
+  spec: string;
+}
+
+function getCachePath(fileKey: string, nodeId: string): string {
+  const safeNodeId = nodeId.replace(/:/g, "-");
+  return path.join(CACHE_DIR, `${fileKey}_${safeNodeId}.json`);
+}
+
+function readCache(fileKey: string, nodeId: string): string | null {
+  const cachePath = getCachePath(fileKey, nodeId);
+
+  if (!fs.existsSync(cachePath)) {
+    return null;
+  }
+
+  try {
+    const cached: CacheEntry = JSON.parse(fs.readFileSync(cachePath, "utf-8"));
+
+    // 만료 체크
+    if (Date.now() - cached.timestamp > CACHE_MAX_AGE_MS) {
+      console.log(`   💾 캐시 만료: ${path.basename(cachePath)}`);
+      return null;
+    }
+
+    console.log(`   💾 캐시 hit: ${path.basename(cachePath)}`);
+    return cached.spec;
+  } catch {
+    console.log(`   ⚠️ 캐시 파싱 실패: ${path.basename(cachePath)}`);
+    return null;
+  }
+}
+
+function writeCache(fileKey: string, nodeId: string, spec: string): void {
+  try {
+    fs.mkdirSync(CACHE_DIR, { recursive: true });
+    const cachePath = getCachePath(fileKey, nodeId);
+    const entry: CacheEntry = {
+      timestamp: Date.now(),
+      spec,
+    };
+    fs.writeFileSync(cachePath, JSON.stringify(entry, null, 2));
+    console.log(`   💾 캐시 저장: ${path.basename(cachePath)}`);
+  } catch (e) {
+    console.warn(`   ⚠️ 캐시 저장 실패: ${e}`);
+  }
+}
+
 // GitHub Actions Output Helper
 function setOutput(name: string, value: string) {
   const outputFile = process.env.GITHUB_OUTPUT;
@@ -80,17 +135,40 @@ async function fetchWithRetry(
 ): Promise<Response> {
   for (let i = 0; i < retries; i++) {
     const res = await fetch(url, options);
+
+    // 429 에러 발생 시 처리
     if (res.status === 429) {
-      const retryAfter = res.headers.get("Retry-After");
-      const waitTime = retryAfter
-        ? parseInt(retryAfter, 10) * 1000 + 1000
-        : 3000 * (i + 1);
-      console.log(`   ⏳ Figma API 제한(429). ${waitTime / 1000}초 대기...`);
-      await new Promise((resolve) => setTimeout(resolve, waitTime));
+      const retryAfterStr = res.headers.get("Retry-After");
+      const rateLimitType = res.headers.get("X-Figma-Rate-Limit-Type");
+      const planTier = res.headers.get("X-Figma-Plan-Tier");
+
+      // 헤더에 있는 대기 시간(초)을 가져오거나, 없으면 기본값으로 점진적 대기 (3초, 6초...)
+      const waitSeconds = retryAfterStr
+        ? parseInt(retryAfterStr, 10)
+        : 3 * (i + 1);
+      const waitTimeMs = waitSeconds * 1000;
+
+      console.warn(`   ⚠️ Figma API 제한(429) 발생.`);
+      console.warn(
+        `      - 사유: ${rateLimitType || "알 수 없음"} (Plan: ${
+          planTier || "알 수 없음"
+        })`
+      );
+      console.warn(
+        `      - 대기: ${waitSeconds}초 후 재시도합니다... (${
+          i + 1
+        }/${retries})`
+      );
+
+      await new Promise((resolve) => setTimeout(resolve, waitTimeMs));
       continue;
     }
+
+    // 429가 아니면 응답 반환 (성공이든 다른 에러든)
     return res;
   }
+
+  // 최대 재시도 횟수 초과 시 마지막 시도 수행
   return fetch(url, options);
 }
 
@@ -121,10 +199,18 @@ function parseFigmaUrl(
 
 // Figma API: 노드 정보(Spec) 가져오기
 async function getFigmaSpec(fileKey: string, nodeId: string): Promise<string> {
+  // 1. 캐시 먼저 확인
+  const cached = readCache(fileKey, nodeId);
+  if (cached) {
+    return cached;
+  }
+
+  // 2. 토큰 없으면 스킵
   if (!FIGMA_TOKEN) {
     console.log("   ⚠️ FIGMA_ACCESS_TOKEN 없음. 스펙 조회 생략.");
     return "";
   }
+
   console.log(`   🎨 Figma Spec 조회 중... (${nodeId})`);
 
   try {
@@ -181,8 +267,13 @@ async function getFigmaSpec(fileKey: string, nodeId: string): Promise<string> {
       itemSpacing: node.itemSpacing,
     };
 
+    const spec = JSON.stringify(summary, null, 2);
+
+    // 3. 성공 시 캐시에 저장
+    writeCache(fileKey, nodeId, spec);
+
     console.log("   ✅ Figma Spec 로드 완료");
-    return JSON.stringify(summary, null, 2);
+    return spec;
   } catch (e) {
     console.warn(`   ⚠️ Figma Spec 조회 실패: ${e}`);
     return "";

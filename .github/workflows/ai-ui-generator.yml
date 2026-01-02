@@ -42,7 +42,7 @@ jobs:
         run: |
           if [ "${{ steps.changed-files.outputs.any_changed }}" == "true" ]; then
             echo "found=true" >> $GITHUB_OUTPUT
-            echo "📁 변경된 scaffold 파일:"
+            echo "🔍 변경된 scaffold 파일:"
             echo "${{ steps.changed-files.outputs.all_changed_files }}"
           else
             echo "found=false" >> $GITHUB_OUTPUT
@@ -65,6 +65,16 @@ jobs:
       - name: Install Dependencies
         if: steps.check.outputs.found == 'true'
         run: pnpm install
+
+      # Figma 스펙 캐시 복원
+      - name: Restore Figma Cache
+        if: steps.check.outputs.found == 'true'
+        uses: actions/cache@v4
+        with:
+          path: .figma-cache
+          key: figma-spec-${{ hashFiles('**/*.scaffold.svelte') }}
+          restore-keys: |
+            figma-spec-
 
       - name: Run AI UI Generator
         if: steps.check.outputs.found == 'true'
