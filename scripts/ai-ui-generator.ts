@@ -417,6 +417,7 @@ ${scaffoldCode}
 9. 아이콘 크기는 절대 건드리지 말 것
 10. **min-width, max-width, min-height, max-height** 같은 변동성이 높은 요소들은 개발자가 직접 처리하니
    해당 속성들은 넣지 말 것(max-w-[??px] min-w-[??px] 등의 클래스도 금지)
+11. divider 나 indicator 는 before 나 after 가상요소로 처리할 것
 
 
 완성된 ${componentName}.svelte:`;
