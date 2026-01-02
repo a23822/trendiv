@@ -16,7 +16,8 @@ jobs:
     # ui-generate 라벨 있으면 스킵
     if: |
       !contains(github.event.pull_request.labels.*.name, 'ui-generate') && 
-      !contains(github.event.pull_request.labels.*.name, 'release')
+      !contains(github.event.pull_request.labels.*.name, 'release') &&
+      contains(github.event.pull_request.labels.*.name, 'review')
     permissions:
       contents: read
       pull-requests: write
