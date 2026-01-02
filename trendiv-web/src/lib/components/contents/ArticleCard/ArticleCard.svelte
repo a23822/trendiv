@@ -29,13 +29,13 @@
 
 	// 아이콘용 고유 ID
 	const iconId = $derived(`article-${trend.id}`);
-	const displayTitle = $derived(analysis?.title_ko || '');
+	const displayTitle = $derived(analysis?.title_ko || trend.title || '');
 	const displaySummary = $derived(analysis?.oneLineSummary || '');
 	const displayScore = $derived(analysis?.score ?? 0);
 	const displayTags = $derived(analysis?.tags || []);
-	const displayModel = $derived(analysis?.aiModel || '');
+	const displayModel = $derived(analysis?.aiModel || 'AI Analysis');
 	const displayLink = $derived(trend.link || '');
-	const displayCategory = $derived(trend.category || '');
+	const displayCategory = $derived(trend.category || 'General');
 
 	const isBookmarked = $derived(bookmarks.isBookmarked(trend.link));
 
@@ -63,25 +63,23 @@
 <div
 	class={cn(
 		CommonStyles.CARD,
-		'relative flex h-full flex-col justify-between overflow-hidden shadow-sm hover:shadow-md'
+		'flex flex-col relative overflow-hidden bg-(--color-gray-0) h-full'
 	)}
 >
-	<!-- Gradient Background (Figma & SVG Linear Gradient) -->
+	<!-- Gradient Overlay (Matching SVG paint0_linear_12_5: #80DED1 (Mint 200) opacity 0.2) -->
 	<div
-		class="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-linear-to-b from-(--color-mint-200)/20 to-transparent"
-		aria-hidden="true"
+		class="absolute top-0 left-0 right-0 h-40 bg-linear-to-b from-(--color-mint-200)/20 to-transparent pointer-events-none"
 	></div>
 
 	<!-- articleCard - header -->
-	<div class="flex flex-col gap-3">
+	<div class="relative z-10 flex flex-col gap-2 mb-4">
 		<!-- aiInfoArea -->
-		<div class="flex items-center justify-between">
+		<div class="flex items-center justify-between h-5">
 			<div class="flex items-center gap-2">
-				<!-- 점수 앞 원형 인디케이터는 before 가상요소로 처리 -->
+				<!-- Score -->
 				<div
 					class={cn(
-						'flex shrink-0 items-center gap-1.5 text-sm font-bold',
-						'before:inline-block before:h-1.5 before:w-1.5 before:rounded-full before:bg-current',
+						'flex items-center gap-1.5 text-xs font-bold tabular-nums',
 						displayScore >= 8
 							? 'text-(--color-primary)'
 							: displayScore >= 4
@@ -89,73 +87,86 @@
 								: 'text-(--color-alert)'
 					)}
 				>
-					{`${displayScore}점`}
+					<span class="w-1.5 h-1.5 rounded-full bg-current opacity-80"></span>
+					<span>{displayScore}점</span>
 				</div>
 
-				<!-- Divider -->
-				<div class="h-3 w-[1px] shrink-0 bg-(--color-gray-300)"></div>
+				<div class="w-px h-3 bg-(--color-gray-300)"></div>
 
+				<!-- Model Info -->
 				<div
-					class="flex items-center gap-1.5 overflow-hidden text-xs font-medium text-(--color-gray-600)"
+					class="flex items-center gap-1.5 text-[11px] text-(--color-gray-500) font-medium truncate max-w-[140px]"
 				>
-					<IconLogoGemini id={iconId} />
-					<span class="truncate">{displayModel}</span>
+					<div class="shrink-0">
+						<IconLogoGemini
+							id={iconId}
+							class="w-3.5 h-3.5"
+						/>
+					</div>
+					<span class="truncate tracking-tight">{displayModel}</span>
 				</div>
 			</div>
 
+			<!-- Bookmark Button -->
 			<button
 				type="button"
 				onclick={handleBookmark}
 				class={cn(
-					'shrink-0 text-(--color-gray-400) hover:bg-(--color-mint-50) hover:text-(--color-primary)',
-					'flex h-6 w-6 items-center justify-center rounded-full',
+					'flex items-center justify-center w-6 h-6 -mr-1 rounded-full',
+					'text-(--color-gray-400) hover:text-(--color-primary) hover:bg-(--color-primary-subtle)',
 					CommonStyles.DEFAULT_TRANSITION_COLOR
 				)}
 			>
 				<span class="sr-only">
 					{isBookmarked ? '북마크 해제' : '북마크 추가'}
 				</span>
-				<IconBookmark filled={isBookmarked} />
+				<div class="w-4 h-4">
+					<IconBookmark filled={isBookmarked} />
+				</div>
 			</button>
 		</div>
 
 		<!-- metaInfoArea -->
-		<div class="flex items-center gap-2 text-xs text-(--color-gray-500)">
-			<div class="flex items-center gap-1.5">
+		<div class="flex items-center gap-1.5 text-xs">
+			<div class="shrink-0">
 				<IconLogoSource
 					id={iconId}
 					category={displayCategory}
 				/>
-				<strong
-					class="max-w-[140px] truncate font-semibold text-(--color-gray-700)"
-				>
-					{displayCategory}
-				</strong>
 			</div>
-			<div class="h-0.5 w-0.5 rounded-full bg-(--color-gray-300)"></div>
-			<span class="shrink-0">{displayDate}</span>
+			<strong
+				class="font-semibold text-(--color-gray-800) truncate max-w-[160px] tracking-tight"
+			>
+				{displayCategory}
+			</strong>
+			<span class="w-0.5 h-0.5 rounded-full bg-(--color-gray-400)"></span>
+			<span class="text-(--color-gray-500) shrink-0 tracking-tight"
+				>{displayDate}</span
+			>
 		</div>
 	</div>
 
 	<!-- articleCard - body -->
-	<div class="mt-3 mb-4 flex flex-col gap-2">
+	<div class="relative z-10 flex-1 flex flex-col gap-2 mb-5">
 		<h3
-			class="line-clamp-2 text-lg leading-snug font-bold text-(--color-gray-900)"
+			class="text-[17px] font-bold text-(--color-gray-900) leading-[1.4] tracking-tight line-clamp-2"
 		>
 			{displayTitle}
 		</h3>
-		<p class="line-clamp-3 text-sm leading-relaxed text-(--color-gray-600)">
+		<p
+			class="text-[13px] font-normal text-(--color-gray-600) leading-[1.6] line-clamp-3 break-keep"
+		>
 			{displaySummary}
 		</p>
 	</div>
 
 	<!-- articleCard - footer -->
-	<div class="mt-auto flex flex-col gap-4">
+	<div class="relative z-10 mt-auto flex flex-col gap-4">
 		<!-- tagGroup -->
 		<div class="flex flex-wrap gap-1.5">
 			{#each displayTags as tag}
 				<span
-					class="rounded border border-(--color-gray-200) bg-(--color-gray-100) px-1.5 py-0.5 text-[11px] font-medium text-(--color-gray-600)"
+					class="px-2 py-0.5 rounded-[6px] bg-(--color-neutral-200) text-(--color-neutral-700) text-[11px] font-medium leading-relaxed tracking-tight"
 				>
 					#{tag}
 				</span>
@@ -164,30 +175,59 @@
 
 		<!-- buttonGroup -->
 		<div
-			class="flex items-center justify-between border-t border-(--color-border-subtle) pt-3"
+			class="flex items-center justify-between pt-3 border-t border-(--color-border-subtle)"
 		>
 			<a
 				href={displayLink}
 				target="_blank"
 				rel="noopener noreferrer"
-				class="flex items-center gap-1 text-xs text-(--color-gray-500) transition-colors hover:text-(--color-primary)"
+				class={cn(
+					'flex items-center gap-1.5 text-xs font-medium text-(--color-gray-500)',
+					'hover:text-(--color-gray-800) hover:underline decoration-auto underline-offset-2',
+					CommonStyles.DEFAULT_TRANSITION_COLOR
+				)}
 			>
-				<IconLink />
+				<div class="w-3.5 h-3.5">
+					<IconLink />
+				</div>
 				<span>원본 링크</span>
 			</a>
+
 			<button
 				type="button"
 				{onclick}
-				class="flex items-center gap-1.5 text-xs font-semibold text-(--color-gray-700) transition-colors hover:text-(--color-gray-900)"
+				class={cn(
+					'flex items-center gap-1 pl-3 pr-2 py-1.5 rounded-lg',
+					'bg-(--color-bg-surface) hover:bg-(--color-bg-active)',
+					'text-xs font-semibold text-(--color-gray-700)',
+					CommonStyles.DEFAULT_TRANSITION
+				)}
 			>
-				<span>자세히 보기</span>
+				<span>분석 결과</span>
 				{#if extraModelCount > 0}
 					<span
-						class="rounded-sm bg-(--color-gray-100) px-1 py-0.5 text-[10px] text-(--color-gray-600)"
+						class="flex items-center justify-center px-1.5 h-4 ml-0.5 rounded bg-(--color-gray-200) text-[10px] text-(--color-gray-600)"
 					>
 						+{extraModelCount}
 					</span>
 				{/if}
+				<!-- Arrow Icon simulated with CSS or simple SVG if needed, but per instructions relying on text/layout mostly -->
+				<svg
+					width="12"
+					height="12"
+					viewBox="0 0 12 12"
+					fill="none"
+					xmlns="http://www.w3.org/2000/svg"
+					class="ml-0.5 text-(--color-gray-500)"
+				>
+					<path
+						d="M4.5 9L7.5 6L4.5 3"
+						stroke="currentColor"
+						stroke-width="1.5"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					/>
+				</svg>
 			</button>
 		</div>
 	</div>
