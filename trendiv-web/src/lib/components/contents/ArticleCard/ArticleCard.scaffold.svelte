@@ -104,6 +104,7 @@
 				id={iconId}
 				category={displayCategory}
 			/>
+			<!-- max-width 값 설정 금지 -->
 			<strong class="truncate">{displayCategory}</strong>
 			<span class="shrink-0">{displayDate}</span>
 		</div>

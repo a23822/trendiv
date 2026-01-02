@@ -63,12 +63,12 @@
 <div
 	class={cn(
 		CommonStyles.CARD,
-		'shadow-sm hover:shadow-md relative flex h-full flex-col justify-between overflow-hidden'
+		'relative flex h-full flex-col justify-between overflow-hidden shadow-sm hover:shadow-md'
 	)}
 >
 	<!-- Gradient Background (Figma & SVG Linear Gradient) -->
 	<div
-		class="from-(--color-mint-200)/20 pointer-events-none absolute inset-x-0 top-0 -z-10 h-1/2 bg-linear-to-b to-transparent"
+		class="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-linear-to-b from-(--color-mint-200)/20 to-transparent"
 		aria-hidden="true"
 	></div>
 
@@ -93,11 +93,13 @@
 				</div>
 
 				<!-- Divider -->
-				<div class="bg-(--color-gray-300) h-3 w-[1px]"></div>
+				<div class="h-3 w-[1px] shrink-0 bg-(--color-gray-300)"></div>
 
-				<div class="text-(--color-gray-600) flex items-center gap-1.5 text-xs font-medium">
+				<div
+					class="flex items-center gap-1.5 overflow-hidden text-xs font-medium text-(--color-gray-600)"
+				>
 					<IconLogoGemini id={iconId} />
-					<span class="max-w-[120px] truncate">{displayModel}</span>
+					<span class="truncate">{displayModel}</span>
 				</div>
 			</div>
 
@@ -105,7 +107,7 @@
 				type="button"
 				onclick={handleBookmark}
 				class={cn(
-					'text-(--color-gray-400) hover:text-(--color-primary) hover:bg-(--color-mint-50) shrink-0',
+					'shrink-0 text-(--color-gray-400) hover:bg-(--color-mint-50) hover:text-(--color-primary)',
 					'flex h-6 w-6 items-center justify-center rounded-full',
 					CommonStyles.DEFAULT_TRANSITION_COLOR
 				)}
@@ -118,27 +120,31 @@
 		</div>
 
 		<!-- metaInfoArea -->
-		<div class="text-(--color-gray-500) flex items-center gap-2 text-xs">
+		<div class="flex items-center gap-2 text-xs text-(--color-gray-500)">
 			<div class="flex items-center gap-1.5">
 				<IconLogoSource
 					id={iconId}
 					category={displayCategory}
 				/>
-				<strong class="text-(--color-gray-700) max-w-[140px] truncate font-semibold">
+				<strong
+					class="max-w-[140px] truncate font-semibold text-(--color-gray-700)"
+				>
 					{displayCategory}
 				</strong>
 			</div>
-			<div class="bg-(--color-gray-300) h-0.5 w-0.5 rounded-full"></div>
+			<div class="h-0.5 w-0.5 rounded-full bg-(--color-gray-300)"></div>
 			<span class="shrink-0">{displayDate}</span>
 		</div>
 	</div>
 
 	<!-- articleCard - body -->
-	<div class="mb-4 mt-3 flex flex-col gap-2">
-		<h3 class="text-(--color-gray-900) line-clamp-2 text-lg font-bold leading-snug">
+	<div class="mt-3 mb-4 flex flex-col gap-2">
+		<h3
+			class="line-clamp-2 text-lg leading-snug font-bold text-(--color-gray-900)"
+		>
 			{displayTitle}
 		</h3>
-		<p class="text-(--color-gray-600) line-clamp-3 text-sm leading-relaxed">
+		<p class="line-clamp-3 text-sm leading-relaxed text-(--color-gray-600)">
 			{displaySummary}
 		</p>
 	</div>
@@ -149,7 +155,7 @@
 		<div class="flex flex-wrap gap-1.5">
 			{#each displayTags as tag}
 				<span
-					class="bg-(--color-gray-100) text-(--color-gray-600) border-(--color-gray-200) rounded px-1.5 py-0.5 text-[11px] font-medium border"
+					class="rounded border border-(--color-gray-200) bg-(--color-gray-100) px-1.5 py-0.5 text-[11px] font-medium text-(--color-gray-600)"
 				>
 					#{tag}
 				</span>
@@ -158,13 +164,13 @@
 
 		<!-- buttonGroup -->
 		<div
-			class="border-(--color-border-subtle) flex items-center justify-between border-t pt-3"
+			class="flex items-center justify-between border-t border-(--color-border-subtle) pt-3"
 		>
 			<a
 				href={displayLink}
 				target="_blank"
 				rel="noopener noreferrer"
-				class="text-(--color-gray-500) hover:text-(--color-primary) flex items-center gap-1 text-xs transition-colors"
+				class="flex items-center gap-1 text-xs text-(--color-gray-500) transition-colors hover:text-(--color-primary)"
 			>
 				<IconLink />
 				<span>원본 링크</span>
@@ -172,12 +178,12 @@
 			<button
 				type="button"
 				{onclick}
-				class="text-(--color-gray-700) hover:text-(--color-gray-900) flex items-center gap-1.5 text-xs font-semibold transition-colors"
+				class="flex items-center gap-1.5 text-xs font-semibold text-(--color-gray-700) transition-colors hover:text-(--color-gray-900)"
 			>
 				<span>자세히 보기</span>
 				{#if extraModelCount > 0}
 					<span
-						class="bg-(--color-gray-100) text-(--color-gray-600) rounded-sm px-1 py-0.5 text-[10px]"
+						class="rounded-sm bg-(--color-gray-100) px-1 py-0.5 text-[10px] text-(--color-gray-600)"
 					>
 						+{extraModelCount}
 					</span>
