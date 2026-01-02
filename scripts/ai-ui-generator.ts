@@ -361,6 +361,7 @@ async function generateCode(options: {
 ## 목표
 제공된 **디자인 SVG 코드**와 **Figma 스펙(Data)**을 결합하여 완벽한 UI를 구현해.
 SVG에서 **정확한 색상값, 그라데이션, 필터, 폰트**를 추출해서 Tailwind 클래스로 변환해.
+내가 디자인한 요소에서 크게 벗어나지 말아줘
 
 ## 입력 데이터
 
@@ -372,7 +373,6 @@ SVG에서 **정확한 색상값, 그라데이션, 필터, 폰트**를 추출해�
 - 폰트: font-family, font-size, font-weight
 - 레이아웃: width, height, 각 요소의 위치
 - 참고용이지 실제 컴포넌트에 svg 태그를 넣지 말 것
-- 하지만 svg에서 나타나는 디자인 스펙들에서 크게 벗어나지 말 것
 
 \`\`\`svg
 ${svgCode}
@@ -415,8 +415,8 @@ ${scaffoldCode}
 8. z-index 는 오로지 개발자의 판단에 따라 주어질 것이므로 절대 사용하지 말 것
   사용해야한다면 relative 단독으로만 사용
 9. 아이콘 크기는 절대 건드리지 말 것
-10. min-width, max-width, min-height, max-height 같은 변동성이 높은 요소들은 개발자가 직접 처리하니
-   해당 속성들은 넣지 말 것
+10. **min-width, max-width, min-height, max-height** 같은 변동성이 높은 요소들은 개발자가 직접 처리하니
+   해당 속성들은 넣지 말 것(max-w-[??px] min-w-[??px] 등의 클래스도 금지)
 
 
 완성된 ${componentName}.svelte:`;
