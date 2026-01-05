@@ -8,6 +8,7 @@
 	import { bookmarks } from '$lib/stores/bookmarks.svelte';
 	import type { Trend, AnalysisResult } from '$lib/types';
 	import { cn } from '$lib/utils/ClassMerge';
+	import { formatDate } from '$lib/utils/date';
 
 	interface Props {
 		trend: Trend;
@@ -45,19 +46,6 @@
 	}
 
 	const displayDate = $derived(formatDate(trend.date));
-
-	function formatDate(date: string) {
-		const parsed = new Date(date);
-		if (isNaN(parsed.getTime())) return '';
-
-		const diff = Date.now() - parsed.getTime();
-		const hours = Math.floor(diff / (1000 * 60 * 60));
-		if (hours < 1) return '방금 전';
-		if (hours < 24) return `${hours}시간 전`;
-		const days = Math.floor(hours / 24);
-		if (days < 7) return `${days}일 전`;
-		return parsed.toLocaleDateString('ko-KR');
-	}
 </script>
 
 <div

@@ -4,7 +4,7 @@
 	import HeroSection from '$lib/components/contents/HeroSection.svelte';
 	import SearchCard from '$lib/components/contents/SearchCard.svelte';
 	import Header from '$lib/components/layout/Header/Header.svelte';
-	import ArticleModal from '$lib/components/modal/ArticleModal.svelte';
+	import ArticleModal from '$lib/components/modal/ArticleModal/ArticleModal.scaffold.svelte';
 	import { auth } from '$lib/stores/auth.svelte.js';
 	import { modal } from '$lib/stores/modal.svelte.js';
 	import type { Trend } from '$lib/types';
