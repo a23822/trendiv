@@ -1,5 +1,6 @@
 <!-- https://www.figma.com/design/jxEwxoZSxmKtjMzQkeKkcP/Trendiv?node-id=12-5&t=OpHyXleilZSkLFzr-4  -->
 <script lang="ts">
+	import KeywordTag from '$lib/components/pure/Tag/keywordTag.svelte';
 	import { CommonStyles } from '$lib/constants/styles';
 	import IconBookmark from '$lib/icons/icon_bookmark.svelte';
 	import IconLink from '$lib/icons/icon_link.svelte';
@@ -154,11 +155,7 @@
 		<!-- tagGroup -->
 		<div class="flex flex-wrap gap-1.5">
 			{#each displayTags as tag}
-				<span
-					class="rounded-[6px] bg-(--color-neutral-200) px-2 py-0.5 text-[11px] leading-relaxed font-medium tracking-tight text-(--color-neutral-700)"
-				>
-					#{tag}
-				</span>
+				<KeywordTag {tag} />
 			{/each}
 		</div>
 

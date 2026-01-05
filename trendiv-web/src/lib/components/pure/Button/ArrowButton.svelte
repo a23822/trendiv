@@ -6,14 +6,20 @@
 		class?: string;
 		onclick?: () => void;
 		disabled?: boolean;
+		bgColor?: string;
 	}
 
 	let {
 		direction = 'right',
 		class: className,
 		onclick,
-		disabled
+		disabled,
+		bgColor = 'var(--color-bg-main)'
 	}: Props = $props();
+
+	const gradientValue = $derived(
+		`linear-gradient(to ${direction === 'left' ? 'right' : 'left'}, ${bgColor}, transparent)`
+	);
 </script>
 
 <button
@@ -21,10 +27,17 @@
 	aria-label={direction === 'left' ? '이전' : '다음'}
 	{onclick}
 	{disabled}
+	style:--btn-gradient={gradientValue}
 	class={cn(
-		'flex items-center justify-center',
-		'h-10 w-10 rounded-xl',
-		'bg-gray-300/60 text-gray-800 sm:hover:bg-neutral-300/80',
+		'group relative flex items-center justify-center',
+		'h-10 w-10 rounded-2xl',
+		'bg-neutral-300 text-gray-800 transition-colors sm:hover:bg-neutral-400/80',
+		// Disabled State
+		'disabled:cursor-not-allowed disabled:bg-gray-900/30 disabled:text-gray-400 disabled:hover:bg-gray-900/30',
+		'before:pointer-events-none before:absolute before:top-0 before:h-full before:w-10',
+		'before:bg-(image:--btn-gradient)',
+		'disabled:before:hidden',
+		direction === 'left' ? 'before:left-full' : 'before:right-full',
 		className
 	)}
 >
@@ -37,7 +50,7 @@
 		xmlns="http://www.w3.org/2000/svg"
 	>
 		<path
-			d="M9 18L15 12L9 6"
+			d="M10.5 18L16.5 12L10.5 6"
 			stroke="currentColor"
 			stroke-width="2.5"
 			stroke-linecap="round"

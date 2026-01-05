@@ -1,5 +1,6 @@
 <script lang="ts">
 	import CloseButton from '$lib/components/pure/Button/CloseButton.svelte';
+	import KeywordTag from '$lib/components/pure/Tag/keywordTag.svelte';
 	import IconBookmark from '$lib/icons/icon_bookmark.svelte';
 	import { bookmarks } from '$lib/stores/bookmarks.svelte';
 	import { modal } from '$lib/stores/modal.svelte.js';
@@ -113,7 +114,7 @@
 				</div>
 
 				<CloseButton
-					className="shrink-0 -mr-2"
+					class="-mr-2 shrink-0"
 					variant="inverted"
 					size={36}
 					onclick={requestClose}

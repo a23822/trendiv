@@ -3,6 +3,8 @@
 	import ArrowButton from '$lib/components/pure/Button/ArrowButton.svelte';
 	import CloseButton from '$lib/components/pure/Button/CloseButton.svelte';
 	import CircleProgress from '$lib/components/pure/Progress/circleProgress.svelte';
+	import ScrollContainer from '$lib/components/pure/Scroll/scrollContainer.svelte';
+	import KeywordTag from '$lib/components/pure/Tag/keywordTag.svelte';
 	import { CommonStyles } from '$lib/constants/styles';
 	import IconBookmark from '$lib/icons/icon_bookmark.svelte';
 	import IconBot from '$lib/icons/icon_bot.svelte';
@@ -29,11 +31,6 @@
 
 	// --- State: Data ---
 	let selectedIndex = $state(0);
-
-	// --- State: Scroll ---
-	let scrollContainer = $state<HTMLDivElement>();
-	let canScrollLeft = $state(false);
-	let canScrollRight = $state(false);
 
 	// --- Refs: 각 버튼 요소 ---
 	let buttonRefs: HTMLButtonElement[] = $state([]);
@@ -63,81 +60,6 @@
 			dialog.showModal();
 		}
 	});
-
-	// --- Scroll 상태 업데이트 ---
-	function updateScrollState() {
-		if (!scrollContainer) return;
-
-		const { scrollLeft, scrollWidth, clientWidth } = scrollContainer;
-		canScrollLeft = scrollLeft > 1;
-		canScrollRight = scrollLeft < scrollWidth - clientWidth - 1;
-	}
-
-	// 스크롤 컨테이너 마운트 시 & results 변경 시 상태 업데이트
-	$effect(() => {
-		if (scrollContainer && results.length > 0) {
-			requestAnimationFrame(updateScrollState);
-		}
-	});
-
-	// --- 선택된 버튼으로 자동 스크롤 ---
-	$effect(() => {
-		const selectedButton = buttonRefs[selectedIndex];
-		if (selectedButton && scrollContainer) {
-			selectedButton.scrollIntoView({
-				behavior: 'smooth',
-				block: 'nearest',
-				inline: 'center'
-			});
-		}
-	});
-
-	// --- Handlers: Scroll ---
-	const SCROLL_AMOUNT = 150;
-
-	function handleScrollLeft() {
-		if (!scrollContainer) return;
-		scrollContainer.scrollBy({
-			left: -SCROLL_AMOUNT,
-			behavior: 'smooth'
-		});
-	}
-
-	function handleScrollRight() {
-		if (!scrollContainer) return;
-		scrollContainer.scrollBy({
-			left: SCROLL_AMOUNT,
-			behavior: 'smooth'
-		});
-	}
-
-	// --- Handlers: Keyboard Navigation ---
-	function handleKeydown(e: KeyboardEvent) {
-		if (results.length <= 1) return;
-
-		switch (e.key) {
-			case 'ArrowLeft':
-				e.preventDefault();
-				if (selectedIndex > 0) {
-					selectedIndex--;
-				}
-				break;
-			case 'ArrowRight':
-				e.preventDefault();
-				if (selectedIndex < results.length - 1) {
-					selectedIndex++;
-				}
-				break;
-			case 'Home':
-				e.preventDefault();
-				selectedIndex = 0;
-				break;
-			case 'End':
-				e.preventDefault();
-				selectedIndex = results.length - 1;
-				break;
-		}
-	}
 
 	// --- Handlers: Modal Control ---
 	function requestClose() {
@@ -195,6 +117,7 @@
 		'flex items-center justify-center',
 		'h-full max-h-full w-full max-w-full p-5',
 		'bg-transparent',
+		// dimmed 요소는 backdrop 에 적용
 		'backdrop:bg-black/50 backdrop:backdrop-blur-xs'
 	)}
 	onclose={handleNativeClose}
@@ -226,81 +149,10 @@
 				<IconBot size={20} />
 				<h4>AI 분석 결과</h4>
 			</div>
-			<div class="flex items-center overflow-hidden">
-				{#if results.length > 1}
-					<!-- 왼쪽 화살표 버튼: 모바일 숨김 -->
-					<div
-						class={cn(
-							'relative shrink-0',
-							'hidden sm:block', // 모바일 숨김
-							'bg-bg-main',
-							'before:pointer-events-none before:absolute before:top-0 before:left-full before:h-full before:w-8',
-							'before:from-bg-main before:bg-linear-to-r before:to-transparent'
-						)}
-					>
-						<ArrowButton
-							direction="left"
-							onclick={handleScrollLeft}
-							disabled={!canScrollLeft}
-						/>
-					</div>
-				{/if}
-
-				<!-- 
-						role="tablist" + roving tabindex 패턴
-						- 컨테이너에 tabindex="0"으로 포커스 가능
-						- 좌우 화살표로 탭 이동
-					-->
-				<div
-					bind:this={scrollContainer}
-					onscroll={updateScrollState}
-					onkeydown={handleKeydown}
-					role="tablist"
-					aria-label="AI 모델 선택"
-					tabindex="0"
-					class={cn(
-						'flex flex-[0_1_100%] gap-3 overflow-x-auto',
-						'scrollbar-hide'
-					)}
-				>
-					{#each results as res, index (res.aiModel || index)}
-						<button
-							bind:this={buttonRefs[index]}
-							type="button"
-							role="tab"
-							aria-selected={selectedIndex === index}
-							aria-controls={`panel-${index}`}
-							tabindex={selectedIndex === index ? 0 : -1}
-							class={cn(
-								'shrink-0',
-								CommonStyles.DEFAULT_TRANSITION_COLOR,
-								selectedIndex === index ? 'font-semibold' : 'font-normal'
-							)}
-							onclick={() => (selectedIndex = index)}
-							onkeydown={handleKeydown}
-						>
-							{res.aiModel}
-						</button>
-					{/each}
-				</div>
-				{#if results.length > 1}
-					<!-- 오른쪽 화살표 버튼: 모바일 숨김 -->
-					<div
-						class={cn(
-							'relative shrink-0',
-							'hidden sm:block', // 모바일 숨김
-							'bg-bg-main',
-							'before:pointer-events-none before:absolute before:top-0 before:right-full before:h-full before:w-8',
-							'before:from-bg-main before:bg-linear-to-l before:to-transparent'
-						)}
-					>
-						<ArrowButton
-							onclick={handleScrollRight}
-							disabled={!canScrollRight}
-						/>
-					</div>
-				{/if}
-			</div>
+			<ScrollContainer
+				items={results.map((r) => r.aiModel)}
+				bind:selectedIndex
+			/>
 			<!-- titleArea -->
 			<div>
 				<h3>{displayTitle}</h3>
@@ -340,11 +192,11 @@
 					<IconTag size={20} />
 					<h4>키워드 태그</h4>
 				</div>
-				<ul>
+				<ul class="flex flex-wrap gap-2">
 					{#each displayTags as tag, i (tag + i)}
 						<!-- 넘치면 overflow-hidden 없이 개행처리 -->
-						<li>
-							<span>{tag}</span>
+						<li class="shrink-0">
+							<KeywordTag {tag} />
 						</li>
 					{/each}
 				</ul>
