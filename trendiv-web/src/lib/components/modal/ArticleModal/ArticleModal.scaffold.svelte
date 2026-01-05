@@ -214,6 +214,7 @@
 					<span>{displayDate}</span>
 					<CloseButton
 						onclick={requestClose}
+						variant="inverted"
 						class="ml-auto"
 					/>
 				</div>
