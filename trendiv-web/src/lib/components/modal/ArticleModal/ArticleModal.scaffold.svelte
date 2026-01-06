@@ -195,7 +195,9 @@
 				<ul class="flex flex-wrap gap-2">
 					{#each displayTags as tag, i (tag + i)}
 						<!-- 넘치면 overflow-hidden 없이 개행처리 -->
-						<li class="shrink-0">
+						<li class="flex shrink-0 items-center">
+							<!-- indicator -->
+							<span class="shrink-0"></span>
 							<KeywordTag {tag} />
 						</li>
 					{/each}
@@ -209,7 +211,10 @@
 				onclick={handleBookmark}
 				aria-label="북마크"
 			>
-				<IconBookmark filled={isBookmarked} />
+				<IconBookmark
+					size={24}
+					filled={isBookmarked}
+				/>
 			</button>
 			<a
 				href={trend.link}
@@ -217,7 +222,7 @@
 				rel="noopener noreferrer"
 				aria-label="원문 보기"
 			>
-				<IconLink />
+				<IconLink size={24} />
 			</a>
 			<button
 				type="button"

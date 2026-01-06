@@ -16,30 +16,30 @@
 	function scrollLeft() {
 		if (selectedIndex > 0) {
 			selectedIndex--;
-			scrollToIndex(selectedIndex);
 		}
 	}
 
 	function scrollRight() {
 		if (selectedIndex < items.length - 1) {
 			selectedIndex++;
-			scrollToIndex(selectedIndex);
 		}
 	}
 
 	function scrollToIndex(index: number) {
 		const container = scrollContainer;
 		if (!container) return;
+		if (index < 0 || index >= container.children.length) return;
 
-		const children = container.children;
-		if (children[index]) {
-			children[index].scrollIntoView({
-				behavior: 'smooth',
-				block: 'nearest',
-				inline: 'center'
-			});
-		}
+		container.children[index]?.scrollIntoView({
+			behavior: 'smooth',
+			block: 'nearest',
+			inline: 'center'
+		});
 	}
+
+	$effect(() => {
+		scrollToIndex(selectedIndex);
+	});
 
 	let canScrollLeft = $derived(selectedIndex > 0);
 	let canScrollRight = $derived(selectedIndex < items.length - 1);
