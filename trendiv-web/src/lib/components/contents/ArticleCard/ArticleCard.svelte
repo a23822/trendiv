@@ -4,12 +4,13 @@
 	import { CommonStyles } from '$lib/constants/styles';
 	import IconBookmark from '$lib/icons/icon_bookmark.svelte';
 	import IconLink from '$lib/icons/icon_link.svelte';
-	import IconLogoGemini from '$lib/icons/icon_logo_gemini.svelte';
+	import IconLogoModel from '$lib/icons/icon_logo_model.svelte';
 	import IconLogoSource from '$lib/icons/icon_logo_source.svelte';
 	import { bookmarks } from '$lib/stores/bookmarks.svelte';
 	import type { Trend, AnalysisResult } from '$lib/types';
 	import { cn } from '$lib/utils/ClassMerge';
 	import { formatDate } from '$lib/utils/date';
+	import { capitalizeFirst } from '$lib/utils/string';
 
 	interface Props {
 		trend: Trend;
@@ -79,23 +80,23 @@
 					<span class="h-1.5 w-1.5 rounded-full bg-current opacity-80"></span>
 					<span class="whitespace-nowrap">{displayScore}점</span>
 				</div>
-
 				<div class="h-3 w-px shrink-0 bg-(--color-gray-300)"></div>
-
 				<!-- Model Info -->
 				<div
 					class="flex items-center gap-1.5 truncate overflow-hidden text-[11px] font-medium text-(--color-gray-500)"
 				>
 					<div class="shrink-0">
-						<IconLogoGemini
+						<IconLogoModel
+							model={displayModel}
 							id={iconId}
-							class="h-3.5 w-3.5"
+							size={12}
 						/>
 					</div>
-					<span class="truncate tracking-tight">{displayModel}</span>
+					<span class="truncate tracking-tight"
+						>{capitalizeFirst(displayModel)}</span
+					>
 				</div>
 			</div>
-
 			<!-- Bookmark Button -->
 			<button
 				type="button"

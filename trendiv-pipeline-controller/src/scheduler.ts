@@ -1,5 +1,5 @@
 import cron from "node-cron";
-import { runPipeline } from "./services/pipeline.service";
+import { runPipeline, runDeepAnalysis } from "./services/pipeline.service";
 
 /**
  * ⏰ 스케줄러 초기화 함수
@@ -24,4 +24,11 @@ export const initScheduler = () => {
   });
 
   console.log("   ✔️  Weekly Pipeline scheduled (Every Mon 09:00)");
+
+  cron.schedule("30 10 * * *", async () => {
+    console.log("⏰ [Scheduler] Triggering Daily Deep Analysis...");
+    await runDeepAnalysis();
+  });
+
+  console.log("   ✔️  Deep Analysis scheduled (Every Day 10:30)");
 };

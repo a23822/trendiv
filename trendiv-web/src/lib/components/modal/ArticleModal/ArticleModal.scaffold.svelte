@@ -1,16 +1,13 @@
 <!-- https://www.figma.com/design/jxEwxoZSxmKtjMzQkeKkcP/Trendiv?node-id=4-26966&t=7x8K9SHkPxAYh2oN-4 -->
 <script lang="ts">
-	import ArrowButton from '$lib/components/pure/Button/ArrowButton.svelte';
 	import CloseButton from '$lib/components/pure/Button/CloseButton.svelte';
 	import CircleProgress from '$lib/components/pure/Progress/circleProgress.svelte';
 	import ScrollContainer from '$lib/components/pure/Scroll/scrollContainer.svelte';
 	import KeywordTag from '$lib/components/pure/Tag/keywordTag.svelte';
-	import { CommonStyles } from '$lib/constants/styles';
 	import IconBookmark from '$lib/icons/icon_bookmark.svelte';
 	import IconBot from '$lib/icons/icon_bot.svelte';
 	import IconLightbulb from '$lib/icons/icon_lightbulb.svelte';
 	import IconLink from '$lib/icons/icon_link.svelte';
-	import IconLogoGemini from '$lib/icons/icon_logo_gemini.svelte';
 	import IconLogoSource from '$lib/icons/icon_logo_source.svelte';
 	import IconScan from '$lib/icons/icon_scan.svelte';
 	import IconShare from '$lib/icons/icon_share.svelte';

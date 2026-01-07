@@ -9,36 +9,112 @@ import { AnalysisError } from '../utils/errors';
 import { ContentService } from './content.service';
 import { BrowserService } from './browser.service';
 import { GeminiService } from './gemini.service';
+import { GrokService } from './grok.service';
 
 export class AnalyzerService {
   private contentService: ContentService;
   private browserService: BrowserService;
   private geminiService: GeminiService;
+  private grokService: GrokService | null;
 
-  constructor(browser: Browser, geminiService: GeminiService) {
+  private forceProvider: 'gemini' | 'grok' | null = null;
+
+  constructor(
+    browser: Browser,
+    geminiService: GeminiService,
+    grokService?: GrokService,
+  ) {
     this.contentService = new ContentService(browser);
     this.browserService = new BrowserService(browser);
     this.geminiService = geminiService;
+    this.grokService = grokService || null;
+  }
+
+  // Provider 강제 설정 메서드
+  setForceProvider(provider: 'gemini' | 'grok') {
+    this.forceProvider = provider;
   }
 
   /**
    * Analyze a single trend item
    */
   async analyzeTrend(trend: Trend): Promise<AnalysisResult | null> {
+    const isXCategory = trend.category === 'X';
+
+    // 1. Grok을 써야 하는 경우
+    //    - 강제로 Grok 모드이거나
+    //    - 자동(Auto) 모드인데 카테고리가 X인 경우
+    const shouldUseGrok =
+      this.forceProvider === 'grok' || (!this.forceProvider && isXCategory);
+
+    // 2. Gemini를 써야 하는 경우
+    //    - 강제로 Gemini 모드이거나
+    //    - 자동(Auto) 모드인데 카테고리가 X가 아닌 경우
+    const shouldUseGemini =
+      this.forceProvider === 'gemini' || (!this.forceProvider && !isXCategory);
+
+    // 🛑 [방어 로직] X 카테고리는 Gemini가 분석 불가 (Grok 없으면 스킵)
+    if (isXCategory && shouldUseGemini) {
+      console.warn(
+        `      🚫 Skipping: X (Twitter) items cannot be analyzed by Gemini.`,
+      );
+      return null;
+    }
+
+    // ---------------------------------------------------------
+    // 🚀 [실행 로직]
+    // ---------------------------------------------------------
+
+    // A. Grok 실행
+    if (shouldUseGrok) {
+      if (!this.grokService) {
+        console.warn('      ⚠️ Grok Service not initialized. Skipping.');
+        return null;
+      }
+
+      // 🆕 X가 아닌 경우 → 콘텐츠 스크래핑 후 분석
+      if (!isXCategory) {
+        console.log(`      🦅 Using Grok API (with content)...`);
+
+        const fetchResult = await this.contentService.fetchContent(
+          trend.link,
+          trend.title,
+        );
+
+        const content = fetchResult?.content || '';
+        const analysis = await this.grokService.analyzeWithContent(
+          trend,
+          content,
+        );
+
+        return {
+          ...analysis,
+          aiModel: this.grokService.getModelName(),
+          analyzedAt: new Date().toISOString(),
+        };
+      }
+
+      // X 카테고리 → 기존대로 title만
+      console.log(`      🦅 Using Grok API (X post)...`);
+      const analysis = await this.grokService.analyze(trend);
+      return {
+        ...analysis,
+        aiModel: this.grokService.getModelName(),
+        analyzedAt: new Date().toISOString(),
+      };
+    }
+
+    // B. Gemini 실행 (기존 로직)
+    // X 카테고리가 아닌 경우
     try {
-      // 1️⃣ [1차 시도] 텍스트 긁어오기 (리소스 절약)
+      // 1️⃣ [1차 시도] 텍스트 긁어오기
       const fetchResult = await this.contentService.fetchContent(
         trend.link,
         trend.title,
       );
 
-      // 텍스트가 200자 이상이면 충분하다고 판단 -> 텍스트 모드로 분석
       if (fetchResult && fetchResult.content.length > 200) {
-        console.log(
-          `      📝 텍스트 데이터 충분 (${fetchResult.type}/${fetchResult.source})...`,
-        );
-
-        // ... (텍스트 분석 로직) ...
+        console.log(`      📝 Using Gemini (Text Mode)...`);
         const prompt = this.geminiService.buildPrompt(
           trend.title,
           trend.source,
@@ -53,16 +129,13 @@ export class AnalyzerService {
         };
       }
 
-      // 2️⃣ [2차 시도] 텍스트 부족/실패 시 -> Gemini 3 Vision 가동 📸
-      console.log(`      📸 텍스트 부족. 스크린샷 분석 시도...`);
+      // 2️⃣ [2차 시도] 스크린샷 + Vision
+      console.log(`      📸 Using Gemini (Vision Mode)...`);
       const base64Image = await this.browserService.captureScreenshot(
         trend.link,
       );
 
-      if (!base64Image) {
-        console.log(`      ⏭️ 스크린샷도 실패하여 건너뜀`);
-        return null;
-      }
+      if (!base64Image) return null;
 
       const analysis = await this.geminiService.analyzeImage(
         base64Image,
