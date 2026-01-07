@@ -37,8 +37,7 @@ const runGrokAnalysisForX = async () => {
     .from("trend")
     .select("*")
     .eq("category", targetCategory)
-    .eq("status", "RAW")
-    .limit(5); // 테스트 시에는 주석 해제하여 소량만 먼저 돌려보세요.
+    .eq("status", "RAW");
 
   if (error) {
     throw new Error(`❌ 데이터 조회 실패: ${error.message}`);
@@ -77,13 +76,14 @@ const runGrokAnalysisForX = async () => {
         tags: analysisResponse.tags,
       };
 
-      // 3. DB 업데이트 (analysis_results 추가 및 status 변경)
-      // 기존 analysis_results가 null일 수 있으므로 배열로 덮어씁니다.
+      const newStatus = analysisResult.score > 0 ? "ANALYZED" : "REJECTED";
+
+      // 3. DB 업데이트
       const { error: updateError } = await supabase
         .from("trend")
         .update({
-          analysis_results: [analysisResult] as any, // jsonb[] 타입 캐스팅
-          status: "ANALYZED",
+          analysis_results: [analysisResult] as any, // jsonb[]
+          status: newStatus,
         })
         .eq("id", trend.id);
 

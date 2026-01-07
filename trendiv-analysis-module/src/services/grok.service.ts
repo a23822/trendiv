@@ -113,8 +113,9 @@ export class GrokService {
   async analyze(trend: Trend): Promise<GeminiAnalysisResponse> {
     const systemPrompt = `
 당신은 'Trendiv' 뉴스레터의 **수석 마크업(Markup) 기술 에디터**입니다.
-당신의 독자는 **HTML, CSS, 웹 접근성, 모바일 웹 렌더링**에 미쳐있는 프론트엔드 개발자들입니다.
+당신의 독자는 **HTML, CSS, 웹 접근성, 모바일 웹 렌더링, iOS 이슈**에 미쳐있는 프론트엔드 개발자들입니다.
 아래 내용을 분석하여 독자에게 가치가 있는지를 **매우 엄격하게(Strictly)** 평가하세요.
+**분석 대상이 X(트위터) 관련 링크인 경우, 반드시 해당 링크의 단일 포스트(트윗) 내용만 분석하세요. 사용자 프로필 URL(예: https://x.com/username)인 경우, 해당 사용자의 최근 포스트만 확인하고 bio, 팔로워 수, 아바타, 계정 역사 등은 완전히 무시하세요. 포스트 모음, 프로필 페이지 전체, 또는 외부 지식을 기반으로 한 추론은 금지. 포스트가 없거나 오래된 경우(최근 1년 내 활동 없음) 무조건 0점으로 평가하세요.**
 단, 트윗(X) 게시물은 내용이 짧으므로 제목과 링크 키워드를 중심으로 가치를 추론(Infer)하여 평가하세요.
 
 [🔥 채점 기준표 (Scoring Criteria)]
@@ -137,6 +138,7 @@ export class GrokService {
 - 일반 AI/ML: LLM 모델 출시, AI 트렌드 등 웹 UI와 무관한 내용.
 - 비즈니스/커리어: 연봉, 이직, 리더십, 회사 자랑.
 - 기타: 블록체인, 하드웨어, 게임 개발, 기초 강좌, 광고성 글.
+** - X 프로필 URL처럼 포스트가 아닌 경우, 또는 포스트가 기준과 무관하면 즉시 0점.**
 
 [출력 포맷 (JSON Only)]
 {
@@ -149,12 +151,19 @@ export class GrokService {
 }
     `.trim();
 
-    const userContent = `
+    let userContent = `
 [분석 대상]
 - 제목: ${trend.title}
 - 링크: ${trend.link}
-- 출처: ${trend.source} (${trend.category})
-    `.trim();
+- 출처: $$ {trend.source} ( $${trend.category})
+`;
+
+    if (trend.link.includes('x.com/') && !trend.link.includes('/status/')) {
+      userContent +=
+        '\n**주의: 이 링크는 X 사용자 프로필입니다. 최근 포스트 내용만 분석하세요.**';
+    }
+
+    userContent = userContent.trim();
 
     return this.callGrokAPI(systemPrompt, userContent);
   }
@@ -168,7 +177,7 @@ export class GrokService {
   ): Promise<GeminiAnalysisResponse> {
     const systemPrompt = `
 당신은 'Trendiv' 뉴스레터의 **수석 마크업(Markup) 기술 에디터**입니다.
-당신의 독자는 **HTML, CSS, 웹 접근성, 모바일 웹 렌더링**에 미쳐있는 프론트엔드 개발자들입니다.
+당신의 독자는 **HTML, CSS, 웹 접근성, 모바일 웹 렌더링, iOS 이슈**에 미쳐있는 프론트엔드 개발자들입니다.
 아래 내용을 분석하여 독자에게 가치가 있는지를 **매우 엄격하게(Strictly)** 평가하세요.
 
 [🔥 채점 기준표 (Scoring Criteria)]
