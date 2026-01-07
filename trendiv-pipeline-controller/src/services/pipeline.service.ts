@@ -9,10 +9,59 @@ import { composeEmailHtml as generateNewsletterHtml } from "trendiv-result-modul
 
 dotenv.config({ path: path.resolve(__dirname, "../../../.env") });
 
-// 딜레이 함수 (API 과부하 방지용)
+// 🆕 타입 정의
+interface TrendItem {
+  id: number;
+  title: string;
+  link: string;
+  date: string;
+  source: string;
+  category: string;
+}
+
+interface AnalysisEntry {
+  aiModel: string;
+  score: number;
+  reason: string;
+  title_ko: string;
+  oneLineSummary: string;
+  keyPoints: string[];
+  tags: string[];
+  analyzedAt: string;
+}
+
+interface AnalysisResult extends AnalysisEntry {
+  id: number;
+}
+
+interface TrendDbItem {
+  id: number;
+  analysis_results: AnalysisEntry[] | null;
+}
+
+// 🆕 이메일용 타입 (trendiv-result-module과 동일)
+interface AnalyzedReport {
+  title: string;
+  oneLineSummary: string;
+  tags: string[];
+  score: number;
+  techStack?: string[];
+  originalLink: string;
+}
+
+interface PipelineResult {
+  success: boolean;
+  count?: number;
+  error?: unknown;
+}
+
+// 🆕 상수
+const MAX_LOOP_COUNT = 100; // 무한루프 방지
+const BATCH_DELAY_MS = 2000;
+
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-export const runPipeline = async () => {
+export const runPipeline = async (): Promise<PipelineResult> => {
   const startTime = Date.now();
   console.log("🔥 [Pipeline] Start processing ALL items...");
 
@@ -65,10 +114,11 @@ export const runPipeline = async () => {
     console.log(" 2. 🔄 Starting Batch Analysis Loop...");
 
     let totalSuccessCount = 0;
-    let allValidTrends: any[] = [];
+    const allValidTrends: AnalyzedReport[] = [];
     let loopCount = 0;
 
-    while (true) {
+    // 🆕 무한루프 방지: MAX_LOOP_COUNT 제한
+    while (loopCount < MAX_LOOP_COUNT) {
       loopCount++;
 
       // A. 데이터 가져오기
@@ -94,11 +144,11 @@ export const runPipeline = async () => {
       }
 
       console.log(
-        `      [Batch ${loopCount}] Analyzing ${targetItems.length} items...`
+        `      [Batch ${loopCount}/${MAX_LOOP_COUNT}] Analyzing ${targetItems.length} items...`
       );
 
       // C. 분석 데이터 정제
-      const cleanData = targetItems.map((item: any) => ({
+      const cleanData: TrendItem[] = targetItems.map((item: TrendItem) => ({
         id: item.id,
         title: item.title,
         link: item.link,
@@ -108,7 +158,7 @@ export const runPipeline = async () => {
       }));
 
       // D. 분석 실행
-      let analysisResults: any[] = [];
+      let analysisResults: AnalysisResult[] = [];
       try {
         analysisResults = await runAnalysis(cleanData);
       } catch (e) {
@@ -123,14 +173,31 @@ export const runPipeline = async () => {
         .select("id, analysis_results")
         .in("id", ids);
 
-      const analyzedUpdates: any[] = [];
-      const rejectedUpdates: any[] = [];
+      // 🆕 DB 조회 실패 시 방어
+      if (!currentItems) {
+        console.error("      ⚠️ DB 조회 실패, 이번 배치 스킵");
+        continue;
+      }
+
+      const analyzedUpdates: {
+        id: number;
+        analysis_results: AnalysisEntry[];
+        status: string;
+      }[] = [];
+      const rejectedUpdates: {
+        id: number;
+        analysis_results: AnalysisEntry[];
+        status: string;
+      }[] = [];
 
       for (const result of analysisResults) {
-        const current = currentItems?.find((item) => item.id === result.id);
-        const existingHistory = (current?.analysis_results as any[]) || [];
+        const current = currentItems.find(
+          (item: TrendDbItem) => item.id === result.id
+        );
+        const existingHistory: AnalysisEntry[] =
+          current?.analysis_results || [];
 
-        const newAnalysis = {
+        const newAnalysis: AnalysisEntry = {
           aiModel: result.aiModel,
           score: result.score,
           reason: result.reason,
@@ -141,9 +208,9 @@ export const runPipeline = async () => {
           analyzedAt: new Date().toISOString(),
         };
 
-        let updatedHistory = [...existingHistory];
+        const updatedHistory = [...existingHistory];
         const existingIndex = existingHistory.findIndex(
-          (r: any) => r.aiModel === result.aiModel
+          (r) => r.aiModel === result.aiModel
         );
 
         if (existingIndex !== -1) {
@@ -167,7 +234,14 @@ export const runPipeline = async () => {
             analysis_results: updatedHistory,
             status: "ANALYZED",
           });
-          allValidTrends.push(result);
+          const originalItem = cleanData.find((item) => item.id === result.id);
+          allValidTrends.push({
+            title: result.title_ko || originalItem?.title || "",
+            oneLineSummary: result.oneLineSummary,
+            tags: result.tags,
+            score: result.score,
+            originalLink: originalItem?.link || "",
+          });
           totalSuccessCount++;
         } else {
           rejectedUpdates.push({
@@ -197,7 +271,14 @@ export const runPipeline = async () => {
 
       // F. API 휴식 (Rate Limit 방지)
       console.log("      😴 Waiting 2s for Rate Limit...");
-      await delay(2000);
+      await delay(BATCH_DELAY_MS);
+    }
+
+    // 🆕 maxLoop 도달 경고
+    if (loopCount >= MAX_LOOP_COUNT) {
+      console.warn(
+        `      ⚠️ Max loop count (${MAX_LOOP_COUNT}) reached. 강제 종료.`
+      );
     }
 
     // ---------------------------------------------------------
@@ -242,10 +323,18 @@ export const runPipeline = async () => {
 /**
  * 🕵️‍♀️ 심층 분석 (Deep Analysis)
  */
-export const runDeepAnalysis = async () => {
+export const runDeepAnalysis = async (): Promise<void> => {
   console.log("🚀 [Deep Analysis] Starting daily re-analysis...");
-  const supabaseUrl = process.env.SUPABASE_URL!;
-  const supabaseKey = process.env.SUPABASE_KEY!;
+
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_KEY;
+
+  // 🆕 환경변수 검증
+  if (!supabaseUrl || !supabaseKey) {
+    console.error("❌ [Deep Analysis] SUPABASE_URL/KEY가 없습니다.");
+    return;
+  }
+
   const supabase = createClient(supabaseUrl, supabaseKey);
 
   const { data: targets } = await supabase
@@ -262,7 +351,7 @@ export const runDeepAnalysis = async () => {
 
   console.log(`   🎯 Targets: ${targets.length} items`);
 
-  const cleanData = targets.map((item) => ({
+  const cleanData: TrendItem[] = targets.map((item) => ({
     id: item.id,
     title: item.title,
     link: item.link,
@@ -301,7 +390,7 @@ export const runDeepAnalysis = async () => {
     } catch (e) {
       console.error("   ❌ Gemini Pro Failed:", e);
     }
-    await delay(2000);
+    await delay(BATCH_DELAY_MS);
   }
 
   // 3. non-X → Grok도 (앙상블)
@@ -323,7 +412,10 @@ export const runDeepAnalysis = async () => {
 };
 
 // 💾 결과 저장 헬퍼 함수 (벌크 처리)
-async function saveAnalysisResults(supabase: SupabaseClient, results: any[]) {
+async function saveAnalysisResults(
+  supabase: SupabaseClient,
+  results: AnalysisResult[]
+): Promise<void> {
   if (results.length === 0) return;
 
   // 1. 한 번에 모든 기존 데이터 조회
@@ -333,12 +425,20 @@ async function saveAnalysisResults(supabase: SupabaseClient, results: any[]) {
     .select("id, analysis_results")
     .in("id", ids);
 
+  // 🆕 DB 조회 실패 시 방어
+  if (!currentItems) {
+    console.error("❌ saveAnalysisResults: DB 조회 실패");
+    return;
+  }
+
   // 2. 메모리에서 업데이트 계산
   const updates = results.map((result) => {
-    const current = currentItems?.find((item) => item.id === result.id);
-    const history = current?.analysis_results || [];
+    const current = currentItems.find(
+      (item: TrendDbItem) => item.id === result.id
+    );
+    const history: AnalysisEntry[] = current?.analysis_results || [];
 
-    const newEntry = {
+    const newEntry: AnalysisEntry = {
       aiModel: result.aiModel,
       score: result.score,
       reason: result.reason,
@@ -349,7 +449,7 @@ async function saveAnalysisResults(supabase: SupabaseClient, results: any[]) {
       analyzedAt: new Date().toISOString(),
     };
 
-    const idx = history.findIndex((h: any) => h.aiModel === result.aiModel);
+    const idx = history.findIndex((h) => h.aiModel === result.aiModel);
     if (idx >= 0) history[idx] = newEntry;
     else history.push(newEntry);
 

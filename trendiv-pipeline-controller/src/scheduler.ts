@@ -5,9 +5,6 @@ import { runPipeline, runDeepAnalysis } from "./services/pipeline.service";
 let isPipelineRunning = false;
 let isDeepAnalysisRunning = false;
 
-/**
- * ⏰ 스케줄러 초기화 함수
- */
 export const initScheduler = () => {
   const isScheduleEnabled = process.env.ENABLE_SCHEDULE === "true";
 
@@ -31,10 +28,18 @@ export const initScheduler = () => {
       console.log("🚀 [Scheduler] Triggering Pipeline...");
 
       try {
-        await runPipeline();
-        console.log("✅ Pipeline completed");
+        const result = await runPipeline();
+
+        // 🆕 리턴값 체크
+        if (result.success) {
+          console.log(
+            `✅ Pipeline completed (${result.count} items processed)`
+          );
+        } else {
+          console.error("❌ Pipeline failed:", result.error);
+        }
       } catch (error) {
-        console.error("❌ Pipeline failed:", error);
+        console.error("❌ Pipeline unexpected error:", error);
       } finally {
         isPipelineRunning = false;
       }

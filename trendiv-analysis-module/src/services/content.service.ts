@@ -25,17 +25,22 @@ export class ContentService {
     url: string,
     title: string,
   ): Promise<ContentFetchResult | null> {
-    const isYoutube = isYoutubeLink(url);
+    try {
+      const isYoutube = isYoutubeLink(url);
 
-    if (isYoutube) {
-      return await this.fetchYoutubeContent(url, title);
+      if (isYoutube) {
+        return await this.fetchYoutubeContent(url, title);
+      }
+
+      return await this.fetchWebpageContent(url, title);
+    } catch (error: any) {
+      console.error(`      ❌ fetchContent failed for ${url}:`, error.message);
+      return null;
     }
-
-    return await this.fetchWebpageContent(url, title);
   }
 
   /**
-   * 🆕 Fetch content + screenshot in single visit
+   * Fetch content + screenshot in single visit
    */
   async fetchContentWithScreenshot(
     url: string,
@@ -44,16 +49,27 @@ export class ContentService {
     content: ContentFetchResult | null;
     screenshot: string | null;
   }> {
-    const isYoutube = isYoutubeLink(url);
+    try {
+      const isYoutube = isYoutubeLink(url);
 
-    if (isYoutube) {
-      // YouTube는 스크린샷 불필요 (transcript/description 사용)
-      const content = await this.fetchYoutubeContent(url, title);
-      return { content, screenshot: null };
+      if (isYoutube) {
+        // YouTube는 스크린샷 불필요 (transcript/description 사용)
+        const content = await this.fetchYoutubeContent(url, title);
+        return { content, screenshot: null };
+      }
+
+      // 웹페이지: 한 번에 텍스트 + 스크린샷
+      return await this.browserService.fetchPageContentWithScreenshot(
+        url,
+        title,
+      );
+    } catch (error: any) {
+      console.error(
+        `      ❌ fetchContentWithScreenshot failed for ${url}:`,
+        error.message,
+      );
+      return { content: null, screenshot: null };
     }
-
-    // 웹페이지: 한 번에 텍스트 + 스크린샷
-    return await this.browserService.fetchPageContentWithScreenshot(url, title);
   }
 
   /**
@@ -63,32 +79,42 @@ export class ContentService {
     url: string,
     title: string,
   ): Promise<ContentFetchResult | null> {
-    const transcript = await this.youtubeService.fetchTranscript(url);
-    if (transcript) {
+    const safeTitle = title?.substring(0, 30) || 'Unknown';
+
+    try {
+      // 1️⃣ Try transcript first
+      const transcript = await this.youtubeService.fetchTranscript(url);
+      if (transcript) {
+        console.log(`      ✅ Transcript fetched for: ${safeTitle}...`);
+        return {
+          content: transcript,
+          type: 'youtube',
+          source: 'transcript',
+        };
+      }
+
+      // 2️⃣ Fallback to description
       console.log(
-        `      ✅ Transcript fetched for: ${title.substring(0, 30)}...`,
+        `      ℹ️ No transcript, using description for: ${safeTitle}...`,
       );
-      return {
-        content: transcript,
-        type: 'youtube',
-        source: 'transcript',
-      };
+      const description = await this.browserService.fetchPageContent(url, true);
+
+      if (description) {
+        return {
+          content: description,
+          type: 'youtube',
+          source: 'description',
+        };
+      }
+
+      return null;
+    } catch (error: any) {
+      console.error(
+        `      ❌ YouTube fetch failed for ${safeTitle}:`,
+        error.message,
+      );
+      return null;
     }
-
-    console.log(
-      `      ℹ️ No transcript, using description for: ${title.substring(0, 30)}...`,
-    );
-    const description = await this.browserService.fetchPageContent(url, true);
-
-    if (description) {
-      return {
-        content: description,
-        type: 'youtube',
-        source: 'description',
-      };
-    }
-
-    return null;
   }
 
   /**
@@ -98,19 +124,27 @@ export class ContentService {
     url: string,
     title: string,
   ): Promise<ContentFetchResult | null> {
-    const content = await this.browserService.fetchPageContent(url, false);
+    const safeTitle = title?.substring(0, 30) || 'Unknown';
 
-    if (content) {
-      console.log(
-        `      ✅ Webpage content fetched: ${title.substring(0, 30)}...`,
+    try {
+      const content = await this.browserService.fetchPageContent(url, false);
+
+      if (content) {
+        console.log(`      ✅ Webpage content fetched: ${safeTitle}...`);
+        return {
+          content,
+          type: 'webpage',
+          source: 'webpage',
+        };
+      }
+
+      return null;
+    } catch (error: any) {
+      console.error(
+        `      ❌ Webpage fetch failed for ${safeTitle}:`,
+        error.message,
       );
-      return {
-        content,
-        type: 'webpage',
-        source: 'webpage',
-      };
+      return null;
     }
-
-    return null;
   }
 }

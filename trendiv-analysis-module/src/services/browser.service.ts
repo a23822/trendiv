@@ -4,13 +4,31 @@
 
 import { Browser, BrowserContext, Page } from 'playwright';
 import { CONFIG } from '../config';
-import { ContentFetchError } from '../utils/errors';
 import { sanitizeText } from '../utils/helpers';
 import { chromium } from 'playwright-extra';
 import stealth from 'puppeteer-extra-plugin-stealth';
 import { ContentFetchResult } from '../types';
 
 chromium.use(stealth());
+
+// 🆕 공통 브라우저 설정
+const BROWSER_CONFIG = {
+  userAgent:
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  viewport: { width: 1920, height: 1080 },
+  locale: 'en-US',
+  timezoneId: 'America/New_York',
+};
+
+const AD_KEYWORDS = [
+  'doubleclick',
+  'googlesyndication',
+  'adservice',
+  'google-analytics',
+  'facebook',
+  'adnxs',
+  'criteo',
+];
 
 export class BrowserService {
   private browser: Browser;
@@ -20,7 +38,87 @@ export class BrowserService {
   }
 
   /**
-   * 🆕 한 번 방문으로 텍스트 + 스크린샷 둘 다 가져오기
+   * 🆕 공통 페이지 설정 (중복 제거)
+   */
+  private async createConfiguredPage(): Promise<{
+    context: BrowserContext;
+    page: Page;
+  }> {
+    const context = await this.browser.newContext({
+      userAgent: BROWSER_CONFIG.userAgent,
+      viewport: BROWSER_CONFIG.viewport,
+      locale: BROWSER_CONFIG.locale,
+      timezoneId: BROWSER_CONFIG.timezoneId,
+    });
+
+    const page = await context.newPage();
+
+    // 광고/불필요한 리소스 차단
+    await page.route('**/*', (route) => {
+      const request = route.request();
+      const resourceType = request.resourceType();
+      const reqUrl = request.url();
+
+      const blockedTypes = ['media', 'font'];
+      const isBlockedType = blockedTypes.includes(resourceType);
+      const isAd = AD_KEYWORDS.some((keyword) => reqUrl.includes(keyword));
+
+      if (isBlockedType || isAd) {
+        route.abort();
+      } else {
+        route.continue();
+      }
+    });
+
+    return { context, page };
+  }
+
+  /**
+   * 🆕 공통 페이지 네비게이션 + 팝업 닫기
+   */
+  private async navigateAndPrepare(page: Page, url: string): Promise<void> {
+    await page.goto(url, {
+      waitUntil: 'domcontentloaded',
+      timeout: 60000,
+    });
+
+    await page.waitForTimeout(3000);
+
+    // 팝업/쿠키 배너 닫기
+    await page
+      .click('[aria-label*="close"], .js-consent-banner button', {
+        timeout: 2000,
+      })
+      .catch(() => {});
+
+    await page.waitForTimeout(1000);
+  }
+
+  /**
+   * 🆕 공통 텍스트 추출
+   */
+  private async extractTextContent(page: Page): Promise<string | null> {
+    const textContent = await page.evaluate(() => {
+      const trash = document.querySelectorAll(
+        'script, style, nav, footer, header, aside, .ads, .comments, #comments, iframe',
+      );
+      trash.forEach((el) => el.remove());
+
+      const article = document.querySelector(
+        'article, main, .post-content, .entry-content',
+      ) as HTMLElement | null;
+
+      return (article || document.body).innerText;
+    });
+
+    return textContent
+      ? sanitizeText(textContent, CONFIG.content.maxLength)
+      : null;
+  }
+
+  /**
+   * 한 번 방문으로 텍스트 + 스크린샷 둘 다 가져오기
+   * 🆕 주입받은 browser 인스턴스 재사용
    */
   async fetchPageContentWithScreenshot(
     url: string,
@@ -29,91 +127,22 @@ export class BrowserService {
     content: ContentFetchResult | null;
     screenshot: string | null;
   }> {
-    let browser;
+    let context: BrowserContext | null = null;
+    let page: Page | null = null;
+
     try {
-      browser = await chromium.launch({
-        headless: true,
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-blink-features=AutomationControlled',
-        ],
-      });
-
-      const context = await browser.newContext({
-        userAgent:
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        viewport: { width: 1920, height: 1080 },
-        locale: 'en-US',
-        timezoneId: 'America/New_York',
-      });
-
-      const page = await context.newPage();
-
-      // 광고/불필요한 리소스 차단
-      await page.route('**/*', (route) => {
-        const request = route.request();
-        const resourceType = request.resourceType();
-        const reqUrl = request.url();
-
-        const blockedTypes = ['media', 'font'];
-        const adKeywords = [
-          'doubleclick',
-          'googlesyndication',
-          'adservice',
-          'google-analytics',
-          'facebook',
-          'adnxs',
-          'criteo',
-        ];
-
-        const isBlockedType = blockedTypes.includes(resourceType);
-        const isAd = adKeywords.some((keyword) => reqUrl.includes(keyword));
-
-        if (isBlockedType || isAd) {
-          route.abort();
-        } else {
-          route.continue();
-        }
-      });
+      const configured = await this.createConfiguredPage();
+      context = configured.context;
+      page = configured.page;
 
       console.log(
-        `      🌐 Fetching (single visit): ${title.substring(0, 30)}...`,
+        `      🌐 Fetching (single visit): ${(title || '').substring(0, 30)}...`,
       );
 
-      await page.goto(url, {
-        waitUntil: 'domcontentloaded',
-        timeout: 60000,
-      });
-
-      await page.waitForTimeout(3000);
-
-      // 팝업/쿠키 배너 닫기
-      await page
-        .click('[aria-label*="close"], .js-consent-banner button', {
-          timeout: 2000,
-        })
-        .catch(() => {});
-
-      await page.waitForTimeout(1000);
+      await this.navigateAndPrepare(page, url);
 
       // 1️⃣ 텍스트 추출
-      const textContent = await page.evaluate(() => {
-        const trash = document.querySelectorAll(
-          'script, style, nav, footer, header, aside, .ads, .comments, #comments, iframe',
-        );
-        trash.forEach((el) => el.remove());
-
-        const article = document.querySelector(
-          'article, main, .post-content, .entry-content',
-        ) as HTMLElement | null;
-
-        return (article || document.body).innerText;
-      });
-
-      const sanitizedContent = textContent
-        ? sanitizeText(textContent, CONFIG.content.maxLength)
-        : null;
+      const sanitizedContent = await this.extractTextContent(page);
 
       // 2️⃣ 스크린샷 캡처
       const buffer = await page.screenshot({
@@ -134,7 +163,7 @@ export class BrowserService {
 
       if (content) {
         console.log(
-          `      ✅ Content + Screenshot fetched: ${title.substring(0, 30)}...`,
+          `      ✅ Content + Screenshot fetched: ${(title || '').substring(0, 30)}...`,
         );
       }
 
@@ -143,79 +172,27 @@ export class BrowserService {
       console.error(`      ❌ Fetch failed for ${url}:`, error.message);
       return { content: null, screenshot: null };
     } finally {
-      if (browser) {
-        await browser.close().catch(() => {});
-      }
+      if (page) await page.close().catch(() => {});
+      if (context) await context.close().catch(() => {});
     }
   }
 
   /**
-   * 📸 스크린샷만 촬영 (기존 - 호환성 유지)
+   * 📸 스크린샷만 촬영
+   * 🆕 주입받은 browser 인스턴스 재사용
    */
   async captureScreenshot(url: string): Promise<string | null> {
-    let browser;
+    let context: BrowserContext | null = null;
+    let page: Page | null = null;
+
     try {
-      browser = await chromium.launch({
-        headless: true,
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-blink-features=AutomationControlled',
-        ],
-      });
-
-      const context = await browser.newContext({
-        userAgent:
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        viewport: { width: 1920, height: 1080 },
-        locale: 'en-US',
-        timezoneId: 'America/New_York',
-      });
-
-      const page = await context.newPage();
-
-      await page.route('**/*', (route) => {
-        const request = route.request();
-        const resourceType = request.resourceType();
-        const reqUrl = request.url();
-
-        const blockedTypes = ['media', 'font'];
-        const adKeywords = [
-          'doubleclick',
-          'googlesyndication',
-          'adservice',
-          'google-analytics',
-          'facebook',
-          'adnxs',
-          'criteo',
-        ];
-
-        const isBlockedType = blockedTypes.includes(resourceType);
-        const isAd = adKeywords.some((keyword) => reqUrl.includes(keyword));
-
-        if (isBlockedType || isAd) {
-          route.abort();
-        } else {
-          route.continue();
-        }
-      });
+      const configured = await this.createConfiguredPage();
+      context = configured.context;
+      page = configured.page;
 
       console.log(`      📸 Navigating to: ${url}`);
 
-      await page.goto(url, {
-        waitUntil: 'domcontentloaded',
-        timeout: 60000,
-      });
-
-      await page.waitForTimeout(3000);
-
-      await page
-        .click('[aria-label*="close"], .js-consent-banner button', {
-          timeout: 2000,
-        })
-        .catch(() => {});
-
-      await page.waitForTimeout(2000);
+      await this.navigateAndPrepare(page, url);
 
       const buffer = await page.screenshot({
         fullPage: false,
@@ -228,14 +205,13 @@ export class BrowserService {
       console.error(`      📸 Screenshot failed for ${url}:`, error.message);
       return null;
     } finally {
-      if (browser) {
-        await browser.close().catch(() => {});
-      }
+      if (page) await page.close().catch(() => {});
+      if (context) await context.close().catch(() => {});
     }
   }
 
   /**
-   * 텍스트만 가져오기 (기존 - 호환성 유지)
+   * 텍스트만 가져오기
    */
   async fetchPageContent(
     url: string,
@@ -260,7 +236,26 @@ export class BrowserService {
         timeout: CONFIG.browser.timeout,
       });
 
-      const content = await page.evaluate(this.extractContent, isYoutube);
+      const content = await page.evaluate((isYoutubePage: boolean) => {
+        if (isYoutubePage) {
+          const metaDesc = document.querySelector('meta[name="description"]');
+          if (metaDesc) {
+            return (metaDesc as HTMLMetaElement).content;
+          }
+          return document.body.innerText;
+        }
+
+        const trash = document.querySelectorAll(
+          'script, style, nav, footer, header, aside, .ads, .comments, #comments, iframe',
+        );
+        trash.forEach((el) => el.remove());
+
+        const article = document.querySelector(
+          'article, main, .post-content, .entry-content',
+        ) as HTMLElement | null;
+
+        return (article || document.body).innerText;
+      }, isYoutube);
 
       if (!content || content.length < CONFIG.content.minLength) {
         return null;
@@ -271,33 +266,8 @@ export class BrowserService {
       console.error(`      Fetch error for ${url}:`, error);
       return null;
     } finally {
-      if (page) {
-        await page.close().catch(() => {});
-      }
-      if (context) {
-        await context.close().catch(() => {});
-      }
+      if (page) await page.close().catch(() => {});
+      if (context) await context.close().catch(() => {});
     }
   }
-
-  private extractContent = (isYoutubePage: boolean): string => {
-    if (isYoutubePage) {
-      const metaDesc = document.querySelector('meta[name="description"]');
-      if (metaDesc) {
-        return (metaDesc as HTMLMetaElement).content;
-      }
-      return document.body.innerText;
-    }
-
-    const trash = document.querySelectorAll(
-      'script, style, nav, footer, header, aside, .ads, .comments, #comments, iframe',
-    );
-    trash.forEach((el) => el.remove());
-
-    const article = document.querySelector(
-      'article, main, .post-content, .entry-content',
-    ) as HTMLElement | null;
-
-    return (article || document.body).innerText;
-  };
 }
