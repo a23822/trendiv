@@ -209,7 +209,7 @@ export class GrokService {
 - 링크: ${trend.link}
 - 출처: ${trend.source} (${trend.category})
 - 내용:
-${content.substring(0, CONFIG.grok.maxContentLength)}
+${(content || '').substring(0, CONFIG.grok.maxContentLength)}
     `.trim();
 
     return this.callGrokAPI(systemPrompt, userContent);

@@ -71,48 +71,54 @@ export class AnalyzerService {
         console.warn('      ⚠️ Grok Service not initialized. Skipping.');
         return null;
       }
+      try {
+        // 🆕 X가 아닌 경우 → 콘텐츠 스크래핑 후 분석
+        if (!isXCategory) {
+          console.log(`      🦅 Using Grok API (with content)...`);
 
-      // 🆕 X가 아닌 경우 → 콘텐츠 스크래핑 후 분석
-      if (!isXCategory) {
-        console.log(`      🦅 Using Grok API (with content)...`);
+          const fetchResult = await this.contentService.fetchContent(
+            trend.link,
+            trend.title,
+          );
 
-        const fetchResult = await this.contentService.fetchContent(
-          trend.link,
-          trend.title,
-        );
+          const content = fetchResult?.content || '';
+          const analysis = await this.grokService.analyzeWithContent(
+            trend,
+            content,
+          );
 
-        const content = fetchResult?.content || '';
-        const analysis = await this.grokService.analyzeWithContent(
-          trend,
-          content,
-        );
+          return {
+            ...analysis,
+            aiModel: this.grokService.getModelName(),
+            analyzedAt: new Date().toISOString(),
+          };
+        }
 
+        // X 카테고리 → 기존대로 title만
+        console.log(`      🦅 Using Grok API (X post)...`);
+        const analysis = await this.grokService.analyze(trend);
         return {
           ...analysis,
           aiModel: this.grokService.getModelName(),
           analyzedAt: new Date().toISOString(),
         };
+      } catch (error) {
+        console.error(`❌ Grok analysis failed for "${trend.title}":`, error);
+        return null;
       }
-
-      // X 카테고리 → 기존대로 title만
-      console.log(`      🦅 Using Grok API (X post)...`);
-      const analysis = await this.grokService.analyze(trend);
-      return {
-        ...analysis,
-        aiModel: this.grokService.getModelName(),
-        analyzedAt: new Date().toISOString(),
-      };
     }
 
     // B. Gemini 실행 (기존 로직)
     // X 카테고리가 아닌 경우
     try {
-      // 1️⃣ [1차 시도] 텍스트 긁어오기
-      const fetchResult = await this.contentService.fetchContent(
-        trend.link,
-        trend.title,
-      );
+      // 🆕 한 번에 텍스트 + 스크린샷 가져오기
+      const { content: fetchResult, screenshot } =
+        await this.contentService.fetchContentWithScreenshot(
+          trend.link,
+          trend.title,
+        );
 
+      // 1️⃣ 텍스트가 충분하면 텍스트 모드
       if (fetchResult && fetchResult.content.length > 200) {
         console.log(`      📝 Using Gemini (Text Mode)...`);
         const prompt = this.geminiService.buildPrompt(
@@ -129,25 +135,23 @@ export class AnalyzerService {
         };
       }
 
-      // 2️⃣ [2차 시도] 스크린샷 + Vision
-      console.log(`      📸 Using Gemini (Vision Mode)...`);
-      const base64Image = await this.browserService.captureScreenshot(
-        trend.link,
-      );
+      // 2️⃣ 텍스트 부족하면 스크린샷 모드 (이미 가져온 스크린샷 사용)
+      if (screenshot) {
+        console.log(`      📸 Using Gemini (Vision Mode)...`);
+        const analysis = await this.geminiService.analyzeImage(
+          screenshot,
+          trend.title,
+          trend.category,
+        );
+        return {
+          ...analysis,
+          aiModel: this.geminiService.getModelName(),
+          analyzedAt: new Date().toISOString(),
+        };
+      }
 
-      if (!base64Image) return null;
-
-      const analysis = await this.geminiService.analyzeImage(
-        base64Image,
-        trend.title,
-        trend.category,
-      );
-
-      return {
-        ...analysis,
-        aiModel: this.geminiService.getModelName(),
-        analyzedAt: new Date().toISOString(),
-      };
+      console.log(`      ⚠️ No content or screenshot available`);
+      return null;
     } catch (error) {
       console.error(`❌ Analysis failed for "${trend.title}":`, error);
       return null;

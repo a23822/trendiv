@@ -21,7 +21,10 @@ export class ContentService {
   /**
    * Fetch content with automatic type detection
    */
-  async fetchContent(url: string, title: string): Promise<ContentFetchResult | null> {
+  async fetchContent(
+    url: string,
+    title: string,
+  ): Promise<ContentFetchResult | null> {
     const isYoutube = isYoutubeLink(url);
 
     if (isYoutube) {
@@ -32,18 +35,39 @@ export class ContentService {
   }
 
   /**
-   * YouTube content fetching strategy:
-   * 1. Try transcript first (best quality)
-   * 2. Fallback to video description
+   * 🆕 Fetch content + screenshot in single visit
+   */
+  async fetchContentWithScreenshot(
+    url: string,
+    title: string,
+  ): Promise<{
+    content: ContentFetchResult | null;
+    screenshot: string | null;
+  }> {
+    const isYoutube = isYoutubeLink(url);
+
+    if (isYoutube) {
+      // YouTube는 스크린샷 불필요 (transcript/description 사용)
+      const content = await this.fetchYoutubeContent(url, title);
+      return { content, screenshot: null };
+    }
+
+    // 웹페이지: 한 번에 텍스트 + 스크린샷
+    return await this.browserService.fetchPageContentWithScreenshot(url, title);
+  }
+
+  /**
+   * YouTube content fetching strategy
    */
   private async fetchYoutubeContent(
     url: string,
     title: string,
   ): Promise<ContentFetchResult | null> {
-    // 1️⃣ Try transcript first
     const transcript = await this.youtubeService.fetchTranscript(url);
     if (transcript) {
-      console.log(`      ✅ Transcript fetched for: ${title.substring(0, 30)}...`);
+      console.log(
+        `      ✅ Transcript fetched for: ${title.substring(0, 30)}...`,
+      );
       return {
         content: transcript,
         type: 'youtube',
@@ -51,8 +75,9 @@ export class ContentService {
       };
     }
 
-    // 2️⃣ Fallback to description
-    console.log(`      ℹ️ No transcript, using description for: ${title.substring(0, 30)}...`);
+    console.log(
+      `      ℹ️ No transcript, using description for: ${title.substring(0, 30)}...`,
+    );
     const description = await this.browserService.fetchPageContent(url, true);
 
     if (description) {
@@ -76,7 +101,9 @@ export class ContentService {
     const content = await this.browserService.fetchPageContent(url, false);
 
     if (content) {
-      console.log(`      ✅ Webpage content fetched: ${title.substring(0, 30)}...`);
+      console.log(
+        `      ✅ Webpage content fetched: ${title.substring(0, 30)}...`,
+      );
       return {
         content,
         type: 'webpage',
