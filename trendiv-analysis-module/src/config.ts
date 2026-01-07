@@ -15,7 +15,7 @@ export const CONFIG = {
   grok: {
     apiKey: process.env.GROK_API_KEY,
     defaultModel: process.env.GROK_MODEL || 'grok-4-1-fast-reasoning',
-    baseUrl: 'https://api.x.ai/v1',
+    baseUrl: 'https://api.x.ai/v1/chat/completions',
     maxRetries: 3,
     initialRetryDelay: 2000,
     timeout: 30000,
