@@ -3,10 +3,12 @@
 	import { CommonStyles } from '$lib/constants/styles';
 	import IconBookmark from '$lib/icons/icon_bookmark.svelte';
 	import IconLink from '$lib/icons/icon_link.svelte';
-	import IconLogoGemini from '$lib/icons/icon_logo_gemini.svelte';
+	import IconLogoModel from '$lib/icons/icon_logo_model.svelte';
+	import IconLogoSource from '$lib/icons/icon_logo_source.svelte';
 	import { bookmarks } from '$lib/stores/bookmarks.svelte';
 	import type { Trend, AnalysisResult } from '$lib/types';
 	import { cn } from '$lib/utils/ClassMerge';
+	import { capitalizeFirst } from '$lib/utils/string';
 
 	interface Props {
 		trend: Trend;
@@ -27,7 +29,7 @@
 	);
 
 	// 아이콘용 고유 ID
-	const geminiIconId = $derived(`article-${trend.id}`);
+	const iconId = $derived(`article-${trend.id}`);
 	const displayTitle = $derived(analysis?.title_ko || '');
 	const displaySummary = $derived(analysis?.oneLineSummary || '');
 	const displayScore = $derived(analysis?.score ?? 0);
@@ -79,8 +81,11 @@
 				{`${displayScore}점`}
 			</div>
 			<div class="truncate">
-				<IconLogoGemini id={geminiIconId} />
-				<span>{displayModel}</span>
+				<IconLogoModel
+					model={displayModel}
+					id={iconId}
+				/>
+				<span>{capitalizeFirst(displayModel)}</span>
 			</div>
 			<button
 				type="button"
@@ -99,6 +104,12 @@
 		</div>
 		<!-- metaInfoArea -->
 		<div class="flex items-center">
+			<IconLogoSource
+				id={iconId}
+				size={12}
+				category={displayCategory}
+			/>
+			<!-- max-width 값 설정 금지 -->
 			<strong class="truncate">{displayCategory}</strong>
 			<span class="shrink-0">{displayDate}</span>
 		</div>
@@ -112,6 +123,7 @@
 	<div>
 		<!-- tagGroup -->
 		<div>
+			<!-- 태그는 모두 보여줄 것 -->
 			{#each displayTags as tag}
 				<span>{tag}</span>
 			{/each}

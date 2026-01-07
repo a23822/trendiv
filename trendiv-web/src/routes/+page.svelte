@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { PUBLIC_API_URL } from '$env/static/public';
-	import ArticleCard from '$lib/components/contents/ArticleCard.svelte';
+	import ArticleCard from '$lib/components/contents/ArticleCard/ArticleCard.svelte';
 	import HeroSection from '$lib/components/contents/HeroSection.svelte';
 	import SearchCard from '$lib/components/contents/SearchCard.svelte';
 	import Header from '$lib/components/layout/Header/Header.svelte';
-	import ArticleModal from '$lib/components/modal/ArticleModal.svelte';
+	import ArticleModal from '$lib/components/modal/ArticleModal/ArticleModal.svelte';
 	import { auth } from '$lib/stores/auth.svelte.js';
 	import { modal } from '$lib/stores/modal.svelte.js';
 	import type { Trend } from '$lib/types';
@@ -12,13 +12,16 @@
 	import { onMount } from 'svelte';
 
 	let { data }: { data: PageData } = $props();
-	let trends = $state<Trend[]>([]);
+
+	let trends = $state<Trend[]>(data.trends ?? []);
 	let page = $state(1);
 	let isLoadingMore = $state(false);
 	let hasMore = $state(true);
 	let searchKeyword = $state('');
 	let selectedTags = $state<string[]>([]);
 	let isSearching = $state(false);
+
+	let abortController: AbortController | null = null;
 
 	const API_URL = PUBLIC_API_URL || 'http://127.0.0.1:3000';
 	const popularTags = [
@@ -34,22 +37,37 @@
 	let email = $state('');
 	let isSubmitting = $state(false);
 
+	// resize 디바운스
+	let innerWidth = $state(0);
+	let resizeTimeout: ReturnType<typeof setTimeout>;
+
+	function handleResize() {
+		clearTimeout(resizeTimeout);
+		resizeTimeout = setTimeout(() => {
+			innerWidth = window.innerWidth;
+		}, 150);
+	}
+
 	$effect(() => {
 		if (auth.user?.email) {
 			email = auth.user.email;
 		}
 	});
 
-	$effect(() => {
-		if (data.trends) {
-			trends = data.trends;
-		}
-	});
-
 	onMount(() => {
+		innerWidth = window.innerWidth;
+		window.addEventListener('resize', handleResize);
+
 		if (trends.length === 0) {
 			fetchTrends(true);
 		}
+
+		// cleanup: resize 리스너, 타이머, abort 정리
+		return () => {
+			window.removeEventListener('resize', handleResize);
+			clearTimeout(resizeTimeout);
+			abortController?.abort();
+		};
 	});
 
 	async function handleSubscribe() {
@@ -81,14 +99,17 @@
 
 	async function fetchTrends(reset = false) {
 		if (isLoadingMore && !reset) return;
-		if (reset) isSearching = true;
-		else isLoadingMore = true;
+
+		abortController?.abort();
+		abortController = new AbortController();
 
 		if (reset) {
+			isSearching = true;
 			page = 1;
-			trends = [];
 			hasMore = true;
+			// trends = [] 제거 → 깜빡임 방지
 		} else {
+			isLoadingMore = true;
 			page += 1;
 		}
 
@@ -99,15 +120,18 @@
 				searchKeyword: searchKeyword,
 				tagFilter: selectedTags.join(',')
 			});
-			const res = await fetch(`${API_URL}/api/trends?${params}`);
+			const res = await fetch(`${API_URL}/api/trends?${params}`, {
+				signal: abortController.signal
+			});
 
 			if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
 
 			const result = await res.json();
 
 			if (result.success) {
-				if (reset) trends = result.data;
-				else {
+				if (reset) {
+					trends = result.data; // 데이터 받은 후 교체
+				} else {
 					const newItems = result.data.filter(
 						(newTrend: Trend) => !trends.some((ex) => ex.id === newTrend.id)
 					);
@@ -116,11 +140,14 @@
 				if (trends.length >= result.total) hasMore = false;
 			} else {
 				console.error('데이터 로드 실패:', result.error);
-				hasMore = false;
+				// hasMore 유지 → 재시도 가능
 			}
 		} catch (e) {
+			if (e instanceof Error && e.name === 'AbortError') {
+				return;
+			}
 			console.error('API 호출 중 오류 발생:', e);
-			hasMore = false;
+			// hasMore 유지 → 재시도 가능
 		} finally {
 			isLoadingMore = false;
 			isSearching = false;
@@ -150,8 +177,14 @@
 
 	function infiniteScroll(node: HTMLElement) {
 		const observer = new IntersectionObserver((entries) => {
-			if (entries[0].isIntersecting && hasMore && !isSearching)
+			if (
+				entries[0].isIntersecting &&
+				hasMore &&
+				!isSearching &&
+				!isLoadingMore
+			) {
 				fetchTrends(false);
+			}
 		});
 
 		observer.observe(node);
@@ -163,9 +196,7 @@
 		};
 	}
 
-	// ArticleCard masonry 배열
-	let innerWidth = $state(0);
-
+	// masonry 배열 (브레이크포인트 기반)
 	const masonryColumns = $derived.by(() => {
 		if (innerWidth < 640) {
 			return [trends];
@@ -179,7 +210,7 @@
 	});
 </script>
 
-<svelte:window bind:innerWidth />
+<!-- bind:innerWidth 제거 -->
 
 <Header />
 

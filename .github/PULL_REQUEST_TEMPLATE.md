@@ -17,4 +17,13 @@
 
 ---
 
-> 💡 **AI UI 생성이 필요하면?** > [ui-generate 템플릿으로 PR 만들기](../compare?template=ui-generate.md)
+## 📋 ui-generator 사용법
+
+1. `ComponentName.scaffold.svelte` 파일 생성
+2. Figma에서 프레임 선택 → **Copy as SVG** (Ctrl+Shift+C)
+3. scaffold.svelte 랑 같은 위치에 붙여넣기
+4. PR 생성 후 `ui-generate` 라벨 추가
+5. AI가 `ComponentName.svelte` 자동 생성
+6. (선택) `preview` 라벨로 Cloudflare 배포
+
+---

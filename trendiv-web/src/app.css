@@ -255,6 +255,13 @@
 	}
 }
 
+@utility scrollbar-hide {
+	scrollbar-width: none;
+	&::-webkit-scrollbar {
+		display: none;
+	}
+}
+
 @layer base {
 	.scroll-locked {
 		overflow: hidden;

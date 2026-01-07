@@ -9,6 +9,7 @@ import { chromium } from 'playwright';
 import { CONFIG } from './config';
 import { Trend, PipelineResult } from './types';
 import { GeminiService } from './services/gemini.service';
+import { GrokService } from './services/grok.service';
 import { AnalyzerService } from './services/analyzer.service';
 import { delay } from './utils/helpers';
 
@@ -22,18 +23,33 @@ export type { AnalysisResult, Trend, PipelineResult } from './types';
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 
 const apiKey = process.env.GEMINI_API_KEY;
+const grokKey = process.env.GROK_API_KEY;
 if (!apiKey) {
   console.error('❌ GEMINI_API_KEY가 없습니다. .env 파일을 확인해주세요.');
   process.exit(1);
 }
 
-const MODEL_NAME = process.env.GEMINI_MODEL || CONFIG.gemini.defaultModel;
-console.log(`⚙️ Trendiv 심층 분석 엔진 가동 (Model: ${MODEL_NAME})`);
+const DEFAULT_GEMINI_MODEL =
+  process.env.GEMINI_MODEL || CONFIG.gemini.defaultModel;
+
+if (grokKey) {
+  console.log(`⚙️ Grok Service Activated (For X.com)`);
+} else {
+  console.log(`⚠️ Grok API Key missing. X.com items will be skipped.`);
+}
+
+export interface AnalysisOptions {
+  modelName?: string;
+  provider?: 'gemini' | 'grok';
+}
 
 // ---------------------------------------------------------
 // 🚀 Main Analysis Function
 // ---------------------------------------------------------
-export async function runAnalysis(trends: Trend[]): Promise<PipelineResult[]> {
+export async function runAnalysis(
+  trends: Trend[],
+  options?: AnalysisOptions,
+): Promise<PipelineResult[]> {
   if (!trends || trends.length === 0) {
     console.log('⚠️ No trends to analyze');
     return [];
@@ -44,12 +60,31 @@ export async function runAnalysis(trends: Trend[]): Promise<PipelineResult[]> {
     throw new Error('GEMINI_API_KEY is not configured');
   }
 
-  console.log(`🧠 [Analysis] Start analyzing ${trends.length} items...`);
+  const modelName = options?.modelName || DEFAULT_GEMINI_MODEL;
 
-  // Initialize services
-  const geminiService = new GeminiService(apiKey, MODEL_NAME);
+  console.log(
+    `🧠 [Analysis] Start analyzing ${trends.length} items (Model: ${modelName}, Provider: ${options?.provider || 'Auto'})...`,
+  );
+
+  // 2. 서비스 초기화
+  // GeminiService는 항상 초기화 (기본 엔진)
+  const geminiService = new GeminiService(apiKey!, modelName);
+
+  // GrokService는 키가 있을 때만 초기화
+  const grokService = grokKey ? new GrokService(grokKey) : undefined;
+
   const browser = await chromium.launch({ headless: true });
-  const analyzerService = new AnalyzerService(browser, geminiService);
+
+  // 3. AnalyzerService 생성 및 Provider 강제 설정
+  const analyzerService = new AnalyzerService(
+    browser,
+    geminiService,
+    grokService,
+  );
+
+  if (options?.provider) {
+    analyzerService.setForceProvider(options.provider);
+  }
 
   const results: PipelineResult[] = [];
 
@@ -70,6 +105,9 @@ export async function runAnalysis(trends: Trend[]): Promise<PipelineResult[]> {
             date: trend.date,
           });
           console.log(`      ✅ Completed (Score: ${analysis.score}/10)`);
+        } else {
+          // X 카테고리를 Gemini로 돌려서 스킵된 경우
+          console.log(`      ⏭️ Skipped (Provider mismatch or Logic)`);
         }
       } catch (error) {
         console.error(

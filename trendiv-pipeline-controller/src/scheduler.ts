@@ -1,12 +1,11 @@
 import cron from "node-cron";
-import { runPipeline } from "./services/pipeline.service";
+import { runPipeline, runDeepAnalysis } from "./services/pipeline.service";
 
-/**
- * ⏰ 스케줄러 초기화 함수
- */
+// 중복 실행 방지 플래그
+let isPipelineRunning = false;
+let isDeepAnalysisRunning = false;
+
 export const initScheduler = () => {
-  // 환경 변수로 스케줄링 활성화 여부 제어 (개발 중 중복 실행 방지)
-  // .env 파일에 ENABLE_SCHEDULE="true" 라고 적혀있을 때만 자동 실행됩니다.
   const isScheduleEnabled = process.env.ENABLE_SCHEDULE === "true";
 
   if (!isScheduleEnabled) {
@@ -16,12 +15,63 @@ export const initScheduler = () => {
 
   console.log("🕒 [Scheduler] Initialized.");
 
-  // 1. 주간 뉴스레터 파이프라인 (매주 월요일 오전 9:00)
-  // Cron 표현식: 분 시 일 월 요일 (0 9 * * 1 => 월요일 09:00)
-  cron.schedule("0 9 * * 1", async () => {
-    console.log("⏰ [Scheduler] Triggering Weekly Pipeline...");
-    await runPipeline();
-  });
+  // 1. 주간 뉴스레터 파이프라인 (매일 오전 9:00)
+  cron.schedule(
+    "0 9 * * *",
+    async () => {
+      if (isPipelineRunning) {
+        console.log("⚠️ [Pipeline] Already running, skipping...");
+        return;
+      }
 
-  console.log("   ✔️  Weekly Pipeline scheduled (Every Mon 09:00)");
+      isPipelineRunning = true;
+      console.log("🚀 [Scheduler] Triggering Pipeline...");
+
+      try {
+        const result = await runPipeline();
+
+        // 🆕 리턴값 체크
+        if (result.success) {
+          console.log(
+            `✅ Pipeline completed (${result.count} items processed)`
+          );
+        } else {
+          console.error("❌ Pipeline failed:", result.error);
+        }
+      } catch (error) {
+        console.error("❌ Pipeline unexpected error:", error);
+      } finally {
+        isPipelineRunning = false;
+      }
+    },
+    { timezone: "Asia/Seoul" }
+  );
+
+  console.log("   ✔️  Daily Pipeline scheduled (Every Day 09:00 KST)");
+
+  // 2. 심층 분석 (매일 오전 10:30)
+  cron.schedule(
+    "30 10 * * *",
+    async () => {
+      if (isDeepAnalysisRunning) {
+        console.log("⚠️ [Deep Analysis] Already running, skipping...");
+        return;
+      }
+
+      isDeepAnalysisRunning = true;
+      console.log("⏰ [Scheduler] Triggering Daily Deep Analysis...");
+
+      try {
+        await runDeepAnalysis();
+        console.log("✅ Deep Analysis completed");
+      } catch (error) {
+        console.error("❌ Deep Analysis failed:", error);
+      } finally {
+        isDeepAnalysisRunning = false;
+      }
+    },
+    { timezone: "Asia/Seoul" }
+  );
+
+  console.log("   ✔️  Deep Analysis scheduled (Every Day 10:30 KST)");
 };

@@ -17,6 +17,6 @@ export const IDs = {
 	ICONS: {
 		LOGO_HERO_TAG_GRAD: 'icon-logo-hero-tag-grad',
 		LOGO_HERO_GLOW: 'icon-logo-hero-glow',
-		LOGO_GEMINI: 'icon-logo-gemini'
+		LOGO_MODEL: 'icon-logo-model'
 	}
 } as const;
