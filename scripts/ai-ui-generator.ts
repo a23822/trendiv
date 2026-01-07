@@ -405,7 +405,9 @@ ${scaffoldCode}
 \`\`\`
 
 ## 작성 규칙
-1. **Tailwind v4 문법**: \`bg-(--color-primary)\`, \`shadow-(--shadow-md)\` 형태
+1. **Tailwind v4 문법**: \`bg-gray-700\`, \`text-neutral-600\` 형태
+figma 에서 전달받는 컬러변수는 25 25 25 형식이므로 --bg-main을 받으면 bg-(--bg-main) 이 아닌 bg-bg-main 으로 적용
+--gray-800 을 받으면 text-(--gray-800) 이 아닌 text-gray-800 으로 적용
 2. **기본 클래스 우선**: \`text-[12px]\` → \`text-xs\`, \`p-[16px]\` → \`p-4\`
 3. **그라데이션**: SVG의 linearGradient를 \`bg-gradient-to-b from-[색상] to-[색상]\`으로
 4. **그림자**: SVG filter 또는 Figma effects를 \`shadow-sm\`, \`shadow-md\` 등으로 매핑
