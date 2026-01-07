@@ -3,11 +3,12 @@
 	import { CommonStyles } from '$lib/constants/styles';
 	import IconBookmark from '$lib/icons/icon_bookmark.svelte';
 	import IconLink from '$lib/icons/icon_link.svelte';
-	import IconLogoGemini from '$lib/icons/icon_logo_gemini.svelte';
+	import IconLogoModel from '$lib/icons/icon_logo_model.svelte';
 	import IconLogoSource from '$lib/icons/icon_logo_source.svelte';
 	import { bookmarks } from '$lib/stores/bookmarks.svelte';
 	import type { Trend, AnalysisResult } from '$lib/types';
 	import { cn } from '$lib/utils/ClassMerge';
+	import { capitalizeFirst } from '$lib/utils/string';
 
 	interface Props {
 		trend: Trend;
@@ -80,8 +81,11 @@
 				{`${displayScore}점`}
 			</div>
 			<div class="truncate">
-				<IconLogoGemini id={iconId} />
-				<span>{displayModel}</span>
+				<IconLogoModel
+					model={displayModel}
+					id={iconId}
+				/>
+				<span>{capitalizeFirst(displayModel)}</span>
 			</div>
 			<button
 				type="button"
@@ -102,6 +106,7 @@
 		<div class="flex items-center">
 			<IconLogoSource
 				id={iconId}
+				size={12}
 				category={displayCategory}
 			/>
 			<!-- max-width 값 설정 금지 -->
