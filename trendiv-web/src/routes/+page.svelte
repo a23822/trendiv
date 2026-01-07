@@ -4,7 +4,7 @@
 	import HeroSection from '$lib/components/contents/HeroSection.svelte';
 	import SearchCard from '$lib/components/contents/SearchCard.svelte';
 	import Header from '$lib/components/layout/Header/Header.svelte';
-	import ArticleModal from '$lib/components/modal/ArticleModal.svelte';
+	import ArticleModal from '$lib/components/modal/ArticleModal/ArticleModal.svelte';
 	import { auth } from '$lib/stores/auth.svelte.js';
 	import { modal } from '$lib/stores/modal.svelte.js';
 	import type { Trend } from '$lib/types';
@@ -37,6 +37,17 @@
 	let email = $state('');
 	let isSubmitting = $state(false);
 
+	// resize 디바운스
+	let innerWidth = $state(0);
+	let resizeTimeout: ReturnType<typeof setTimeout>;
+
+	function handleResize() {
+		clearTimeout(resizeTimeout);
+		resizeTimeout = setTimeout(() => {
+			innerWidth = window.innerWidth;
+		}, 150);
+	}
+
 	$effect(() => {
 		if (auth.user?.email) {
 			email = auth.user.email;
@@ -44,9 +55,19 @@
 	});
 
 	onMount(() => {
+		innerWidth = window.innerWidth;
+		window.addEventListener('resize', handleResize);
+
 		if (trends.length === 0) {
 			fetchTrends(true);
 		}
+
+		// cleanup: resize 리스너, 타이머, abort 정리
+		return () => {
+			window.removeEventListener('resize', handleResize);
+			clearTimeout(resizeTimeout);
+			abortController?.abort();
+		};
 	});
 
 	async function handleSubscribe() {
@@ -79,19 +100,16 @@
 	async function fetchTrends(reset = false) {
 		if (isLoadingMore && !reset) return;
 
-		if (abortController) {
-			abortController.abort();
-		}
+		abortController?.abort();
 		abortController = new AbortController();
 
-		if (reset) isSearching = true;
-		else isLoadingMore = true;
-
 		if (reset) {
+			isSearching = true;
 			page = 1;
-			trends = [];
 			hasMore = true;
+			// trends = [] 제거 → 깜빡임 방지
 		} else {
+			isLoadingMore = true;
 			page += 1;
 		}
 
@@ -111,8 +129,9 @@
 			const result = await res.json();
 
 			if (result.success) {
-				if (reset) trends = result.data;
-				else {
+				if (reset) {
+					trends = result.data; // 데이터 받은 후 교체
+				} else {
 					const newItems = result.data.filter(
 						(newTrend: Trend) => !trends.some((ex) => ex.id === newTrend.id)
 					);
@@ -121,15 +140,14 @@
 				if (trends.length >= result.total) hasMore = false;
 			} else {
 				console.error('데이터 로드 실패:', result.error);
-				hasMore = false;
+				// hasMore 유지 → 재시도 가능
 			}
 		} catch (e) {
-			// abort된 요청은 에러 처리 스킵
 			if (e instanceof Error && e.name === 'AbortError') {
 				return;
 			}
 			console.error('API 호출 중 오류 발생:', e);
-			hasMore = false;
+			// hasMore 유지 → 재시도 가능
 		} finally {
 			isLoadingMore = false;
 			isSearching = false;
@@ -178,9 +196,7 @@
 		};
 	}
 
-	// ArticleCard masonry 배열
-	let innerWidth = $state(0);
-
+	// masonry 배열 (브레이크포인트 기반)
 	const masonryColumns = $derived.by(() => {
 		if (innerWidth < 640) {
 			return [trends];
@@ -194,7 +210,7 @@
 	});
 </script>
 
-<svelte:window bind:innerWidth />
+<!-- bind:innerWidth 제거 -->
 
 <Header />
 

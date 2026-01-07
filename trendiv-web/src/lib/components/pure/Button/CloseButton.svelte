@@ -1,14 +1,14 @@
 <script lang="ts">
 	interface Props {
 		onclick?: () => void;
-		className?: string;
+		class?: string;
 		variant?: 'normal' | 'inverted';
 		size?: number;
 	}
 
 	let {
 		onclick,
-		className = '',
+		class: className,
 		variant = 'normal',
 		size = 60
 	}: Props = $props();

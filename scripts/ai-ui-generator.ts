@@ -388,8 +388,8 @@ ${figmaSpec || "스펙 데이터 없음 (SVG만 참고)"}
 
 ### 3. 프로젝트 스타일 (CSS/SCSS)
 - SVG/Figma의 색상(#Hex)이 아래 변수와 일치하면 반드시 **CSS 변수**를 사용하세요.
-  - 예: \`bg-[#1ba896]\` ❌ → \`bg-(--color-primary)\` ✅
-  - 예: \`bg-[#1BA896]\` ❌ → \`bg-(--mint-500)\` ✅
+  - 예: \`bg-[#1ba896]\` ❌ → \`bg-(--color-primary) 또는 bg-primary\` ✅
+  - 예: \`bg-[#1BA896]\` ❌ → \`bg-(--color-mint-500) 또는 bg-mint-500\` ✅
 - **styles.ts**에 정의된 공통 스타일 객체(CommonStyles 등)가 있다면, 해당 객체 내부의 Tailwind 클래스 조합을 참고하여 디자인 일관성을 유지하세요.
 
 \`\`\`css
@@ -405,7 +405,9 @@ ${scaffoldCode}
 \`\`\`
 
 ## 작성 규칙
-1. **Tailwind v4 문법**: \`bg-(--color-primary)\`, \`shadow-(--shadow-md)\` 형태
+1. **Tailwind v4 문법**: \`bg-gray-700\`, \`text-neutral-600\` 형태
+figma 에서 전달받는 컬러변수는 25 25 25 형식이므로 --bg-main을 받으면 bg-(--bg-main) 이 아닌 bg-bg-main 으로 적용
+--gray-800 을 받으면 text-(--gray-800) 이 아닌 text-gray-800 으로 적용
 2. **기본 클래스 우선**: \`text-[12px]\` → \`text-xs\`, \`p-[16px]\` → \`p-4\`
 3. **그라데이션**: SVG의 linearGradient를 \`bg-gradient-to-b from-[색상] to-[색상]\`으로
 4. **그림자**: SVG filter 또는 Figma effects를 \`shadow-sm\`, \`shadow-md\` 등으로 매핑

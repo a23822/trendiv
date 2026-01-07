@@ -1,5 +1,6 @@
 <!-- https://www.figma.com/design/jxEwxoZSxmKtjMzQkeKkcP/Trendiv?node-id=12-5&t=OpHyXleilZSkLFzr-4  -->
 <script lang="ts">
+	import KeywordTag from '$lib/components/pure/Tag/keywordTag.svelte';
 	import { CommonStyles } from '$lib/constants/styles';
 	import IconBookmark from '$lib/icons/icon_bookmark.svelte';
 	import IconLink from '$lib/icons/icon_link.svelte';
@@ -8,6 +9,7 @@
 	import { bookmarks } from '$lib/stores/bookmarks.svelte';
 	import type { Trend, AnalysisResult } from '$lib/types';
 	import { cn } from '$lib/utils/ClassMerge';
+	import { formatDate } from '$lib/utils/date';
 
 	interface Props {
 		trend: Trend;
@@ -45,19 +47,6 @@
 	}
 
 	const displayDate = $derived(formatDate(trend.date));
-
-	function formatDate(date: string) {
-		const parsed = new Date(date);
-		if (isNaN(parsed.getTime())) return '';
-
-		const diff = Date.now() - parsed.getTime();
-		const hours = Math.floor(diff / (1000 * 60 * 60));
-		if (hours < 1) return '방금 전';
-		if (hours < 24) return `${hours}시간 전`;
-		const days = Math.floor(hours / 24);
-		if (days < 7) return `${days}일 전`;
-		return parsed.toLocaleDateString('ko-KR');
-	}
 </script>
 
 <div
@@ -166,11 +155,7 @@
 		<!-- tagGroup -->
 		<div class="flex flex-wrap gap-1.5">
 			{#each displayTags as tag}
-				<span
-					class="rounded-[6px] bg-(--color-neutral-200) px-2 py-0.5 text-[11px] leading-relaxed font-medium tracking-tight text-(--color-neutral-700)"
-				>
-					#{tag}
-				</span>
+				<KeywordTag {tag} />
 			{/each}
 		</div>
 
