@@ -388,8 +388,8 @@ ${figmaSpec || "스펙 데이터 없음 (SVG만 참고)"}
 
 ### 3. 프로젝트 스타일 (CSS/SCSS)
 - SVG/Figma의 색상(#Hex)이 아래 변수와 일치하면 반드시 **CSS 변수**를 사용하세요.
-  - 예: \`bg-[#1ba896]\` ❌ → \`bg-(--color-primary)\` ✅
-  - 예: \`bg-[#1BA896]\` ❌ → \`bg-(--mint-500)\` ✅
+  - 예: \`bg-[#1ba896]\` ❌ → \`bg-(--color-primary) 또는 bg-primary\` ✅
+  - 예: \`bg-[#1BA896]\` ❌ → \`bg-(--color-mint-500) 또는 bg-mint-500\` ✅
 - **styles.ts**에 정의된 공통 스타일 객체(CommonStyles 등)가 있다면, 해당 객체 내부의 Tailwind 클래스 조합을 참고하여 디자인 일관성을 유지하세요.
 
 \`\`\`css

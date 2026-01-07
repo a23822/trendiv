@@ -66,7 +66,7 @@
 
 <div class="flex">
 	{#if items.length > 1}
-		<div class={cn('hidden shrink-0 sm:block', 'p-3')}>
+		<div class={cn('hidden shrink-0 sm:block', '-ml-3 p-3')}>
 			<ArrowButton
 				direction="left"
 				onclick={scrollLeft}
@@ -76,14 +76,14 @@
 	{/if}
 	<div
 		bind:this={scrollContainer}
-		class="flex h-16 flex-1 gap-3 overflow-x-auto"
+		class="scrollbar-hide flex h-16 flex-1 gap-3 overflow-x-auto"
 	>
 		{#each items as item, index}
 			{@render scrollChip(item, index)}
 		{/each}
 	</div>
 	{#if items.length > 1}
-		<div class={cn('hidden shrink-0 sm:block', 'p-3')}>
+		<div class={cn('hidden shrink-0 sm:block', '-mr-3 p-3')}>
 			<ArrowButton
 				onclick={scrollRight}
 				disabled={!canScrollRight}
