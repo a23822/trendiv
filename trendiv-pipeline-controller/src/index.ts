@@ -92,7 +92,7 @@ if (process.env.BATCH_MODE === "true") {
     console.log("🚀 [Batch Mode] 파이프라인 시작...");
     try {
       const result = await runPipeline();
-      await sendEmailReport("SUCCESS", result);
+      await sendEmailReport("SUCCESS", { ...result });
       console.log("👋 [Batch Mode] 성공 종료");
       process.exit(0);
     } catch (error) {
