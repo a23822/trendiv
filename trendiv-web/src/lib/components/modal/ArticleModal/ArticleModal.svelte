@@ -122,27 +122,23 @@
 	<div
 		class={cn(
 			'bg-bg-main flex flex-col',
-			'w-[90vw] max-w-180 max-h-[85vh]',
-			'rounded-3xl shadow-xl overflow-hidden',
-			'border border-border-subtle'
+			'max-h-[85vh] w-[90vw] max-w-180',
+			'overflow-hidden rounded-3xl shadow-xl',
+			'border-border-subtle border'
 		)}
 	>
 		<!-- header -->
 		<div class="shrink-0 px-6 pt-6 pb-2">
 			<!-- subArea -->
 			<div class="flex items-center justify-between">
-				<div
-					class="flex items-center gap-2 text-gray-500 text-sm font-medium"
-				>
+				<div class="flex items-center gap-2 text-sm font-medium text-gray-500">
 					<IconLogoSource
 						category={displayCategory}
 						id={iconId}
 						size={20}
 					/>
 					<div class="flex items-center gap-2">
-						<span class="text-gray-700 font-semibold"
-							>{displayCategory}</span
-						>
+						<span class="font-semibold text-gray-700">{displayCategory}</span>
 						<!-- Divider using pseudo element styling equivalent -->
 						<div class="h-3 w-[1px] bg-gray-300"></div>
 						<span class="text-gray-500">{displayDate}</span>
@@ -150,18 +146,17 @@
 				</div>
 				<CloseButton
 					onclick={requestClose}
-					variant="ghost"
-					class="text-gray-400 hover:text-gray-800 hover:bg-bg-surface -mr-2"
+					variant="inverted"
 				/>
 			</div>
 		</div>
 
 		<!-- body -->
-		<div class="flex-1 overflow-y-auto px-6 pb-8 scrollbar-hide">
+		<div class="flex-1 overflow-y-auto px-6 pb-8">
 			<!-- AI Section Header -->
-			<div class="flex items-center gap-1.5 text-primary mb-3">
+			<div class="text-primary mb-3 flex items-center gap-1.5">
 				<IconBot size={18} />
-				<h4 class="font-bold text-sm">AI 분석 결과</h4>
+				<h4 class="text-sm font-bold">AI 분석 결과</h4>
 			</div>
 
 			<!-- Model Switcher -->
@@ -174,47 +169,49 @@
 
 			<!-- Title -->
 			<div class="mb-8">
-				<h3 class="text-xl sm:text-2xl font-bold text-gray-900 leading-snug">
+				<h3 class="text-xl leading-snug font-bold text-gray-900 sm:text-2xl">
 					{displayTitle}
 				</h3>
 			</div>
 
 			<!-- Analysis Content -->
 			<section class="mb-8">
-				<div class="flex items-center gap-2 text-gray-800 mb-3">
+				<div class="mb-3 flex items-center gap-2 text-gray-800">
 					<IconScan size={20} />
-					<h4 class="font-bold text-base">분석 내용</h4>
+					<h4 class="text-base font-bold">분석 내용</h4>
 				</div>
-				
+
 				<!-- Score & Reason Box -->
-				<div class="flex items-center gap-4 bg-bg-surface p-4 rounded-2xl mb-4 border border-border-subtle">
+				<div
+					class="bg-bg-surface border-border-subtle mb-4 flex items-center gap-4 rounded-2xl border p-4"
+				>
 					<CircleProgress
 						score={displayScore}
 						max={10}
 						class="shrink-0"
 					/>
-					<p class="text-sm text-gray-700 font-medium leading-relaxed">
+					<p class="text-sm leading-relaxed font-medium text-gray-700">
 						{displayReason}
 					</p>
 				</div>
-				
-				<p class="text-gray-700 leading-relaxed text-sm sm:text-base">
+
+				<p class="text-sm leading-relaxed text-gray-700 sm:text-base">
 					{displaySummary}
 				</p>
 			</section>
 
 			<!-- Key Points -->
 			<section class="mb-8">
-				<div class="flex items-center gap-2 text-gray-800 mb-3">
+				<div class="mb-3 flex items-center gap-2 text-gray-800">
 					<IconLightbulb size={20} />
-					<h4 class="font-bold text-base">핵심 포인트</h4>
+					<h4 class="text-base font-bold">핵심 포인트</h4>
 				</div>
 				<ul class="flex flex-col gap-3">
 					{#each displayKeyPoints as point, i (point + i)}
 						<li
-							class="flex items-start gap-2.5 bg-bg-surface p-3.5 rounded-xl text-sm text-gray-700 leading-relaxed border border-border-subtle"
+							class="bg-bg-surface border-border-subtle flex items-center gap-2.5 rounded-xl border p-3.5 text-sm leading-relaxed text-gray-700"
 						>
-							<div class="mt-1.5 w-1.5 h-1.5 rounded-full bg-primary shrink-0"></div>
+							<div class="bg-primary h-1.5 w-1.5 shrink-0 rounded-full"></div>
 							<span>{point}</span>
 						</li>
 					{/each}
@@ -223,9 +220,9 @@
 
 			<!-- Tags -->
 			<section>
-				<div class="flex items-center gap-2 text-gray-800 mb-3">
+				<div class="mb-3 flex items-center gap-2 text-gray-800">
 					<IconTag size={20} />
-					<h4 class="font-bold text-base">키워드 태그</h4>
+					<h4 class="text-base font-bold">키워드 태그</h4>
 				</div>
 				<ul class="flex flex-wrap gap-2">
 					{#each displayTags as tag, i (tag + i)}
@@ -239,13 +236,13 @@
 
 		<!-- footer -->
 		<div
-			class="shrink-0 p-4 border-t border-border-subtle bg-bg-main flex items-center justify-end gap-2"
+			class="border-border-subtle bg-bg-main flex shrink-0 items-center justify-end gap-2 border-t p-4"
 		>
 			<button
 				type="button"
 				onclick={handleBookmark}
 				aria-label="북마크"
-				class="p-2.5 rounded-full text-gray-500 hover:text-primary hover:bg-bg-surface transition-colors"
+				class="hover:text-primary hover:bg-bg-surface rounded-full p-2.5 text-gray-500 transition-colors"
 			>
 				<IconBookmark
 					size={24}
@@ -257,7 +254,7 @@
 				target="_blank"
 				rel="noopener noreferrer"
 				aria-label="원문 보기"
-				class="p-2.5 rounded-full text-gray-500 hover:text-gray-900 hover:bg-bg-surface transition-colors"
+				class="hover:bg-bg-surface rounded-full p-2.5 text-gray-500 transition-colors hover:text-gray-900"
 			>
 				<IconLink size={24} />
 			</a>
@@ -265,7 +262,7 @@
 				type="button"
 				onclick={handleShare}
 				aria-label="공유하기"
-				class="p-2.5 rounded-full text-gray-500 hover:text-gray-900 hover:bg-bg-surface transition-colors"
+				class="hover:bg-bg-surface rounded-full p-2.5 text-gray-500 transition-colors hover:text-gray-900"
 			>
 				<IconShare />
 			</button>
