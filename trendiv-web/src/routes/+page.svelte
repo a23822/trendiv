@@ -49,6 +49,10 @@
 	}
 
 	$effect(() => {
+		trends = data.trends ?? [];
+	});
+
+	$effect(() => {
 		if (auth.user?.email) {
 			email = auth.user.email;
 		}

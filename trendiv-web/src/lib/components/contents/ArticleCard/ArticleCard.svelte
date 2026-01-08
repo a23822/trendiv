@@ -157,7 +157,7 @@
 	<div class="relative z-10 mt-auto flex flex-col gap-4">
 		<!-- tagGroup -->
 		<div class="flex flex-wrap gap-1.5">
-			{#each displayTags as tag}
+			{#each displayTags as tag (tag)}
 				<KeywordTag {tag} />
 			{/each}
 		</div>
