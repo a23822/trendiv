@@ -117,9 +117,13 @@ export class AnalyzerService {
           trend.link,
           trend.title,
         );
-
+      // 기본은 200자지만, YouTube거나 자막이 없어서 설명만 있는 경우 20자만 넘어도 분석 시도
+      const minLength =
+        trend.source && trend.source.toLowerCase().includes('youtube')
+          ? 20
+          : 200;
       // 1️⃣ 텍스트가 충분하면 텍스트 모드
-      if (fetchResult && fetchResult.content.length > 200) {
+      if (fetchResult && fetchResult.content.length > minLength) {
         console.log(`      📝 Using Gemini (Text Mode)...`);
         const prompt = this.geminiService.buildPrompt(
           trend.title,
