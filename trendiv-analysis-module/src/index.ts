@@ -60,18 +60,31 @@ export async function runAnalysis(
     throw new Error('GEMINI_API_KEY is not configured');
   }
 
-  const modelName = options?.modelName || DEFAULT_GEMINI_MODEL;
+  const requestModelName = options?.modelName;
+
+  const geminiModel =
+    options?.provider === 'gemini' && requestModelName
+      ? requestModelName
+      : process.env.GEMINI_MODEL || CONFIG.gemini.defaultModel;
 
   console.log(
-    `🧠 [Analysis] Start analyzing ${trends.length} items (Model: ${modelName}, Provider: ${options?.provider || 'Auto'})...`,
+    `🧠 [Analysis] Start analyzing ${trends.length} items (Provider: ${options?.provider || 'Auto'})...`,
   );
 
   // 2. 서비스 초기화
   // GeminiService는 항상 초기화 (기본 엔진)
-  const geminiService = new GeminiService(apiKey!, modelName);
+  const geminiService = new GeminiService(apiKey!, geminiModel);
 
-  // GrokService는 키가 있을 때만 초기화
-  const grokService = grokKey ? new GrokService(grokKey) : undefined;
+  let grokService: GrokService | undefined;
+
+  if (grokKey) {
+    const grokModel =
+      options?.provider === 'grok' && requestModelName
+        ? requestModelName
+        : process.env.GROK_MODEL || undefined;
+
+    grokService = new GrokService(grokKey, grokModel);
+  }
 
   const browser = await chromium.launch({ headless: true });
 

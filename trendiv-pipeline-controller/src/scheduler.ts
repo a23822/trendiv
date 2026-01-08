@@ -1,9 +1,13 @@
 import cron from "node-cron";
-import { runPipeline, runDeepAnalysis } from "./services/pipeline.service";
-
+import {
+  runPipeline,
+  runGeminiProAnalysis,
+  runGrokAnalysis,
+} from "./services/pipeline.service";
 // 중복 실행 방지 플래그
 let isPipelineRunning = false;
-let isDeepAnalysisRunning = false;
+let isGrokRunning = false;
+let isGeminiProRunning = false;
 
 export const initScheduler = () => {
   const isScheduleEnabled = process.env.ENABLE_SCHEDULE === "true";
@@ -49,29 +53,48 @@ export const initScheduler = () => {
 
   console.log("   ✔️  Daily Pipeline scheduled (Every Day 09:00 KST)");
 
-  // 2. 심층 분석 (매일 오전 10:30)
+  // 2. Gemini Pro 심층 분석 (매일 10:30)
   cron.schedule(
     "30 10 * * *",
     async () => {
-      if (isDeepAnalysisRunning) {
-        console.log("⚠️ [Deep Analysis] Already running, skipping...");
+      // 플래그 체크
+      if (isGeminiProRunning) {
+        console.log("⚠️ [Gemini Pro] Already running, skipping...");
         return;
       }
 
-      isDeepAnalysisRunning = true;
-      console.log("⏰ [Scheduler] Triggering Daily Deep Analysis...");
+      isGeminiProRunning = true;
+      console.log("⏰ [Scheduler] Triggering Gemini Pro Analysis...");
 
       try {
-        await runDeepAnalysis();
-        console.log("✅ Deep Analysis completed");
+        await runGeminiProAnalysis();
       } catch (error) {
-        console.error("❌ Deep Analysis failed:", error);
+        console.error("❌ Gemini Pro Scheduler Error:", error);
       } finally {
-        isDeepAnalysisRunning = false;
+        isGeminiProRunning = false;
       }
     },
     { timezone: "Asia/Seoul" }
   );
 
-  console.log("   ✔️  Deep Analysis scheduled (Every Day 10:30 KST)");
+  console.log("   ✔️  Gemini Pro Analysis scheduled (Every Day 10:30 KST)");
+
+  // 3. Grok 심층 분석 (매일 10:45) - X + 일반글 모두 포함
+  cron.schedule(
+    "45 10 * * *",
+    async () => {
+      if (isGrokRunning) return;
+      isGrokRunning = true;
+      try {
+        await runGrokAnalysis();
+      } catch (error) {
+        console.error("❌ Grok Analysis Error:", error);
+      } finally {
+        isGrokRunning = false;
+      }
+    },
+    { timezone: "Asia/Seoul" }
+  );
+
+  console.log("   ✔️  Grok Analysis scheduled (Every Day 10:45 KST)");
 };

@@ -9,7 +9,7 @@ dotenv.config();
 // ==========================================
 const API_KEY = process.env.GEMINI_API_KEY;
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
-const MODEL_NAME = process.env.GEMINI_MODEL_LIGHT || "gemini-2.5-flash";
+const MODEL_NAME = process.env.GEMINI_MODEL_LIGHT || "gemini-3-flash-preview";
 
 const [OWNER, REPO] = (process.env.GITHUB_REPOSITORY || "").split("/");
 const PR_NUMBER = parseInt(process.env.PR_NUMBER || "0", 10);

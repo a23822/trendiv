@@ -17,7 +17,7 @@ const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 const GITHUB_REPOSITORY = process.env.GITHUB_REPOSITORY;
 const GITHUB_PR_NUMBER = process.env.GITHUB_PR_NUMBER;
 
-const MODEL_NAME = process.env.GEMINI_MODEL_LIGHT || "gemini-2.5-flash";
+const MODEL_NAME = process.env.GEMINI_MODEL_LIGHT || "gemini-3-flash-preview";
 
 // 룰 파일 경로 (환경변수로 오버라이드 가능)
 const RULES_FILE_PATH = process.env.AI_REVIEW_RULES_PATH

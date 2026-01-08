@@ -160,6 +160,9 @@ export const runPipeline = async (): Promise<PipelineResult> => {
       // D. 분석 실행
       let analysisResults: AnalysisResult[] = [];
       try {
+        // 주의: analyzer.service 내부에서 X 카테고리는 Gemini가 분석 못하므로 Skip(null) 처리됨
+        // Skip된 항목은 analysisResults에 포함되지 않으므로 DB 업데이트도 안 일어남 -> 계속 RAW 상태 유지 (정상)
+        // 이후 runGrokAnalysis에서 처리됨
         analysisResults = await runAnalysis(cleanData);
       } catch (e) {
         console.error(`      ⚠️ Batch ${loopCount} Analysis Failed:`, e);
@@ -168,27 +171,26 @@ export const runPipeline = async (): Promise<PipelineResult> => {
 
       // E. DB 업데이트 (벌크 처리)
       const ids = analysisResults.map((r) => r.id);
+
+      // 🆕 결과가 없으면(전부 X라서 스킵되었거나 에러) 다음 배치로
+      if (ids.length === 0) {
+        console.log("      ⚠️ 유효한 분석 결과 없음 (X 항목일 수 있음), 스킵");
+        await delay(1000);
+        continue;
+      }
+
       const { data: currentItems } = await supabase
         .from("trend")
         .select("id, analysis_results")
         .in("id", ids);
 
-      // 🆕 DB 조회 실패 시 방어
       if (!currentItems) {
         console.error("      ⚠️ DB 조회 실패, 이번 배치 스킵");
         continue;
       }
 
-      const analyzedUpdates: {
-        id: number;
-        analysis_results: AnalysisEntry[];
-        status: string;
-      }[] = [];
-      const rejectedUpdates: {
-        id: number;
-        analysis_results: AnalysisEntry[];
-        status: string;
-      }[] = [];
+      const analyzedUpdates: any[] = [];
+      const rejectedUpdates: any[] = [];
 
       for (const result of analysisResults) {
         const current = currentItems.find(
@@ -214,16 +216,7 @@ export const runPipeline = async (): Promise<PipelineResult> => {
         );
 
         if (existingIndex !== -1) {
-          const old = existingHistory[existingIndex];
-          const isContentSame =
-            old.score === newAnalysis.score &&
-            old.oneLineSummary === newAnalysis.oneLineSummary &&
-            JSON.stringify(old.keyPoints) ===
-              JSON.stringify(newAnalysis.keyPoints);
-
-          if (!isContentSame) {
-            updatedHistory[existingIndex] = newAnalysis;
-          }
+          updatedHistory[existingIndex] = newAnalysis;
         } else {
           updatedHistory.push(newAnalysis);
         }
@@ -253,7 +246,6 @@ export const runPipeline = async (): Promise<PipelineResult> => {
         }
       }
 
-      // 벌크 업데이트 실행
       if (analyzedUpdates.length > 0) {
         const { error } = await supabase
           .from("trend")
@@ -269,20 +261,16 @@ export const runPipeline = async (): Promise<PipelineResult> => {
           console.error("      ⚠️ Rejected upsert failed:", error.message);
       }
 
-      // F. API 휴식 (Rate Limit 방지)
       console.log("      😴 Waiting 2s for Rate Limit...");
       await delay(BATCH_DELAY_MS);
     }
 
-    // 🆕 maxLoop 도달 경고
     if (loopCount >= MAX_LOOP_COUNT) {
-      console.warn(
-        `      ⚠️ Max loop count (${MAX_LOOP_COUNT}) reached. 강제 종료.`
-      );
+      console.warn(`      ⚠️ Max loop count (${MAX_LOOP_COUNT}) reached.`);
     }
 
     // ---------------------------------------------------------
-    // 5️⃣ 이메일 발송 (모든 배치 결과 합산)
+    // 5️⃣ 이메일 발송
     // ---------------------------------------------------------
     console.log(` 5. 📧 Preparing Email for ${allValidTrends.length} items...`);
 
@@ -320,118 +308,204 @@ export const runPipeline = async (): Promise<PipelineResult> => {
   }
 };
 
-/**
- * 🕵️‍♀️ 심층 분석 (Deep Analysis)
- */
-export const runDeepAnalysis = async (): Promise<void> => {
-  console.log("🚀 [Deep Analysis] Starting daily re-analysis...");
+// ---------------------------------------------------------
+// 1️⃣ Gemini Pro 심층 분석 (Non-X 전용)
+// ---------------------------------------------------------
+export const runGeminiProAnalysis = async (): Promise<void> => {
+  console.log("✨ [Gemini Pro] Starting analysis for Non-X items...");
 
   const supabaseUrl = process.env.SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_KEY;
+  // .env에 GEMINI_MODEL_PRO가 없으면 undefined가 되어 에러 로그 출력됨 (정상)
+  const modelName = process.env.GEMINI_MODEL_PRO;
 
-  // 🆕 환경변수 검증
-  if (!supabaseUrl || !supabaseKey) {
-    console.error("❌ [Deep Analysis] SUPABASE_URL/KEY가 없습니다.");
+  if (!supabaseUrl || !supabaseKey || !modelName) {
+    console.error("❌ [Gemini Pro] 환경변수 누락 (GEMINI_MODEL_PRO 확인 필요)");
     return;
   }
 
   const supabase = createClient(supabaseUrl, supabaseKey);
 
-  const { data: targets } = await supabase
-    .from("trend")
-    .select("*")
-    .eq("status", "ANALYZED")
-    .order("date", { ascending: false })
-    .limit(10);
+  const BATCH_SIZE = 50;
+  const MAX_PAGES = 10;
+  const TARGET_COUNT = 10;
 
-  if (!targets || targets.length === 0) {
-    console.log("   🤷‍♂️ No analyzed items found.");
+  let targets: TrendItem[] = [];
+  let page = 0;
+
+  while (targets.length < TARGET_COUNT && page < MAX_PAGES) {
+    const from = page * BATCH_SIZE;
+    const to = from + BATCH_SIZE - 1;
+
+    const { data: candidates } = await supabase
+      .from("trend")
+      .select("*")
+      .eq("status", "ANALYZED")
+      .neq("category", "X")
+      .order("date", { ascending: false })
+      .range(from, to);
+
+    if (!candidates || candidates.length === 0) break;
+
+    for (const item of candidates) {
+      if (targets.length >= TARGET_COUNT) break;
+
+      const history = (item.analysis_results as AnalysisEntry[]) || [];
+      // ⚠️ 수정: 모델명 완전 일치 비교로 변경 (버전 업 시 재분석 가능하도록)
+      const alreadyAnalyzed = history.some((h) => h.aiModel === modelName);
+
+      if (!alreadyAnalyzed) {
+        targets.push({
+          id: item.id,
+          title: item.title,
+          link: item.link,
+          date: item.date,
+          source: item.source,
+          category: item.category,
+        });
+      }
+    }
+    page++;
+  }
+
+  if (targets.length === 0) {
+    console.log(
+      `   ✅ [Gemini Pro] 최근 ${page * BATCH_SIZE}개 항목 모두 완료.`
+    );
     return;
   }
 
-  console.log(`   🎯 Targets: ${targets.length} items`);
+  console.log(
+    `   🎯 Gemini Pro Targets: ${targets.length} items (Model: ${modelName})`
+  );
 
-  const cleanData: TrendItem[] = targets.map((item) => ({
-    id: item.id,
-    title: item.title,
-    link: item.link,
-    date: item.date,
-    source: item.source,
-    category: item.category,
-  }));
-
-  const xItems = cleanData.filter((item) => item.category === "X");
-  const nonXItems = cleanData.filter((item) => item.category !== "X");
-
-  console.log(`   📊 X: ${xItems.length}, non-X: ${nonXItems.length}`);
-
-  // 1. X 카테고리 → Grok만
-  if (xItems.length > 0 && process.env.GROK_API_KEY) {
-    console.log(`   🦅 Running Grok for X items (${xItems.length})...`);
-    try {
-      const grokResults = await runAnalysis(xItems, { provider: "grok" });
-      await saveAnalysisResults(supabase, grokResults);
-      console.log(`      ✅ Grok (X): ${grokResults.length} done`);
-    } catch (e) {
-      console.error("   ❌ Grok (X) Failed:", e);
-    }
+  try {
+    const results = await runAnalysis(targets, {
+      modelName: modelName,
+      provider: "gemini",
+    });
+    await saveAnalysisResults(supabase, results);
+    console.log(`   ✅ Gemini Pro Done: ${results.length} processed`);
+  } catch (e) {
+    console.error("   ❌ Gemini Pro Failed:", e);
   }
-
-  // 2. non-X → Gemini Pro
-  if (nonXItems.length > 0 && process.env.GEMINI_MODEL_PRO) {
-    console.log(`   ✨ Running Gemini Pro for non-X (${nonXItems.length})...`);
-    try {
-      const proResults = await runAnalysis(nonXItems, {
-        modelName: process.env.GEMINI_MODEL_PRO,
-        provider: "gemini",
-      });
-      await saveAnalysisResults(supabase, proResults);
-      console.log(`      ✅ Gemini Pro: ${proResults.length} done`);
-    } catch (e) {
-      console.error("   ❌ Gemini Pro Failed:", e);
-    }
-    await delay(BATCH_DELAY_MS);
-  }
-
-  // 3. non-X → Grok도 (앙상블)
-  if (nonXItems.length > 0 && process.env.GROK_API_KEY) {
-    console.log(`   🦅 Running Grok for non-X (${nonXItems.length})...`);
-    try {
-      const grokResults = await runAnalysis(nonXItems, {
-        modelName: process.env.GROK_MODEL,
-        provider: "grok",
-      });
-      await saveAnalysisResults(supabase, grokResults);
-      console.log(`      ✅ Grok (non-X): ${grokResults.length} done`);
-    } catch (e) {
-      console.error("   ❌ Grok (non-X) Failed:", e);
-    }
-  }
-
-  console.log("✅ [Deep Analysis] Finished.");
 };
 
-// 💾 결과 저장 헬퍼 함수 (벌크 처리)
+// ---------------------------------------------------------
+// 2️⃣ Grok 심층 분석 (X "RAW" + 모든 "ANALYZED")
+// ---------------------------------------------------------
+export const runGrokAnalysis = async (): Promise<void> => {
+  console.log(
+    "🦅 [Grok Analysis] Starting analysis (X: Raw/Analyzed, Others: Analyzed)..."
+  );
+
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_KEY;
+  const grokKey = process.env.GROK_API_KEY;
+  const modelName = process.env.GROK_MODEL || "grok-4-1-fast-reasoning";
+
+  if (!supabaseUrl || !supabaseKey) {
+    console.error("❌ [Grok] Supabase 환경변수 누락");
+    return;
+  }
+  if (!grokKey) {
+    console.log("   ⚠️ GROK_API_KEY 없음. 분석 스킵.");
+    return;
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseKey);
+
+  const BATCH_SIZE = 50;
+  const MAX_PAGES = 10;
+  const TARGET_COUNT = 10;
+
+  let targets: TrendItem[] = [];
+  let page = 0;
+
+  while (targets.length < TARGET_COUNT && page < MAX_PAGES) {
+    const from = page * BATCH_SIZE;
+    const to = from + BATCH_SIZE - 1;
+
+    // ⚠️ 수정: X 카테고리의 'RAW' 상태인 것도 가져와야 함 (1차 분석 누락 방지)
+    // Supabase 쿼리 한계상 status를 OR로 가져오기보다는, 일단 'ANALYZED'와 'RAW'를 모두 포함해서 가져옴
+    // 그리고 코드 레벨에서 필터링
+    const { data: candidates } = await supabase
+      .from("trend")
+      .select("*")
+      .in("status", ["ANALYZED", "RAW"])
+      .order("date", { ascending: false })
+      .range(from, to);
+
+    if (!candidates || candidates.length === 0) break;
+
+    for (const item of candidates) {
+      if (targets.length >= TARGET_COUNT) break;
+
+      // 필터 로직 강화
+      // 1. X가 아닌데 RAW 상태면 -> 아직 Gemini 1차 분석도 안 된 것 -> Grok 대상 아님 (Skip)
+      if (item.category !== "X" && item.status === "RAW") {
+        continue;
+      }
+      // 2. REJECTED 상태는 쿼리에서 이미 제외됨
+
+      const history = (item.analysis_results as AnalysisEntry[]) || [];
+
+      // ⚠️ 수정: 모델명 완전 일치 비교로 변경 (strict equality)
+      const alreadyAnalyzed = history.some((h) => h.aiModel === modelName);
+
+      if (!alreadyAnalyzed) {
+        targets.push({
+          id: item.id,
+          title: item.title,
+          link: item.link,
+          date: item.date,
+          source: item.source,
+          category: item.category,
+        });
+      }
+    }
+    page++;
+  }
+
+  if (targets.length === 0) {
+    console.log(`   ✅ [Grok] 최근 항목 분석 완료.`);
+    return;
+  }
+
+  console.log(
+    `   🎯 Grok Targets: ${targets.length} items (Model: ${modelName})`
+  );
+
+  try {
+    const results = await runAnalysis(targets, {
+      modelName: modelName,
+      provider: "grok",
+    });
+    await saveAnalysisResults(supabase, results);
+    console.log(`   ✅ Grok Done: ${results.length} processed`);
+  } catch (e) {
+    console.error("   ❌ Grok Failed:", e);
+  }
+};
+
+// 💾 결과 저장 헬퍼 (벌크 처리)
 async function saveAnalysisResults(
   supabase: SupabaseClient,
   results: AnalysisResult[]
 ): Promise<void> {
   if (results.length === 0) return;
 
-  // 1. 한 번에 모든 기존 데이터 조회
   const ids = results.map((r) => r.id);
   const { data: currentItems } = await supabase
     .from("trend")
     .select("id, analysis_results")
     .in("id", ids);
 
-  // 🆕 DB 조회 실패 시 방어
   if (!currentItems) {
     console.error("❌ saveAnalysisResults: DB 조회 실패");
     return;
   }
 
-  // 2. 메모리에서 업데이트 계산
   const updates = results.map((result) => {
     const current = currentItems.find(
       (item: TrendDbItem) => item.id === result.id
@@ -449,17 +523,31 @@ async function saveAnalysisResults(
       analyzedAt: new Date().toISOString(),
     };
 
+    // 1. 히스토리 업데이트 (덮어쓰기 or 추가)
     const idx = history.findIndex((h) => h.aiModel === result.aiModel);
     if (idx >= 0) history[idx] = newEntry;
     else history.push(newEntry);
 
+    // 2. ⚠️ 상태 결정 로직 수정 (하나라도 0점보다 크면 ANALYZED 유지)
+    // - 기존: 이번 결과가 0이면 무조건 REJECTED
+    // - 수정: 전체 히스토리 중 긍정 평가가 하나라도 있으면 ANALYZED
+    const hasPositiveReview = history.some((h) => h.score > 0);
+    const newStatus = hasPositiveReview ? "ANALYZED" : "REJECTED";
+
+    // 로그 (상태가 REJECTED로 확정되는 경우만 출력)
+    if (!hasPositiveReview) {
+      console.log(
+        `      🗑️ [Deep Analysis] 모든 모델이 0점 부여 -> REJECTED (ID: ${result.id})`
+      );
+    }
+
     return {
       id: result.id,
       analysis_results: history,
+      status: newStatus,
     };
   });
 
-  // 3. 한 번에 벌크 업데이트
   const { error } = await supabase
     .from("trend")
     .upsert(updates, { onConflict: "id" });

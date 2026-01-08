@@ -10,9 +10,9 @@ export class GrokService {
   private apiKey: string;
   private model: string;
 
-  constructor(apiKey: string) {
+  constructor(apiKey: string, modelName?: string) {
     this.apiKey = apiKey;
-    this.model = CONFIG.grok.defaultModel;
+    this.model = modelName || CONFIG.grok.defaultModel;
   }
 
   /**
@@ -155,7 +155,7 @@ export class GrokService {
 [분석 대상]
 - 제목: ${trend.title}
 - 링크: ${trend.link}
-- 출처: $$ {trend.source} ( $${trend.category})
+- 출처: ${trend.source} (${trend.category})
 `;
 
     if (trend.link.includes('x.com/') && !trend.link.includes('/status/')) {
