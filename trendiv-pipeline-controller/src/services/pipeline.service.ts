@@ -484,7 +484,7 @@ export const runGrokAnalysis = async (): Promise<void> => {
   }
 };
 
-// 💾 결과 저장 헬퍼 (벌크 처리 -> 개별 Update로 변경)
+// 💾 결과 저장 헬퍼 (품질 관리를 위해 하나라도 0점이면 REJECTED 처리)
 async function saveAnalysisResults(
   supabase: SupabaseClient,
   results: AnalysisResult[]
@@ -531,13 +531,19 @@ async function saveAnalysisResults(
     if (idx >= 0) history[idx] = newEntry;
     else history.push(newEntry);
 
-    // 2. 상태 결정 (히스토리 중 하나라도 0점 초과면 ANALYZED)
-    const hasPositiveReview = history.some((h) => h.score > 0);
-    const newStatus = hasPositiveReview ? "ANALYZED" : "REJECTED";
+    // ---------------------------------------------------------
+    // 2. 상태 결정 로직 수정 [요청 반영]
+    // ---------------------------------------------------------
+    // 기존: 하나라도 0점 초과면 ANALYZED (some)
+    // 수정: 모든 모델의 분석 결과가 0점보다 커야만 ANALYZED (every)
+    // 즉, 하나라도 0점이 포함되어 있다면 REJECTED가 됩니다.
+    const isHighQuality = history.every((h) => h.score > 0);
+    const newStatus = isHighQuality ? "ANALYZED" : "REJECTED";
 
-    if (!hasPositiveReview) {
+    if (!isHighQuality) {
+      const zeroModel = history.find((h) => h.score === 0)?.aiModel;
       console.log(
-        `      🗑️ [Deep Analysis] 모든 모델이 0점 부여 -> REJECTED (ID: ${result.id})`
+        `      🗑️ [Quality Control] 모델(${zeroModel})이 0점을 부여하여 REJECTED 처리 (ID: ${result.id})`
       );
     }
 
@@ -547,12 +553,12 @@ async function saveAnalysisResults(
       status: newStatus,
     };
 
-    // 🆕 [중요] 1차 분석(runPipeline) 등에서 본문(content)이 넘어왔다면 같이 저장
+    // 🆕 1차 분석 등에서 본문(content)이 넘어왔다면 같이 저장
     if (result.content) {
       updateData.content = result.content;
     }
 
-    // 4. 개별 Update 실행 (기존 title, link 등은 건드리지 않음)
+    // 4. 개별 Update 실행
     const { error } = await supabase
       .from("trend")
       .update(updateData)
