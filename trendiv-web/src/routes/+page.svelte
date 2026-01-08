@@ -198,15 +198,33 @@
 
 	// masonry 배열 (브레이크포인트 기반)
 	const masonryColumns = $derived.by(() => {
-		if (innerWidth < 640) {
-			return [trends];
-		} else {
-			const cols: Trend[][] = [[], []];
-			trends.forEach((trend, i) => {
-				cols[i % 2].push(trend);
-			});
-			return cols;
-		}
+		if (innerWidth < 640) return [trends];
+
+		const cols: Trend[][] = [[], []];
+		const heights = [0, 0];
+
+		trends.forEach((trend) => {
+			const shorter = heights[0] <= heights[1] ? 0 : 1;
+			cols[shorter].push(trend);
+
+			// 높이 추정
+			const analysis = trend.analysis_results?.length
+				? trend.analysis_results[trend.analysis_results.length - 1]
+				: null;
+
+			const titleLen = (analysis?.title_ko || trend.title || '').length;
+			const summaryLen = (analysis?.oneLineSummary || '').length;
+			const tagCount = analysis?.tags?.length ?? 0;
+
+			// 기본 높이 + 제목(2줄 제한) + 요약(3줄 제한) + 태그 줄 수
+			heights[shorter] +=
+				150 +
+				Math.min(titleLen, 60) +
+				Math.min(summaryLen, 120) +
+				tagCount * 10;
+		});
+
+		return cols;
 	});
 </script>
 
