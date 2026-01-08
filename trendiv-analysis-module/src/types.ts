@@ -11,6 +11,7 @@ export interface AnalysisResult {
   keyPoints: string[];
   tags: string[];
   analyzedAt: string;
+  content?: string;
 }
 
 export interface Trend {
@@ -21,6 +22,7 @@ export interface Trend {
   source: string;
   category: string;
   analysis_results?: AnalysisResult[];
+  content?: string;
 }
 
 export interface PipelineResult extends AnalysisResult {

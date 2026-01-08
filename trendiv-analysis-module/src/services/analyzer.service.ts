@@ -5,7 +5,6 @@
 
 import { Browser } from 'playwright';
 import { AnalysisResult, Trend } from '../types';
-import { AnalysisError } from '../utils/errors';
 import { ContentService } from './content.service';
 import { BrowserService } from './browser.service';
 import { GeminiService } from './gemini.service';
@@ -30,7 +29,6 @@ export class AnalyzerService {
     this.grokService = grokService || null;
   }
 
-  // Provider 강제 설정 메서드
   setForceProvider(provider: 'gemini' | 'grok') {
     this.forceProvider = provider;
   }
@@ -41,28 +39,56 @@ export class AnalyzerService {
   async analyzeTrend(trend: Trend): Promise<AnalysisResult | null> {
     const isXCategory = trend.category === 'X';
 
-    // 1. Grok을 써야 하는 경우
-    //    - 강제로 Grok 모드이거나
-    //    - 자동(Auto) 모드인데 카테고리가 X인 경우
     const shouldUseGrok =
       this.forceProvider === 'grok' || (!this.forceProvider && isXCategory);
 
-    // 2. Gemini를 써야 하는 경우
-    //    - 강제로 Gemini 모드이거나
-    //    - 자동(Auto) 모드인데 카테고리가 X가 아닌 경우
-    const shouldUseGemini =
-      this.forceProvider === 'gemini' || (!this.forceProvider && !isXCategory);
+    // ---------------------------------------------------------
+    // 콘텐츠 확보 전략 (Fallback to DB)
+    // ---------------------------------------------------------
 
-    // 🛑 [방어 로직] X 카테고리는 Gemini가 분석 불가 (Grok 없으면 스킵)
-    if (isXCategory && shouldUseGemini) {
-      console.warn(
-        `      🚫 Skipping: X (Twitter) items cannot be analyzed by Gemini.`,
+    let fetchedContent = '';
+    let fetchedScreenshot: string | null = null;
+    let isUsedStoredContent = false;
+
+    // 1. 라이브 스크래핑 시도 (X 카테고리 제외)
+    if (!isXCategory) {
+      try {
+        console.log(
+          `      Trying live fetch for: ${trend.title.substring(0, 20)}...`,
+        );
+
+        const { content, screenshot } =
+          await this.contentService.fetchContentWithScreenshot(
+            trend.link,
+            trend.title,
+          );
+
+        // content 객체에서 실제 텍스트(.content)만 추출
+        fetchedContent = content?.content || '';
+
+        fetchedScreenshot = screenshot || null;
+      } catch (e) {
+        console.warn(`      ⚠️ Live fetch failed, checking DB content...`);
+      }
+    }
+
+    // 2. [Fallback] 라이브 콘텐츠가 부실하면 DB에 저장된 본문 사용
+    const MIN_LIVE_LENGTH = 100;
+
+    if (
+      fetchedContent.length < MIN_LIVE_LENGTH &&
+      trend.content &&
+      trend.content.length > fetchedContent.length
+    ) {
+      console.log(
+        `      ♻️ Live content insufficient (${fetchedContent.length} chars). Using STORED content (${trend.content.length} chars).`,
       );
-      return null;
+      fetchedContent = trend.content;
+      isUsedStoredContent = true;
     }
 
     // ---------------------------------------------------------
-    // 🚀 [실행 로직]
+    // 🚀 [분석 실행] 확보한 fetchedContent 사용
     // ---------------------------------------------------------
 
     // A. Grok 실행
@@ -72,29 +98,23 @@ export class AnalyzerService {
         return null;
       }
       try {
-        // 🆕 X가 아닌 경우 → 콘텐츠 스크래핑 후 분석
         if (!isXCategory) {
           console.log(`      🦅 Using Grok API (with content)...`);
 
-          const fetchResult = await this.contentService.fetchContent(
-            trend.link,
-            trend.title,
-          );
-
-          const content = fetchResult?.content || '';
           const analysis = await this.grokService.analyzeWithContent(
             trend,
-            content,
+            fetchedContent,
           );
 
           return {
             ...analysis,
             aiModel: this.grokService.getModelName(),
             analyzedAt: new Date().toISOString(),
+            content: isUsedStoredContent ? undefined : fetchedContent,
           };
         }
 
-        // X 카테고리 → 기존대로 title만
+        // X 카테고리
         console.log(`      🦅 Using Grok API (X post)...`);
         const analysis = await this.grokService.analyze(trend);
         return {
@@ -103,47 +123,40 @@ export class AnalyzerService {
           analyzedAt: new Date().toISOString(),
         };
       } catch (error) {
-        console.error(`❌ Grok analysis failed for "${trend.title}":`, error);
+        console.error(`❌ Grok analysis failed:`, error);
         return null;
       }
     }
 
-    // B. Gemini 실행 (기존 로직)
-    // X 카테고리가 아닌 경우
+    // B. Gemini 실행
     try {
-      // 🆕 한 번에 텍스트 + 스크린샷 가져오기
-      const { content: fetchResult, screenshot } =
-        await this.contentService.fetchContentWithScreenshot(
-          trend.link,
-          trend.title,
-        );
-      // 기본은 200자지만, YouTube거나 자막이 없어서 설명만 있는 경우 20자만 넘어도 분석 시도
-      const minLength =
-        trend.source && trend.source.toLowerCase().includes('youtube')
-          ? 20
-          : 200;
-      // 1️⃣ 텍스트가 충분하면 텍스트 모드
-      if (fetchResult && fetchResult.content.length > minLength) {
+      // 1️⃣ 텍스트 모드
+      const isYoutube =
+        trend.source && trend.source.toLowerCase().includes('youtube');
+      const minLength = isYoutube ? 20 : 200;
+
+      if (fetchedContent.length > minLength) {
         console.log(`      📝 Using Gemini (Text Mode)...`);
         const prompt = this.geminiService.buildPrompt(
           trend.title,
           trend.source,
           trend.category,
-          fetchResult.content,
+          fetchedContent,
         );
         const analysis = await this.geminiService.analyze(prompt);
         return {
           ...analysis,
           aiModel: this.geminiService.getModelName(),
           analyzedAt: new Date().toISOString(),
+          content: isUsedStoredContent ? undefined : fetchedContent,
         };
       }
 
-      // 2️⃣ 텍스트 부족하면 스크린샷 모드 (이미 가져온 스크린샷 사용)
-      if (screenshot) {
+      // 2️⃣ 스크린샷 모드
+      if (fetchedScreenshot) {
         console.log(`      📸 Using Gemini (Vision Mode)...`);
         const analysis = await this.geminiService.analyzeImage(
-          screenshot,
+          fetchedScreenshot,
           trend.title,
           trend.category,
         );
@@ -157,7 +170,7 @@ export class AnalyzerService {
       console.log(`      ⚠️ No content or screenshot available`);
       return null;
     } catch (error) {
-      console.error(`❌ Analysis failed for "${trend.title}":`, error);
+      console.error(`❌ Gemini analysis failed:`, error);
       return null;
     }
   }

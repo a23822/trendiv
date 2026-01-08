@@ -17,6 +17,7 @@ export interface Trend {
 	source: string;
 	category: string;
 	analysis_results?: AnalysisResult[];
+	content?: string;
 }
 
 export interface Bookmark {
