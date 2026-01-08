@@ -17,7 +17,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // 🛡️ Cloudflare/Load Balancer 환경 프록시 신뢰 설정
-app.set("trust proxy", true);
+app.set("trust proxy", 1);
 
 // Supabase 설정
 const supabaseUrl = process.env.SUPABASE_URL;
