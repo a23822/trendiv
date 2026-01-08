@@ -17,6 +17,7 @@ interface TrendItem {
   date: string;
   source: string;
   category: string;
+  content?: string; // 👈 [수정 1] 심층 분석 때 넘겨줄 본문 필드 추가
 }
 
 interface AnalysisEntry {
@@ -32,6 +33,7 @@ interface AnalysisEntry {
 
 interface AnalysisResult extends AnalysisEntry {
   id: number;
+  content?: string;
 }
 
 interface TrendDbItem {
@@ -155,15 +157,16 @@ export const runPipeline = async (): Promise<PipelineResult> => {
         date: item.date,
         source: item.source,
         category: item.category || "Uncategorized",
+        content: item.content,
       }));
 
       // D. 분석 실행
       let analysisResults: AnalysisResult[] = [];
       try {
         // 주의: analyzer.service 내부에서 X 카테고리는 Gemini가 분석 못하므로 Skip(null) 처리됨
-        // Skip된 항목은 analysisResults에 포함되지 않으므로 DB 업데이트도 안 일어남 -> 계속 RAW 상태 유지 (정상)
-        // 이후 runGrokAnalysis에서 처리됨
-        analysisResults = await runAnalysis(cleanData);
+        analysisResults = (await runAnalysis(
+          cleanData
+        )) as unknown as AnalysisResult[];
       } catch (e) {
         console.error(`      ⚠️ Batch ${loopCount} Analysis Failed:`, e);
         continue;
@@ -226,6 +229,7 @@ export const runPipeline = async (): Promise<PipelineResult> => {
             id: result.id,
             analysis_results: updatedHistory,
             status: "ANALYZED",
+            content: result.content, // ✅ 정상: 1차 분석 결과를 저장
           });
           const originalItem = cleanData.find((item) => item.id === result.id);
           allValidTrends.push({
@@ -316,7 +320,6 @@ export const runGeminiProAnalysis = async (): Promise<void> => {
 
   const supabaseUrl = process.env.SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_KEY;
-  // .env에 GEMINI_MODEL_PRO가 없으면 undefined가 되어 에러 로그 출력됨 (정상)
   const modelName = process.env.GEMINI_MODEL_PRO;
 
   if (!supabaseUrl || !supabaseKey || !modelName) {
@@ -351,7 +354,6 @@ export const runGeminiProAnalysis = async (): Promise<void> => {
       if (targets.length >= TARGET_COUNT) break;
 
       const history = (item.analysis_results as AnalysisEntry[]) || [];
-      // ⚠️ 수정: 모델명 완전 일치 비교로 변경 (버전 업 시 재분석 가능하도록)
       const alreadyAnalyzed = history.some((h) => h.aiModel === modelName);
 
       if (!alreadyAnalyzed) {
@@ -362,6 +364,7 @@ export const runGeminiProAnalysis = async (): Promise<void> => {
           date: item.date,
           source: item.source,
           category: item.category,
+          content: item.content, // 👈 [수정 2] DB에 저장된 본문이 있으면 전달
         });
       }
     }
@@ -426,9 +429,6 @@ export const runGrokAnalysis = async (): Promise<void> => {
     const from = page * BATCH_SIZE;
     const to = from + BATCH_SIZE - 1;
 
-    // ⚠️ 수정: X 카테고리의 'RAW' 상태인 것도 가져와야 함 (1차 분석 누락 방지)
-    // Supabase 쿼리 한계상 status를 OR로 가져오기보다는, 일단 'ANALYZED'와 'RAW'를 모두 포함해서 가져옴
-    // 그리고 코드 레벨에서 필터링
     const { data: candidates } = await supabase
       .from("trend")
       .select("*")
@@ -441,16 +441,11 @@ export const runGrokAnalysis = async (): Promise<void> => {
     for (const item of candidates) {
       if (targets.length >= TARGET_COUNT) break;
 
-      // 필터 로직 강화
-      // 1. X가 아닌데 RAW 상태면 -> 아직 Gemini 1차 분석도 안 된 것 -> Grok 대상 아님 (Skip)
       if (item.category !== "X" && item.status === "RAW") {
         continue;
       }
-      // 2. REJECTED 상태는 쿼리에서 이미 제외됨
 
       const history = (item.analysis_results as AnalysisEntry[]) || [];
-
-      // ⚠️ 수정: 모델명 완전 일치 비교로 변경 (strict equality)
       const alreadyAnalyzed = history.some((h) => h.aiModel === modelName);
 
       if (!alreadyAnalyzed) {
@@ -461,6 +456,7 @@ export const runGrokAnalysis = async (): Promise<void> => {
           date: item.date,
           source: item.source,
           category: item.category,
+          content: item.content, // 👈 [수정 3] DB에 저장된 본문이 있으면 전달
         });
       }
     }
@@ -488,7 +484,7 @@ export const runGrokAnalysis = async (): Promise<void> => {
   }
 };
 
-// 💾 결과 저장 헬퍼 (벌크 처리)
+// 💾 결과 저장 헬퍼 (벌크 처리 -> 개별 Update로 변경)
 async function saveAnalysisResults(
   supabase: SupabaseClient,
   results: AnalysisResult[]
@@ -496,6 +492,7 @@ async function saveAnalysisResults(
   if (results.length === 0) return;
 
   const ids = results.map((r) => r.id);
+  // 현재 DB에 있는 상태를 조회 (history 병합을 위해)
   const { data: currentItems } = await supabase
     .from("trend")
     .select("id, analysis_results")
@@ -506,10 +503,16 @@ async function saveAnalysisResults(
     return;
   }
 
-  const updates = results.map((result) => {
+  let successCount = 0;
+  let failCount = 0;
+
+  console.log(`      💾 Saving results for ${results.length} items...`);
+
+  for (const result of results) {
     const current = currentItems.find(
       (item: TrendDbItem) => item.id === result.id
     );
+    // 기존 히스토리가 없으면 빈 배열
     const history: AnalysisEntry[] = current?.analysis_results || [];
 
     const newEntry: AnalysisEntry = {
@@ -523,34 +526,48 @@ async function saveAnalysisResults(
       analyzedAt: new Date().toISOString(),
     };
 
-    // 1. 히스토리 업데이트 (덮어쓰기 or 추가)
+    // 1. 히스토리 업데이트 (같은 모델이면 덮어쓰기, 아니면 추가)
     const idx = history.findIndex((h) => h.aiModel === result.aiModel);
     if (idx >= 0) history[idx] = newEntry;
     else history.push(newEntry);
 
-    // 2. ⚠️ 상태 결정 로직 수정 (하나라도 0점보다 크면 ANALYZED 유지)
-    // - 기존: 이번 결과가 0이면 무조건 REJECTED
-    // - 수정: 전체 히스토리 중 긍정 평가가 하나라도 있으면 ANALYZED
+    // 2. 상태 결정 (히스토리 중 하나라도 0점 초과면 ANALYZED)
     const hasPositiveReview = history.some((h) => h.score > 0);
     const newStatus = hasPositiveReview ? "ANALYZED" : "REJECTED";
 
-    // 로그 (상태가 REJECTED로 확정되는 경우만 출력)
     if (!hasPositiveReview) {
       console.log(
         `      🗑️ [Deep Analysis] 모든 모델이 0점 부여 -> REJECTED (ID: ${result.id})`
       );
     }
 
-    return {
-      id: result.id,
+    // 3. 업데이트할 데이터 준비
+    const updateData: any = {
       analysis_results: history,
       status: newStatus,
     };
-  });
 
-  const { error } = await supabase
-    .from("trend")
-    .upsert(updates, { onConflict: "id" });
+    // 🆕 [중요] 1차 분석(runPipeline) 등에서 본문(content)이 넘어왔다면 같이 저장
+    if (result.content) {
+      updateData.content = result.content;
+    }
 
-  if (error) console.error("❌ Bulk update failed:", error.message);
+    // 4. 개별 Update 실행 (기존 title, link 등은 건드리지 않음)
+    const { error } = await supabase
+      .from("trend")
+      .update(updateData)
+      .eq("id", result.id);
+
+    if (error) {
+      console.error(
+        `      ❌ Update failed for ID ${result.id}:`,
+        error.message
+      );
+      failCount++;
+    } else {
+      successCount++;
+    }
+  }
+
+  console.log(`      ✅ Saved: ${successCount} success, ${failCount} failed`);
 }
