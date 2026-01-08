@@ -157,6 +157,7 @@ export const runPipeline = async (): Promise<PipelineResult> => {
         date: item.date,
         source: item.source,
         category: item.category || "Uncategorized",
+        content: item.content,
       }));
 
       // D. 분석 실행
