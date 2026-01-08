@@ -110,7 +110,9 @@
 				category={displayCategory}
 			/>
 			<!-- max-width 값 설정 금지 -->
-			<strong class="truncate">{displayCategory}</strong>
+			{#if displayCategory !== 'X'}
+				<strong class="truncate">{displayCategory}</strong>
+			{/if}
 			<span class="shrink-0">{displayDate}</span>
 		</div>
 	</div>

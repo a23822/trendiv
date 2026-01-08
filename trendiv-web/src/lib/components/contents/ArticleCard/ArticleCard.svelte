@@ -124,11 +124,13 @@
 					category={displayCategory}
 				/>
 			</div>
-			<strong
-				class="truncate font-semibold tracking-tight text-(--color-gray-800)"
-			>
-				{displayCategory}
-			</strong>
+			{#if displayCategory !== 'X'}
+				<strong
+					class="truncate font-semibold tracking-tight text-(--color-gray-800)"
+				>
+					{displayCategory}
+				</strong>
+			{/if}
 			<span class="h-0.5 w-0.5 shrink-0 rounded-full bg-(--color-gray-400)"
 			></span>
 			<span class="shrink-0 tracking-tight text-(--color-gray-500)"
