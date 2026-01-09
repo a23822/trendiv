@@ -7,7 +7,7 @@
 	import IconRefresh from '$lib/icons/icon_refresh.svelte';
 	import IconTag from '$lib/icons/icon_tag.svelte';
 	import { cn } from '$lib/utils/ClassMerge';
-	import { tick } from 'svelte';
+	import { tick, onDestroy } from 'svelte';
 
 	interface Props {
 		tags?: string[];
@@ -54,12 +54,34 @@
 		'hidden'
 	);
 
+	// 타이머 관리 (메모리 누수 방지)
+	let activeTimers = new Set<ReturnType<typeof setTimeout>>();
+
+	// 애니메이션 중인 태그 추적 (빠른 클릭 방지)
+	let animatingTags = new Set<string>();
+
+	// 안전한 setTimeout (자동 정리)
+	function safeTimeout(
+		callback: () => void,
+		delay: number
+	): ReturnType<typeof setTimeout> {
+		const id = setTimeout(() => {
+			activeTimers.delete(id);
+			callback();
+		}, delay);
+		activeTimers.add(id);
+		return id;
+	}
+
+	// 컴포넌트 언마운트 시 모든 타이머 정리
+	onDestroy(() => {
+		activeTimers.forEach((id) => clearTimeout(id));
+		activeTimers.clear();
+	});
+
 	$effect(() => {
-		if (
-			!isInitialized && // 변경
-			tags.length > 0
-		) {
-			isInitialized = true; // 추가
+		if (!isInitialized && tags.length > 0) {
+			isInitialized = true;
 
 			internalSelectedTags = [...selectedTags];
 
@@ -94,6 +116,10 @@
 	}
 
 	async function selectTag(tag: string) {
+		// 이미 애니메이션 중이면 무시
+		if (animatingTags.has(tag)) return;
+		animatingTags.add(tag);
+
 		const isFirstTag =
 			animatedSelectedTags.length === 0 ||
 			animatedSelectedTags.every((t) => t.is_hiding);
@@ -118,7 +144,8 @@
 			);
 		});
 
-		setTimeout(() => {
+		// safeTimeout 사용
+		safeTimeout(() => {
 			internalSelectedTags = [...internalSelectedTags, tag];
 			animatedSelectedTags = animatedSelectedTags.map((t) =>
 				t.name === tag ? { ...t, is_showing: false } : t
@@ -126,11 +153,16 @@
 			animatedUnselectedTags = animatedUnselectedTags.filter(
 				(t) => t.name !== tag
 			);
+			animatingTags.delete(tag); // 애니메이션 완료
 			onchange?.(internalSelectedTags);
 		}, ANIMATION_DURATION);
 	}
 
 	async function unselectTag(tag: string) {
+		// 이미 애니메이션 중이면 무시
+		if (animatingTags.has(tag)) return;
+		animatingTags.add(tag);
+
 		const isLastTag =
 			animatedSelectedTags.filter((t) => !t.is_hiding).length === 1;
 
@@ -154,12 +186,14 @@
 			);
 		});
 
-		setTimeout(() => {
+		// safeTimeout 사용
+		safeTimeout(() => {
 			internalSelectedTags = internalSelectedTags.filter((t) => t !== tag);
 			animatedUnselectedTags = animatedUnselectedTags.map((t) =>
 				t.name === tag ? { ...t, is_showing: false } : t
 			);
 			animatedSelectedTags = animatedSelectedTags.filter((t) => t.name !== tag);
+			animatingTags.delete(tag); // 애니메이션 완료
 			onchange?.(internalSelectedTags);
 
 			if (isLastTag) {
@@ -168,8 +202,15 @@
 		}, ANIMATION_DURATION);
 	}
 
+	// 리셋 중 플래그
+	let isResetting = $state(false);
+
 	async function resetAll() {
-		const currentSelectedNames = selectedTags.slice();
+		// 이미 리셋 중이면 무시
+		if (isResetting) return;
+		isResetting = true;
+
+		const currentSelectedNames = internalSelectedTags.slice(); // internalSelectedTags 사용
 
 		containerState = 'hiding';
 
@@ -197,13 +238,16 @@
 			);
 		});
 
-		setTimeout(() => {
+		// safeTimeout 사용
+		safeTimeout(() => {
 			internalSelectedTags = [];
 			animatedSelectedTags = [];
 			animatedUnselectedTags = animatedUnselectedTags.map((t) => ({
 				...t,
 				is_showing: false
 			}));
+			animatingTags.clear(); // 모든 애니메이션 상태 초기화
+			isResetting = false; // 리셋 완료
 			onchange?.(internalSelectedTags);
 
 			containerState = 'hidden';
@@ -211,6 +255,7 @@
 	}
 </script>
 
+<!-- 템플릿은 동일 -->
 <section
 	class={cn(
 		CommonStyles.CARD,
