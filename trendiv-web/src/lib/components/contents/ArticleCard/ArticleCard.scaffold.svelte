@@ -110,7 +110,9 @@
 				category={displayCategory}
 			/>
 			<!-- max-width 값 설정 금지 -->
-			<strong class="truncate">{displayCategory}</strong>
+			{#if displayCategory !== 'X'}
+				<strong class="truncate">{displayCategory}</strong>
+			{/if}
 			<span class="shrink-0">{displayDate}</span>
 		</div>
 	</div>
@@ -124,7 +126,7 @@
 		<!-- tagGroup -->
 		<div>
 			<!-- 태그는 모두 보여줄 것 -->
-			{#each displayTags as tag}
+			{#each displayTags as tag (tag)}
 				<span>{tag}</span>
 			{/each}
 		</div>

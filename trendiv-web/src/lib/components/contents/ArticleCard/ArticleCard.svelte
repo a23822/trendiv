@@ -124,11 +124,13 @@
 					category={displayCategory}
 				/>
 			</div>
-			<strong
-				class="truncate font-semibold tracking-tight text-(--color-gray-800)"
-			>
-				{displayCategory}
-			</strong>
+			{#if displayCategory !== 'X'}
+				<strong
+					class="truncate font-semibold tracking-tight text-(--color-gray-800)"
+				>
+					{displayCategory}
+				</strong>
+			{/if}
 			<span class="h-0.5 w-0.5 shrink-0 rounded-full bg-(--color-gray-400)"
 			></span>
 			<span class="shrink-0 tracking-tight text-(--color-gray-500)"
@@ -155,7 +157,7 @@
 	<div class="relative z-10 mt-auto flex flex-col gap-4">
 		<!-- tagGroup -->
 		<div class="flex flex-wrap gap-1.5">
-			{#each displayTags as tag}
+			{#each displayTags as tag (tag)}
 				<KeywordTag {tag} />
 			{/each}
 		</div>

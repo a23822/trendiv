@@ -34,6 +34,8 @@ if (!PIPELINE_API_KEY) {
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
+let isPipelineRunning = false;
+
 // 🛠️ 쿼리 파라미터 안전 파싱 (배열 방지)
 const parseStringQuery = (query: unknown): string => {
   if (Array.isArray(query)) return String(query[0] || "").trim();
@@ -123,6 +125,7 @@ if (process.env.BATCH_MODE === "true") {
     generalLimiter,
     async (req: Request, res: Response) => {
       try {
+        // 1. 파라미터 파싱 (기본적인 페이지, limit 등)
         const page = Math.max(
           1,
           parseInt(parseStringQuery(req.query.page)) || 1
@@ -132,77 +135,63 @@ if (process.env.BATCH_MODE === "true") {
           Math.max(1, parseInt(parseStringQuery(req.query.limit)) || 20)
         );
 
-        const searchKeyword = parseStringQuery(req.query.searchKeyword);
-        const tagFilter = parseStringQuery(req.query.tagFilter);
+        // 검색어, 날짜 필터 파싱
+        const searchKeyword = parseStringQuery(req.query.searchKeyword) || null;
+        const startDate = parseStringQuery(req.query.startDate) || null;
+        const endDate = parseStringQuery(req.query.endDate) || null;
 
-        const from = (page - 1) * limit;
+        const categoryStr = parseStringQuery(req.query.category);
+        const categories = categoryStr
+          ? categoryStr
+              .split(",")
+              .map((c) => c.trim())
+              .filter(Boolean)
+          : null;
 
-        // 태그 파싱
-        const tags = tagFilter
-          .split(",")
-          .map((t) => t.trim())
-          .filter((t) => t);
+        const tagFilterStr = parseStringQuery(req.query.tagFilter);
+        const tags = tagFilterStr
+          ? tagFilterStr
+              .split(",")
+              .map((t) => t.trim())
+              .filter(Boolean)
+          : null;
 
-        let data: any[] = [];
-        let count: number | null = 0;
+        const sortBy = parseStringQuery(req.query.sortBy) || "latest"; // 'latest', 'score', 'old'
+        const minScore = parseInt(parseStringQuery(req.query.minScore)) || 0;
 
-        if (tags.length > 0) {
-          // ✅ 태그 필터 있으면 RPC 사용
-          const { data: rpcData, error } = await supabase.rpc(
-            "search_trends_by_tags",
-            {
-              tag_names: tags,
-              search_keyword: searchKeyword,
-              page_limit: limit,
-              page_offset: from,
-            }
-          );
-
-          if (error) throw error;
-
-          // ✅ total_count는 각 row에 포함되어 있음
-          if (rpcData && rpcData.length > 0) {
-            count = rpcData[0].total_count;
-            // total_count 필드 제거 후 반환
-            data = rpcData.map(({ total_count, ...rest }: any) => rest);
-          } else {
-            data = [];
-            count = 0;
+        // 2. 통합 RPC 함수 호출
+        const { data: rpcData, error } = await supabase.rpc(
+          "search_trends_by_filter",
+          {
+            p_search_keyword: searchKeyword,
+            p_categories: categories, // 배열로 전달
+            p_tags: tags && tags.length > 0 ? tags : null, // 빈 배열이면 null 처리
+            p_start_date: startDate,
+            p_end_date: endDate,
+            p_min_score: minScore, // 점수 필터
+            p_sort_by: sortBy, // 정렬 기준
+            p_page: page,
+            p_limit: limit,
           }
-        } else {
-          // 기존 로직 유지
-          let query = supabase
-            .from("trend")
-            .select(
-              "id, title, link, date, source, analysis_results, category",
-              { count: "exact" }
-            )
-            .eq("status", "ANALYZED")
-            .order("date", { ascending: false });
+        );
 
-          if (searchKeyword) {
-            query = query.ilike("title", `%${searchKeyword}%`);
-          }
+        if (error) throw error;
 
-          const {
-            data: queryData,
-            error,
-            count: totalCount,
-          } = await query.range(from, from + limit - 1);
+        // 3. 데이터 가공 (total_count 분리)
+        let trends = [];
+        let totalCount = 0;
 
-          if (error) {
-            if (page > 1) {
-              return res
-                .status(200)
-                .json({ success: true, data: [], page, total: 0 });
-            }
-            throw error;
-          }
-          data = queryData || [];
-          count = totalCount;
+        if (rpcData && rpcData.length > 0) {
+          // RPC 결과의 첫 번째 row에 전체 개수가 포함되어 있음
+          totalCount = rpcData[0].total_count;
+
+          // 클라이언트에게 줄 때는 total_count 필드를 제거하고 데이터만 줌
+          trends = rpcData.map(({ total_count, ...rest }: any) => rest);
         }
 
-        res.status(200).json({ success: true, data, page, total: count });
+        res
+          .status(200)
+          .json({ success: true, data: trends, page, total: totalCount });
       } catch (error: unknown) {
         console.error("❌ 트렌드 조회 실패:", error);
         const message = error instanceof Error ? error.message : String(error);
@@ -216,6 +205,12 @@ if (process.env.BATCH_MODE === "true") {
     "/api/pipeline/run",
     adminLimiter,
     async (req: Request, res: Response) => {
+      // 중복 실행 방지 체크
+      if (isPipelineRunning) {
+        console.warn("⚠️ 파이프라인이 이미 실행 중입니다.");
+        return res.status(429).json({ error: "Pipeline is already running" });
+      }
+
       // ✅ 헤더 값 안전 추출
       const clientKey =
         getHeaderValue(req.headers["x-api-key"]) ||
@@ -231,7 +226,17 @@ if (process.env.BATCH_MODE === "true") {
         return res.status(401).json({ error: "Unauthorized" });
       }
 
+      // 즉시 응답 반환 (Timeout 방지)
+      res.status(202).json({
+        success: true,
+        message: "Pipeline triggered successfully. Running in background.",
+        jobId: Date.now(),
+      });
+
       console.log("👆 [Manual] 실행 요청됨 (동기 실행 모드)");
+
+      console.log("👆 [Manual] 실행 시작 (Background)");
+      isPipelineRunning = true;
 
       try {
         const result = await runPipeline();
@@ -245,6 +250,9 @@ if (process.env.BATCH_MODE === "true") {
         res
           .status(500)
           .json({ error: "Pipeline execution failed", details: String(err) });
+      } finally {
+        isPipelineRunning = false;
+        console.log("🏁 [Background] 실행 종료 (Lock 해제)");
       }
     }
   );
