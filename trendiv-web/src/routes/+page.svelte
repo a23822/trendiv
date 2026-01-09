@@ -52,12 +52,10 @@
 		}, 150);
 	}
 
-	let initialized = false;
-
+	// data 변경 감지 (soft navigation 대응)
 	$effect(() => {
-		if (!initialized && data.trends) {
+		if (data.trends) {
 			trends = data.trends;
-			initialized = true;
 		}
 	});
 
@@ -117,6 +115,9 @@
 	let lastProcessedCount = $state(0);
 	let lastColumnCount = $state(2);
 
+	// columnCount를 $derived로 분리 (1px 변경마다 재계산 방지)
+	const columnCount = $derived(innerWidth < 640 ? 1 : 2);
+
 	function estimateHeight(trend: Trend): number {
 		const analysis = trend.represent_result ?? null;
 
@@ -136,20 +137,18 @@
 	}
 
 	$effect(() => {
-		// 1. 감지할 의존성 명시 (trends나 innerWidth가 변할 때만 실행)
+		// 1. 감지할 의존성 명시 (trends나 columnCount가 변할 때만 실행)
 		const currentTrends = trends;
-		const width = innerWidth;
+		const cols = columnCount;
 
 		// 2. 내부 로직은 untrack으로 감싸서 cachedColumns 변경이 이 effect를 다시 트리거하지 않게 함
 		untrack(() => {
-			const columnCount = width < 640 ? 1 : 2;
-
 			// 컬럼 수 변경 시 전체 리셋
-			if (columnCount !== lastColumnCount) {
-				lastColumnCount = columnCount;
+			if (cols !== lastColumnCount) {
+				lastColumnCount = cols;
 				resetMasonryCache();
 
-				if (columnCount === 1) {
+				if (cols === 1) {
 					cachedColumns = [currentTrends];
 					lastProcessedCount = currentTrends.length;
 					return;
@@ -157,18 +156,19 @@
 			}
 
 			// 1컬럼 모드
-			if (columnCount === 1) {
+			if (cols === 1) {
 				cachedColumns = [currentTrends];
 				lastProcessedCount = currentTrends.length;
 				return;
 			}
 
 			// trends가 줄어들었거나(필터링) 완전히 새로운 데이터면 리셋
+			// (첫 번째 아이템 ID가 다르면 새 데이터로 판단)
 			const firstCachedId = cachedColumns[0]?.[0]?.id;
 			const firstTrendId = currentTrends[0]?.id;
 
 			if (
-				currentTrends.length === 0 ||
+				currentTrends.length === 0 || // 결과 없으면 무조건 리셋
 				currentTrends.length < lastProcessedCount ||
 				(firstCachedId && firstTrendId && firstCachedId !== firstTrendId)
 			) {
@@ -181,15 +181,13 @@
 				// 여기서 cachedHeights를 읽어도 untrack 내부라 재실행되지 않음
 				const shorter = cachedHeights[0] <= cachedHeights[1] ? 0 : 1;
 
-				cachedColumns[shorter] = [...cachedColumns[shorter], trend]; // 쓰기 발생
-				cachedHeights[shorter] += estimateHeight(trend); // 쓰기 발생
+				cachedColumns[shorter].push(trend); // push 사용 (배열 복사 비용 절감)
+				cachedHeights[shorter] += estimateHeight(trend);
 			}
 
 			lastProcessedCount = currentTrends.length;
 		});
 	});
-
-	const masonryColumns = $derived(cachedColumns);
 
 	// =============================================
 	// fetchTrends (reset 시 캐시 리셋 추가)
@@ -252,6 +250,7 @@
 		} finally {
 			isLoadingMore = false;
 			isSearching = false;
+			abortController = null; // 메모리 정리
 		}
 	}
 
@@ -336,7 +335,7 @@
 				<div class="py-32 text-center text-gray-400">결과가 없습니다.</div>
 			{:else}
 				<div class="grid grid-cols-1 items-start gap-6 sm:grid-cols-2">
-					{#each masonryColumns as column, colIndex (colIndex)}
+					{#each cachedColumns as column, colIndex (colIndex)}
 						<div class="flex flex-col gap-6">
 							{#each column as trend (trend.id)}
 								<ArticleCard
