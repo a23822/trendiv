@@ -2,7 +2,10 @@
 	import SearchChip from '$lib/components/pure/Chip/SearchChip.svelte';
 	import SearchBar from '$lib/components/pure/Search/SearchBar.svelte';
 	import { CommonStyles } from '$lib/constants/styles';
+	import IconDocument from '$lib/icons/icon_document.svelte';
+	import IconFilter from '$lib/icons/icon_filter.svelte';
 	import IconRefresh from '$lib/icons/icon_refresh.svelte';
+	import IconTag from '$lib/icons/icon_tag.svelte';
 	import { cn } from '$lib/utils/ClassMerge';
 	import { tick } from 'svelte';
 
@@ -21,10 +24,10 @@
 
 	let {
 		tags = [],
-		selectedTags = $bindable([]),
+		selectedTags = [],
 		searchKeyword = $bindable(''),
 		categoryList,
-		selectedCategory = $bindable([]),
+		selectedCategory = [],
 		onselectCategory,
 		isLoadingMore = false,
 		onsearch,
@@ -39,6 +42,8 @@
 		is_initial: boolean;
 	};
 
+	let isInitialized = false;
+
 	const ANIMATION_DURATION = 450;
 
 	let animatedSelectedTags = $state<AnimatedTag[]>([]);
@@ -51,10 +56,13 @@
 
 	$effect(() => {
 		if (
-			animatedSelectedTags.length === 0 &&
-			animatedUnselectedTags.length === 0 &&
+			!isInitialized && // 변경
 			tags.length > 0
 		) {
+			isInitialized = true; // 추가
+
+			internalSelectedTags = [...selectedTags];
+
 			animatedSelectedTags = selectedTags.map((name) => ({
 				name,
 				is_showing: false,
@@ -75,7 +83,7 @@
 		}
 	});
 
-	const hasSelected = $derived(selectedTags.length > 0);
+	let internalSelectedTags = $state<string[]>([]);
 
 	async function showContainer() {
 		containerState = 'showing';
@@ -111,14 +119,14 @@
 		});
 
 		setTimeout(() => {
-			selectedTags = [...selectedTags, tag];
+			internalSelectedTags = [...internalSelectedTags, tag];
 			animatedSelectedTags = animatedSelectedTags.map((t) =>
 				t.name === tag ? { ...t, is_showing: false } : t
 			);
 			animatedUnselectedTags = animatedUnselectedTags.filter(
 				(t) => t.name !== tag
 			);
-			onchange?.(selectedTags);
+			onchange?.(internalSelectedTags);
 		}, ANIMATION_DURATION);
 	}
 
@@ -147,12 +155,12 @@
 		});
 
 		setTimeout(() => {
-			selectedTags = selectedTags.filter((t) => t !== tag);
+			internalSelectedTags = internalSelectedTags.filter((t) => t !== tag);
 			animatedUnselectedTags = animatedUnselectedTags.map((t) =>
 				t.name === tag ? { ...t, is_showing: false } : t
 			);
 			animatedSelectedTags = animatedSelectedTags.filter((t) => t.name !== tag);
-			onchange?.(selectedTags);
+			onchange?.(internalSelectedTags);
 
 			if (isLastTag) {
 				containerState = 'hidden';
@@ -190,20 +198,26 @@
 		});
 
 		setTimeout(() => {
-			selectedTags = [];
+			internalSelectedTags = [];
 			animatedSelectedTags = [];
 			animatedUnselectedTags = animatedUnselectedTags.map((t) => ({
 				...t,
 				is_showing: false
 			}));
-			onchange?.(selectedTags);
+			onchange?.(internalSelectedTags);
 
 			containerState = 'hidden';
 		}, ANIMATION_DURATION);
 	}
 </script>
 
-<section class={cn(CommonStyles.CARD, 'mb-4 sm:mb-6')}>
+<section
+	class={cn(
+		CommonStyles.CARD,
+		'mb-4 sm:mb-6',
+		'top-header-height sticky right-0 left-0 z-999'
+	)}
+>
 	<h2 class="sr-only">검색 카드</h2>
 	<SearchBar
 		{onsearch}
@@ -212,6 +226,28 @@
 	/>
 	<div class="border-border-default mt-4 border-t-2">
 		<div>
+			<div
+				class={cn(
+					'flex items-center gap-1',
+					'text-mint-700/70 mt-4 text-lg font-bold'
+				)}
+			>
+				<IconFilter
+					class="shrink-0"
+					size={20}
+				/><span class="truncate">필터</span>
+			</div>
+			<div
+				class={cn(
+					'flex items-center gap-1',
+					'text-mint-700/70 mt-4 text-sm font-bold'
+				)}
+			>
+				<IconTag
+					class="shrink-0"
+					size={12}
+				/><span class="truncate">태그</span>
+			</div>
 			<!-- Selected Tags -->
 			<div
 				class={cn(
@@ -319,17 +355,29 @@
 	</div>
 
 	{#if categoryList.length > 0}
-		<div
-			class="border-border-default mt-4 flex flex-wrap gap-2 border-t-2 pt-4"
-		>
-			{#each categoryList as category}
-				<SearchChip
-					active={selectedCategory.includes(category)}
-					onclick={() => onselectCategory?.(category)}
-				>
-					{category}
-				</SearchChip>
-			{/each}
+		<div class="border-border-default mt-4 border-t-2">
+			<div
+				class={cn(
+					'flex items-center gap-1',
+					'text-mint-700/70 mt-4 text-sm font-bold'
+				)}
+			>
+				<IconDocument
+					class="shrink-0"
+					size={12}
+				/><span class="truncate">출처</span>
+			</div>
+
+			<div class="mt-4 flex flex-wrap gap-2">
+				{#each categoryList as category}
+					<SearchChip
+						active={selectedCategory.includes(category)}
+						onclick={() => onselectCategory?.(category)}
+					>
+						{category}
+					</SearchChip>
+				{/each}
+			</div>
 		</div>
 	{/if}
 </section>

@@ -9,7 +9,7 @@
 	import { modal } from '$lib/stores/modal.svelte.js';
 	import type { Trend } from '$lib/types';
 	import type { PageData } from './$types';
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 
 	let { data }: { data: PageData } = $props();
 
@@ -136,42 +136,57 @@
 	}
 
 	$effect(() => {
-		const columnCount = innerWidth < 640 ? 1 : 2;
+		// 1. 감지할 의존성 명시 (trends나 innerWidth가 변할 때만 실행)
+		const currentTrends = trends;
+		const width = innerWidth;
 
-		// 컬럼 수 변경 시 전체 리셋
-		if (columnCount !== lastColumnCount) {
-			lastColumnCount = columnCount;
-			resetMasonryCache();
+		// 2. 내부 로직은 untrack으로 감싸서 cachedColumns 변경이 이 effect를 다시 트리거하지 않게 함
+		untrack(() => {
+			const columnCount = width < 640 ? 1 : 2;
 
+			// 컬럼 수 변경 시 전체 리셋
+			if (columnCount !== lastColumnCount) {
+				lastColumnCount = columnCount;
+				resetMasonryCache();
+
+				if (columnCount === 1) {
+					cachedColumns = [currentTrends];
+					lastProcessedCount = currentTrends.length;
+					return;
+				}
+			}
+
+			// 1컬럼 모드
 			if (columnCount === 1) {
-				cachedColumns = [trends];
-				lastProcessedCount = trends.length;
+				cachedColumns = [currentTrends];
+				lastProcessedCount = currentTrends.length;
 				return;
 			}
-		}
 
-		// 1컬럼 모드
-		if (columnCount === 1) {
-			cachedColumns = [trends];
-			lastProcessedCount = trends.length;
-			return;
-		}
+			// trends가 줄어들었거나(필터링) 완전히 새로운 데이터면 리셋
+			const firstCachedId = cachedColumns[0]?.[0]?.id;
+			const firstTrendId = currentTrends[0]?.id;
 
-		// trends가 줄어들었으면 (검색/필터 변경) 리셋
-		if (trends.length < lastProcessedCount) {
-			resetMasonryCache();
-		}
+			if (
+				currentTrends.length === 0 ||
+				currentTrends.length < lastProcessedCount ||
+				(firstCachedId && firstTrendId && firstCachedId !== firstTrendId)
+			) {
+				resetMasonryCache();
+			}
 
-		// 새로 추가된 아이템만 처리
-		for (let i = lastProcessedCount; i < trends.length; i++) {
-			const trend = trends[i];
-			const shorter = cachedHeights[0] <= cachedHeights[1] ? 0 : 1;
+			// 새로 추가된 아이템만 처리 (증분 업데이트)
+			for (let i = lastProcessedCount; i < currentTrends.length; i++) {
+				const trend = currentTrends[i];
+				// 여기서 cachedHeights를 읽어도 untrack 내부라 재실행되지 않음
+				const shorter = cachedHeights[0] <= cachedHeights[1] ? 0 : 1;
 
-			cachedColumns[shorter] = [...cachedColumns[shorter], trend];
-			cachedHeights[shorter] += estimateHeight(trend);
-		}
+				cachedColumns[shorter] = [...cachedColumns[shorter], trend]; // 쓰기 발생
+				cachedHeights[shorter] += estimateHeight(trend); // 쓰기 발생
+			}
 
-		lastProcessedCount = trends.length;
+			lastProcessedCount = currentTrends.length;
+		});
 	});
 
 	const masonryColumns = $derived(cachedColumns);
@@ -189,6 +204,7 @@
 			isSearching = true;
 			page = 1;
 			hasMore = true;
+			trends = [];
 			resetMasonryCache(); // ← 캐시 리셋 추가
 		} else {
 			isLoadingMore = true;
@@ -303,7 +319,7 @@
 		<div class="mx-auto max-w-5xl p-4 sm:p-6">
 			<SearchCard
 				bind:searchKeyword
-				bind:selectedTags
+				{selectedTags}
 				tags={popularTags}
 				{isLoadingMore}
 				{categoryList}
