@@ -254,6 +254,16 @@
 		overflow: visible;
 		inset: auto;
 	}
+
+	dialog {
+		overflow: visible;
+		padding: 0;
+		border: none;
+		background: transparent;
+		max-width: min(var(--container-5xl), calc(100vw - 32px));
+		max-height: calc(100vh - 32px);
+		color: var(--color-gray-800);
+	}
 }
 
 @layer utilities {

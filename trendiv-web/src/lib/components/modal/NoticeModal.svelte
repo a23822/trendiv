@@ -93,7 +93,7 @@
 	>
 		<div class={cn('flex flex-row-reverse items-center justify-between')}>
 			<CloseButton
-				className="shrink-0 -mt-1 sm:-mr-2"
+				class="-mt-1 shrink-0 sm:-mr-2"
 				variant="inverted"
 				size={40}
 				onclick={requestClose}
@@ -135,7 +135,7 @@
 			<div
 				style="scrollbar-gutter: stable;"
 				class={cn(
-					'max-h-[400px] overflow-y-auto',
+					'max-h-100 overflow-y-auto',
 					'py-8 pl-4 sm:pl-6',
 					'pr-[calc(1rem-var(--scrollbar-gap))] sm:pr-[calc(1.5rem-var(--scrollbar-gap))]',
 					'text-sm text-gray-700'
@@ -147,7 +147,6 @@
 			</div>
 		</div>
 		{#if BottomComponent}
-			<!-- 🟡 bottomProps를 먼저 spread하고, 핵심 핸들러를 뒤에 배치하여 오버라이드 방지 -->
 			<BottomComponent
 				{...bottomProps}
 				onCancel={requestClose}

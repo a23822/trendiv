@@ -6,6 +6,7 @@
 	import FloatingButtonArea from '$lib/components/layout/Floating/FloatingButtonArea.svelte';
 	import Header from '$lib/components/layout/Header/Header.svelte';
 	import ArticleModal from '$lib/components/modal/ArticleModal/ArticleModal.svelte';
+	import FilterModal from '$lib/components/modal/FilterModal/FilterModal.svelte';
 	import { auth } from '$lib/stores/auth.svelte.js';
 	import { modal } from '$lib/stores/modal.svelte.js';
 	import type { Trend } from '$lib/types';
@@ -279,11 +280,15 @@
 		fetchTrends(true);
 	}
 
-	let isFilterModalOpen = $state(false);
-
-	function openModal(trend: Trend) {
+	function openArticleModal(trend: Trend) {
 		modal.open(ArticleModal, {
 			trend: trend
+		});
+	}
+
+	function openFilterModal() {
+		modal.open(FilterModal, {
+			open: true
 		});
 	}
 
@@ -343,7 +348,7 @@
 							{#each column as trend (trend.id)}
 								<ArticleCard
 									{trend}
-									onclick={() => openModal(trend)}
+									onclick={() => openArticleModal(trend)}
 								/>
 							{/each}
 						</div>
@@ -365,5 +370,5 @@
 			{/if}
 		</div>
 	</div>
-	<FloatingButtonArea onfilter={() => (isFilterModalOpen = true)} />
+	<FloatingButtonArea onfilter={openFilterModal} />
 </main>

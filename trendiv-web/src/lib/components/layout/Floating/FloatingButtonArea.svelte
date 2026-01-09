@@ -2,6 +2,8 @@
 	import { CommonStyles } from '$lib/constants/styles';
 	import IconArrowVertical from '$lib/icons/icon_arrow_vertical.svelte';
 	import IconFilter from '$lib/icons/icon_filter.svelte';
+	import { modal } from '$lib/stores/modal.svelte.js';
+	import { uiState } from '$lib/stores/state.svelte';
 	import { cn } from '$lib/utils/ClassMerge';
 
 	interface Props {
@@ -31,6 +33,9 @@
 
 <div
 	class={cn('fixed right-4 bottom-4 z-50 sm:right-6 sm:bottom-6', className)}
+	style:margin-right={modal.component
+		? `${uiState.scrollbarWidth}px`
+		: undefined}
 >
 	<!-- Main FAB Button (Anchor) -->
 	<button
