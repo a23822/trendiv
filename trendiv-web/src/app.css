@@ -244,6 +244,29 @@
 	[role='button']:not(:disabled) {
 		cursor: pointer;
 	}
+
+	/* Popover 기본 스타일 리셋 */
+	[popover] {
+		margin: 0;
+		padding: 0;
+		border: none;
+		background: transparent;
+		overflow: visible;
+		inset: auto;
+	}
+
+	dialog {
+		overflow: visible;
+		border: none;
+		background: transparent;
+		max-width: min(var(--container-5xl), calc(100vw - 32px));
+		max-height: calc(100vh - 32px);
+		color: var(--color-gray-800);
+	}
+
+	em {
+		font-style: normal;
+	}
 }
 
 @layer utilities {

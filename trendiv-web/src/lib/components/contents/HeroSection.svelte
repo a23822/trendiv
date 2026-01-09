@@ -94,9 +94,10 @@
 		<p class={cn('mt-4 leading-8', 'text-gray-300-fixed text-lg  font-bold')}>
 			트렌디한 <span class="text-gray-100-fixed">HTML, CSS, A11y</span>
 			정보를<br />
-			<span class="text-gray-100-fixed">AI</span>가 분석해서 보여드립니다.
+			<span class="text-gray-100-fixed">AI</span>가 분석해드립니다.
 		</p>
-		<form
+		<!-- todo 임시 블록 -->
+		<!--<form
 			class={cn(
 				'flex flex-col items-center justify-center gap-3',
 				'mt-10',
@@ -158,6 +159,7 @@
 				</button>
 			</div>
 		{/if}
+	-->
 	</div>
 
 	<div

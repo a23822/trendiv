@@ -3,8 +3,10 @@
 	import ArticleCard from '$lib/components/contents/ArticleCard/ArticleCard.svelte';
 	import HeroSection from '$lib/components/contents/HeroSection.svelte';
 	import SearchCard from '$lib/components/contents/SearchCard/SearchCard.svelte';
+	import FloatingButtonArea from '$lib/components/layout/Floating/FloatingButtonArea.svelte';
 	import Header from '$lib/components/layout/Header/Header.svelte';
 	import ArticleModal from '$lib/components/modal/ArticleModal/ArticleModal.svelte';
+	import FilterModal from '$lib/components/modal/FilterModal/FilterModal.svelte';
 	import { auth } from '$lib/stores/auth.svelte.js';
 	import { modal } from '$lib/stores/modal.svelte.js';
 	import type { Trend } from '$lib/types';
@@ -278,9 +280,21 @@
 		fetchTrends(true);
 	}
 
-	function openModal(trend: Trend) {
+	function openArticleModal(trend: Trend) {
 		modal.open(ArticleModal, {
 			trend: trend
+		});
+	}
+
+	function openFilterModal() {
+		modal.open(FilterModal, {
+			open: true,
+			tags: popularTags,
+			categoryList: categoryList,
+			selectedTags: selectedTags,
+			selectedCategory: selectedCategories,
+			onchange: handleTagChange,
+			onselectCategory: handleCategorySelect
 		});
 	}
 
@@ -320,7 +334,6 @@
 				bind:searchKeyword
 				{selectedTags}
 				tags={popularTags}
-				{isLoadingMore}
 				{categoryList}
 				selectedCategory={selectedCategories}
 				onselectCategory={handleCategorySelect}
@@ -340,7 +353,7 @@
 							{#each column as trend (trend.id)}
 								<ArticleCard
 									{trend}
-									onclick={() => openModal(trend)}
+									onclick={() => openArticleModal(trend)}
 								/>
 							{/each}
 						</div>
@@ -362,4 +375,5 @@
 			{/if}
 		</div>
 	</div>
+	<FloatingButtonArea onfilter={openFilterModal} />
 </main>
