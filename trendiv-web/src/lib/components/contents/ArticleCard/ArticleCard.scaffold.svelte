@@ -19,9 +19,10 @@
 
 	// 분석 결과 가져오기
 	const analysis = $derived(
-		trend.analysis_results?.length
-			? trend.analysis_results[trend.analysis_results.length - 1]
-			: null
+		trend.represent_result ||
+			(trend.analysis_results && trend.analysis_results.length > 0
+				? trend.analysis_results[0]
+				: null)
 	);
 
 	const extraModelCount = $derived(
