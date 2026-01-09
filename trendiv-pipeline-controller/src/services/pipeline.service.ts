@@ -17,7 +17,7 @@ interface TrendItem {
   date: string;
   source: string;
   category: string;
-  content?: string; // 👈 [수정 1] 심층 분석 때 넘겨줄 본문 필드 추가
+  content?: string;
 }
 
 interface AnalysisEntry {
@@ -164,9 +164,14 @@ export const runPipeline = async (): Promise<PipelineResult> => {
       let analysisResults: AnalysisResult[] = [];
       try {
         // 주의: analyzer.service 내부에서 X 카테고리는 Gemini가 분석 못하므로 Skip(null) 처리됨
-        analysisResults = (await runAnalysis(
-          cleanData
-        )) as unknown as AnalysisResult[];
+        const rawResults = await runAnalysis(cleanData);
+        if (!Array.isArray(rawResults)) {
+          console.error("runAnalysis returned invalid data");
+          continue;
+        }
+        analysisResults = rawResults.filter(
+          (r) => r && typeof r.id === "number"
+        );
       } catch (e) {
         console.error(`      ⚠️ Batch ${loopCount} Analysis Failed:`, e);
         continue;
@@ -224,12 +229,21 @@ export const runPipeline = async (): Promise<PipelineResult> => {
           updatedHistory.push(newAnalysis);
         }
 
+        const sortedHistory = [...updatedHistory].sort((a, b) => {
+          if (b.score !== a.score) return b.score - a.score; // 점수 높은순
+          return (
+            new Date(b.analyzedAt).getTime() - new Date(a.analyzedAt).getTime()
+          ); // 최신순
+        });
+        const representResult = sortedHistory[0];
+
         if (result.score > 0) {
           analyzedUpdates.push({
             id: result.id,
             analysis_results: updatedHistory,
             status: "ANALYZED",
             content: result.content, // ✅ 정상: 1차 분석 결과를 저장
+            represent_result: representResult || null,
           });
           const originalItem = cleanData.find((item) => item.id === result.id);
           allValidTrends.push({
@@ -245,6 +259,7 @@ export const runPipeline = async (): Promise<PipelineResult> => {
             id: result.id,
             analysis_results: updatedHistory,
             status: "REJECTED",
+            represent_result: representResult || null,
           });
           console.log(`      🗑️ Rejected (Score 0): ID ${result.id}`);
         }
@@ -492,7 +507,8 @@ async function saveAnalysisResults(
   if (results.length === 0) return;
 
   const ids = results.map((r) => r.id);
-  // 현재 DB에 있는 상태를 조회 (history 병합을 위해)
+
+  // 1. 현재 DB 상태 한 번에 조회
   const { data: currentItems } = await supabase
     .from("trend")
     .select("id, analysis_results")
@@ -503,16 +519,16 @@ async function saveAnalysisResults(
     return;
   }
 
-  let successCount = 0;
-  let failCount = 0;
+  console.log(`      💾 Saving results for ${results.length} items (Bulk)...`);
 
-  console.log(`      💾 Saving results for ${results.length} items...`);
+  const updates: any[] = [];
+  const validIds = new Set<number>();
 
+  // 2. 메모리에서 데이터 가공
   for (const result of results) {
     const current = currentItems.find(
       (item: TrendDbItem) => item.id === result.id
     );
-    // 기존 히스토리가 없으면 빈 배열
     const history: AnalysisEntry[] = current?.analysis_results || [];
 
     const newEntry: AnalysisEntry = {
@@ -526,54 +542,56 @@ async function saveAnalysisResults(
       analyzedAt: new Date().toISOString(),
     };
 
-    // 1. 히스토리 업데이트 (같은 모델이면 덮어쓰기, 아니면 추가)
+    // 히스토리 병합
     const idx = history.findIndex((h) => h.aiModel === result.aiModel);
     if (idx >= 0) history[idx] = newEntry;
     else history.push(newEntry);
 
-    // ---------------------------------------------------------
-    // 2. 상태 결정 로직 수정 [요청 반영]
-    // ---------------------------------------------------------
-    // 기존: 하나라도 0점 초과면 ANALYZED (some)
-    // 수정: 모든 모델의 분석 결과가 0점보다 커야만 ANALYZED (every)
-    // 즉, 하나라도 0점이 포함되어 있다면 REJECTED가 됩니다.
+    // 상태 및 대표 결과 결정
     const isHighQuality = history.every((h) => h.score > 0);
     const newStatus = isHighQuality ? "ANALYZED" : "REJECTED";
 
     if (!isHighQuality) {
       const zeroModel = history.find((h) => h.score === 0)?.aiModel;
       console.log(
-        `      🗑️ [Quality Control] 모델(${zeroModel})이 0점을 부여하여 REJECTED 처리 (ID: ${result.id})`
+        `      🗑️ [Quality Control] 0점 발생 (ID: ${result.id}, Model: ${zeroModel})`
       );
     }
 
-    // 3. 업데이트할 데이터 준비
+    const sortedHistory = [...history].sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return (
+        new Date(b.analyzedAt).getTime() - new Date(a.analyzedAt).getTime()
+      );
+    });
+
     const updateData: any = {
+      id: result.id, // upsert를 위해 ID 필수
       analysis_results: history,
       status: newStatus,
+      represent_result: sortedHistory[0] || null,
     };
 
-    // 🆕 1차 분석 등에서 본문(content)이 넘어왔다면 같이 저장
     if (result.content) {
       updateData.content = result.content;
     }
 
-    // 4. 개별 Update 실행
-    const { error } = await supabase
-      .from("trend")
-      .update(updateData)
-      .eq("id", result.id);
-
-    if (error) {
-      console.error(
-        `      ❌ Update failed for ID ${result.id}:`,
-        error.message
-      );
-      failCount++;
-    } else {
-      successCount++;
-    }
+    updates.push(updateData);
+    validIds.add(result.id);
   }
 
-  console.log(`      ✅ Saved: ${successCount} success, ${failCount} failed`);
+  // 3. 한 번에 DB 업데이트 (Bulk Upsert)
+  if (updates.length > 0) {
+    const { error } = await supabase
+      .from("trend")
+      .upsert(updates, { onConflict: "id" });
+
+    if (error) {
+      console.error("      ❌ Bulk Save Failed:", error.message);
+    } else {
+      console.log(
+        `      ✅ Bulk Save Success: ${updates.length} items updated.`
+      );
+    }
+  }
 }

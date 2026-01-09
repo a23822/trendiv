@@ -11,6 +11,9 @@
 		selectedTags?: string[];
 		searchKeyword?: string;
 		isLoadingMore?: boolean;
+		categoryList: string[];
+		selectedCategory?: string[];
+		onselectCategory?: (category: string) => void;
 		onsearch?: (value: string) => void;
 		onclear?: () => void;
 		onchange?: (selectedTags: string[]) => void;
@@ -20,6 +23,9 @@
 		tags = [],
 		selectedTags = $bindable([]),
 		searchKeyword = $bindable(''),
+		categoryList,
+		selectedCategory = $bindable([]),
+		onselectCategory,
 		isLoadingMore = false,
 		onsearch,
 		onclear,
@@ -205,7 +211,7 @@
 		bind:value={searchKeyword}
 	/>
 	<div class="border-border-default mt-4 border-t-2">
-		<div class={cn()}>
+		<div>
 			<!-- Selected Tags -->
 			<div
 				class={cn(
@@ -311,4 +317,19 @@
 			</div>
 		</div>
 	</div>
+
+	{#if categoryList.length > 0}
+		<div
+			class="border-border-default mt-4 flex flex-wrap gap-2 border-t-2 pt-4"
+		>
+			{#each categoryList as category}
+				<SearchChip
+					active={selectedCategory.includes(category)}
+					onclick={() => onselectCategory?.(category)}
+				>
+					{category}
+				</SearchChip>
+			{/each}
+		</div>
+	{/if}
 </section>

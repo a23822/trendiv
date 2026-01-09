@@ -2,7 +2,7 @@
 	import { PUBLIC_API_URL } from '$env/static/public';
 	import ArticleCard from '$lib/components/contents/ArticleCard/ArticleCard.svelte';
 	import HeroSection from '$lib/components/contents/HeroSection.svelte';
-	import SearchCard from '$lib/components/contents/SearchCard.svelte';
+	import SearchCard from '$lib/components/contents/SearchCard/SearchCard.svelte';
 	import Header from '$lib/components/layout/Header/Header.svelte';
 	import ArticleModal from '$lib/components/modal/ArticleModal/ArticleModal.svelte';
 	import { auth } from '$lib/stores/auth.svelte.js';
@@ -20,6 +20,10 @@
 	let searchKeyword = $state('');
 	let selectedTags = $state<string[]>([]);
 	let isSearching = $state(false);
+
+	//filter - category
+	let categoryList = $derived(data.categories ?? []);
+	let selectedCategories = $state<string[]>([]);
 
 	let abortController: AbortController | null = null;
 
@@ -48,8 +52,13 @@
 		}, 150);
 	}
 
+	let initialized = false;
+
 	$effect(() => {
-		trends = data.trends ?? [];
+		if (!initialized && data.trends) {
+			trends = data.trends;
+			initialized = true;
+		}
 	});
 
 	$effect(() => {
@@ -66,7 +75,6 @@
 			fetchTrends(true);
 		}
 
-		// cleanup: resize 리스너, 타이머, abort 정리
 		return () => {
 			window.removeEventListener('resize', handleResize);
 			clearTimeout(resizeTimeout);
@@ -101,6 +109,76 @@
 		}
 	}
 
+	// =============================================
+	// Masonry 증분 처리 관련
+	// =============================================
+	let cachedColumns = $state<Trend[][]>([[], []]);
+	let cachedHeights = $state<number[]>([0, 0]);
+	let lastProcessedCount = $state(0);
+	let lastColumnCount = $state(2);
+
+	function estimateHeight(trend: Trend): number {
+		const analysis = trend.represent_result ?? null;
+
+		const titleLen = (analysis?.title_ko || trend.title || '').length;
+		const summaryLen = (analysis?.oneLineSummary || '').length;
+		const tagCount = analysis?.tags?.length ?? 0;
+
+		return (
+			150 + Math.min(titleLen, 60) + Math.min(summaryLen, 120) + tagCount * 10
+		);
+	}
+
+	function resetMasonryCache() {
+		cachedColumns = [[], []];
+		cachedHeights = [0, 0];
+		lastProcessedCount = 0;
+	}
+
+	$effect(() => {
+		const columnCount = innerWidth < 640 ? 1 : 2;
+
+		// 컬럼 수 변경 시 전체 리셋
+		if (columnCount !== lastColumnCount) {
+			lastColumnCount = columnCount;
+			resetMasonryCache();
+
+			if (columnCount === 1) {
+				cachedColumns = [trends];
+				lastProcessedCount = trends.length;
+				return;
+			}
+		}
+
+		// 1컬럼 모드
+		if (columnCount === 1) {
+			cachedColumns = [trends];
+			lastProcessedCount = trends.length;
+			return;
+		}
+
+		// trends가 줄어들었으면 (검색/필터 변경) 리셋
+		if (trends.length < lastProcessedCount) {
+			resetMasonryCache();
+		}
+
+		// 새로 추가된 아이템만 처리
+		for (let i = lastProcessedCount; i < trends.length; i++) {
+			const trend = trends[i];
+			const shorter = cachedHeights[0] <= cachedHeights[1] ? 0 : 1;
+
+			cachedColumns[shorter] = [...cachedColumns[shorter], trend];
+			cachedHeights[shorter] += estimateHeight(trend);
+		}
+
+		lastProcessedCount = trends.length;
+	});
+
+	const masonryColumns = $derived(cachedColumns);
+
+	// =============================================
+	// fetchTrends (reset 시 캐시 리셋 추가)
+	// =============================================
 	async function fetchTrends(reset = false) {
 		if (isLoadingMore && !reset) return;
 
@@ -111,7 +189,7 @@
 			isSearching = true;
 			page = 1;
 			hasMore = true;
-			// trends = [] 제거 → 깜빡임 방지
+			resetMasonryCache(); // ← 캐시 리셋 추가
 		} else {
 			isLoadingMore = true;
 			page += 1;
@@ -124,6 +202,11 @@
 				searchKeyword: searchKeyword,
 				tagFilter: selectedTags.join(',')
 			});
+
+			if (selectedCategories.length > 0) {
+				params.append('category', selectedCategories.join(','));
+			}
+
 			const res = await fetch(`${API_URL}/api/trends?${params}`, {
 				signal: abortController.signal
 			});
@@ -134,7 +217,7 @@
 
 			if (result.success) {
 				if (reset) {
-					trends = result.data; // 데이터 받은 후 교체
+					trends = result.data;
 				} else {
 					const newItems = result.data.filter(
 						(newTrend: Trend) => !trends.some((ex) => ex.id === newTrend.id)
@@ -144,14 +227,12 @@
 				if (trends.length >= result.total) hasMore = false;
 			} else {
 				console.error('데이터 로드 실패:', result.error);
-				// hasMore 유지 → 재시도 가능
 			}
 		} catch (e) {
 			if (e instanceof Error && e.name === 'AbortError') {
 				return;
 			}
 			console.error('API 호출 중 오류 발생:', e);
-			// hasMore 유지 → 재시도 가능
 		} finally {
 			isLoadingMore = false;
 			isSearching = false;
@@ -170,6 +251,15 @@
 
 	function handleTagChange(newTags: string[]) {
 		selectedTags = newTags;
+		fetchTrends(true);
+	}
+
+	function handleCategorySelect(category: string) {
+		if (selectedCategories.includes(category)) {
+			selectedCategories = selectedCategories.filter((c) => c !== category);
+		} else {
+			selectedCategories = [...selectedCategories, category];
+		}
 		fetchTrends(true);
 	}
 
@@ -199,40 +289,7 @@
 			}
 		};
 	}
-
-	// masonry 배열 (브레이크포인트 기반)
-	const masonryColumns = $derived.by(() => {
-		if (innerWidth < 640) return [trends];
-
-		const cols: Trend[][] = [[], []];
-		const heights = [0, 0];
-
-		trends.forEach((trend) => {
-			const shorter = heights[0] <= heights[1] ? 0 : 1;
-			cols[shorter].push(trend);
-
-			// 높이 추정
-			const analysis = trend.analysis_results?.length
-				? trend.analysis_results[trend.analysis_results.length - 1]
-				: null;
-
-			const titleLen = (analysis?.title_ko || trend.title || '').length;
-			const summaryLen = (analysis?.oneLineSummary || '').length;
-			const tagCount = analysis?.tags?.length ?? 0;
-
-			// 기본 높이 + 제목(2줄 제한) + 요약(3줄 제한) + 태그 줄 수
-			heights[shorter] +=
-				150 +
-				Math.min(titleLen, 60) +
-				Math.min(summaryLen, 120) +
-				tagCount * 10;
-		});
-
-		return cols;
-	});
 </script>
-
-<!-- bind:innerWidth 제거 -->
 
 <Header />
 
@@ -249,6 +306,9 @@
 				bind:selectedTags
 				tags={popularTags}
 				{isLoadingMore}
+				{categoryList}
+				selectedCategory={selectedCategories}
+				onselectCategory={handleCategorySelect}
 				onsearch={handleSearch}
 				onclear={handleClear}
 				onchange={handleTagChange}
