@@ -2,9 +2,12 @@
 	import SearchChip from '$lib/components/pure/Chip/SearchChip.svelte';
 	import SearchBar from '$lib/components/pure/Search/SearchBar.svelte';
 	import { CommonStyles } from '$lib/constants/styles';
+	import IconDocument from '$lib/icons/icon_document.svelte';
+	import IconFilter from '$lib/icons/icon_filter.svelte';
 	import IconRefresh from '$lib/icons/icon_refresh.svelte';
+	import IconTag from '$lib/icons/icon_tag.svelte';
 	import { cn } from '$lib/utils/ClassMerge';
-	import { tick } from 'svelte';
+	import { tick, onDestroy } from 'svelte';
 
 	interface Props {
 		tags?: string[];
@@ -21,10 +24,10 @@
 
 	let {
 		tags = [],
-		selectedTags = $bindable([]),
+		selectedTags = [],
 		searchKeyword = $bindable(''),
 		categoryList,
-		selectedCategory = $bindable([]),
+		selectedCategory = [],
 		onselectCategory,
 		isLoadingMore = false,
 		onsearch,
@@ -39,6 +42,8 @@
 		is_initial: boolean;
 	};
 
+	let isInitialized = false;
+
 	const ANIMATION_DURATION = 450;
 
 	let animatedSelectedTags = $state<AnimatedTag[]>([]);
@@ -49,12 +54,37 @@
 		'hidden'
 	);
 
+	// 타이머 관리 (메모리 누수 방지)
+	let activeTimers = new Set<ReturnType<typeof setTimeout>>();
+
+	// 애니메이션 중인 태그 추적 (빠른 클릭 방지)
+	let animatingTags = new Set<string>();
+
+	// 안전한 setTimeout (자동 정리)
+	function safeTimeout(
+		callback: () => void,
+		delay: number
+	): ReturnType<typeof setTimeout> {
+		const id = setTimeout(() => {
+			activeTimers.delete(id);
+			callback();
+		}, delay);
+		activeTimers.add(id);
+		return id;
+	}
+
+	// 컴포넌트 언마운트 시 모든 타이머 정리
+	onDestroy(() => {
+		activeTimers.forEach((id) => clearTimeout(id));
+		activeTimers.clear();
+	});
+
 	$effect(() => {
-		if (
-			animatedSelectedTags.length === 0 &&
-			animatedUnselectedTags.length === 0 &&
-			tags.length > 0
-		) {
+		if (!isInitialized && tags.length > 0) {
+			isInitialized = true;
+
+			internalSelectedTags = [...selectedTags];
+
 			animatedSelectedTags = selectedTags.map((name) => ({
 				name,
 				is_showing: false,
@@ -75,7 +105,7 @@
 		}
 	});
 
-	const hasSelected = $derived(selectedTags.length > 0);
+	let internalSelectedTags = $state<string[]>([]);
 
 	async function showContainer() {
 		containerState = 'showing';
@@ -86,6 +116,10 @@
 	}
 
 	async function selectTag(tag: string) {
+		// 이미 애니메이션 중이면 무시
+		if (animatingTags.has(tag)) return;
+		animatingTags.add(tag);
+
 		const isFirstTag =
 			animatedSelectedTags.length === 0 ||
 			animatedSelectedTags.every((t) => t.is_hiding);
@@ -110,19 +144,25 @@
 			);
 		});
 
-		setTimeout(() => {
-			selectedTags = [...selectedTags, tag];
+		// safeTimeout 사용
+		safeTimeout(() => {
+			internalSelectedTags = [...internalSelectedTags, tag];
 			animatedSelectedTags = animatedSelectedTags.map((t) =>
 				t.name === tag ? { ...t, is_showing: false } : t
 			);
 			animatedUnselectedTags = animatedUnselectedTags.filter(
 				(t) => t.name !== tag
 			);
-			onchange?.(selectedTags);
+			animatingTags.delete(tag); // 애니메이션 완료
+			onchange?.(internalSelectedTags);
 		}, ANIMATION_DURATION);
 	}
 
 	async function unselectTag(tag: string) {
+		// 이미 애니메이션 중이면 무시
+		if (animatingTags.has(tag)) return;
+		animatingTags.add(tag);
+
 		const isLastTag =
 			animatedSelectedTags.filter((t) => !t.is_hiding).length === 1;
 
@@ -146,13 +186,15 @@
 			);
 		});
 
-		setTimeout(() => {
-			selectedTags = selectedTags.filter((t) => t !== tag);
+		// safeTimeout 사용
+		safeTimeout(() => {
+			internalSelectedTags = internalSelectedTags.filter((t) => t !== tag);
 			animatedUnselectedTags = animatedUnselectedTags.map((t) =>
 				t.name === tag ? { ...t, is_showing: false } : t
 			);
 			animatedSelectedTags = animatedSelectedTags.filter((t) => t.name !== tag);
-			onchange?.(selectedTags);
+			animatingTags.delete(tag); // 애니메이션 완료
+			onchange?.(internalSelectedTags);
 
 			if (isLastTag) {
 				containerState = 'hidden';
@@ -160,8 +202,15 @@
 		}, ANIMATION_DURATION);
 	}
 
+	// 리셋 중 플래그
+	let isResetting = $state(false);
+
 	async function resetAll() {
-		const currentSelectedNames = selectedTags.slice();
+		// 이미 리셋 중이면 무시
+		if (isResetting) return;
+		isResetting = true;
+
+		const currentSelectedNames = internalSelectedTags.slice(); // internalSelectedTags 사용
 
 		containerState = 'hiding';
 
@@ -189,21 +238,31 @@
 			);
 		});
 
-		setTimeout(() => {
-			selectedTags = [];
+		// safeTimeout 사용
+		safeTimeout(() => {
+			internalSelectedTags = [];
 			animatedSelectedTags = [];
 			animatedUnselectedTags = animatedUnselectedTags.map((t) => ({
 				...t,
 				is_showing: false
 			}));
-			onchange?.(selectedTags);
+			animatingTags.clear(); // 모든 애니메이션 상태 초기화
+			isResetting = false; // 리셋 완료
+			onchange?.(internalSelectedTags);
 
 			containerState = 'hidden';
 		}, ANIMATION_DURATION);
 	}
 </script>
 
-<section class={cn(CommonStyles.CARD, 'mb-4 sm:mb-6')}>
+<!-- 템플릿은 동일 -->
+<section
+	class={cn(
+		CommonStyles.CARD,
+		'mb-4 sm:mb-6',
+		'top-header-height sticky right-0 left-0 z-999'
+	)}
+>
 	<h2 class="sr-only">검색 카드</h2>
 	<SearchBar
 		{onsearch}
@@ -212,6 +271,28 @@
 	/>
 	<div class="border-border-default mt-4 border-t-2">
 		<div>
+			<div
+				class={cn(
+					'flex items-center gap-1',
+					'text-mint-700/70 mt-4 text-lg font-bold'
+				)}
+			>
+				<IconFilter
+					class="shrink-0"
+					size={20}
+				/><span class="truncate">필터</span>
+			</div>
+			<div
+				class={cn(
+					'flex items-center gap-1',
+					'text-mint-700/70 mt-4 text-sm font-bold'
+				)}
+			>
+				<IconTag
+					class="shrink-0"
+					size={12}
+				/><span class="truncate">태그</span>
+			</div>
 			<!-- Selected Tags -->
 			<div
 				class={cn(
@@ -319,17 +400,29 @@
 	</div>
 
 	{#if categoryList.length > 0}
-		<div
-			class="border-border-default mt-4 flex flex-wrap gap-2 border-t-2 pt-4"
-		>
-			{#each categoryList as category}
-				<SearchChip
-					active={selectedCategory.includes(category)}
-					onclick={() => onselectCategory?.(category)}
-				>
-					{category}
-				</SearchChip>
-			{/each}
+		<div class="border-border-default mt-4 border-t-2">
+			<div
+				class={cn(
+					'flex items-center gap-1',
+					'text-mint-700/70 mt-4 text-sm font-bold'
+				)}
+			>
+				<IconDocument
+					class="shrink-0"
+					size={12}
+				/><span class="truncate">출처</span>
+			</div>
+
+			<div class="mt-4 flex flex-wrap gap-2">
+				{#each categoryList as category}
+					<SearchChip
+						active={selectedCategory.includes(category)}
+						onclick={() => onselectCategory?.(category)}
+					>
+						{category}
+					</SearchChip>
+				{/each}
+			</div>
 		</div>
 	{/if}
 </section>
