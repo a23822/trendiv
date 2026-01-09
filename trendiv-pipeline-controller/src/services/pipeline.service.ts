@@ -224,12 +224,21 @@ export const runPipeline = async (): Promise<PipelineResult> => {
           updatedHistory.push(newAnalysis);
         }
 
+        const sortedHistory = [...updatedHistory].sort((a, b) => {
+          if (b.score !== a.score) return b.score - a.score; // 점수 높은순
+          return (
+            new Date(b.analyzedAt).getTime() - new Date(a.analyzedAt).getTime()
+          ); // 최신순
+        });
+        const representResult = sortedHistory[0];
+
         if (result.score > 0) {
           analyzedUpdates.push({
             id: result.id,
             analysis_results: updatedHistory,
             status: "ANALYZED",
             content: result.content, // ✅ 정상: 1차 분석 결과를 저장
+            represent_result: representResult || null,
           });
           const originalItem = cleanData.find((item) => item.id === result.id);
           allValidTrends.push({
@@ -245,6 +254,7 @@ export const runPipeline = async (): Promise<PipelineResult> => {
             id: result.id,
             analysis_results: updatedHistory,
             status: "REJECTED",
+            represent_result: representResult || null,
           });
           console.log(`      🗑️ Rejected (Score 0): ID ${result.id}`);
         }
@@ -547,10 +557,20 @@ async function saveAnalysisResults(
       );
     }
 
+    const sortedHistory = [...history].sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return (
+        new Date(b.analyzedAt).getTime() - new Date(a.analyzedAt).getTime()
+      );
+    });
+
+    const representResult = sortedHistory[0];
+
     // 3. 업데이트할 데이터 준비
     const updateData: any = {
       analysis_results: history,
       status: newStatus,
+      represent_result: representResult || null,
     };
 
     // 🆕 1차 분석 등에서 본문(content)이 넘어왔다면 같이 저장

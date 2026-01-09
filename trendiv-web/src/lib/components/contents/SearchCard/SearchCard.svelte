@@ -1,5 +1,6 @@
 <script lang="ts">
 	import SearchChip from '$lib/components/pure/Chip/SearchChip.svelte';
+	import SelectChip from '$lib/components/pure/Chip/SelectChip.svelte';
 	import SearchBar from '$lib/components/pure/Search/SearchBar.svelte';
 	import { CommonStyles } from '$lib/constants/styles';
 	import IconRefresh from '$lib/icons/icon_refresh.svelte';
@@ -11,6 +12,9 @@
 		selectedTags?: string[];
 		searchKeyword?: string;
 		isLoadingMore?: boolean;
+		categoryList: string[];
+		selectedCategory?: string;
+		onselectCategory?: (category: string) => void;
 		onsearch?: (value: string) => void;
 		onclear?: () => void;
 		onchange?: (selectedTags: string[]) => void;
@@ -20,6 +24,9 @@
 		tags = [],
 		selectedTags = $bindable([]),
 		searchKeyword = $bindable(''),
+		categoryList,
+		selectedCategory = $bindable(''),
+		onselectCategory,
 		isLoadingMore = false,
 		onsearch,
 		onclear,
@@ -195,6 +202,16 @@
 			containerState = 'hidden';
 		}, ANIMATION_DURATION);
 	}
+
+	//selectChip
+	const categoryOptions = $derived(
+		categoryList.map((c) => ({ label: c, value: c }))
+	);
+
+	function handleCategoryChange(newVal: string) {
+		selectedCategory = newVal;
+		onselectCategory?.(newVal);
+	}
 </script>
 
 <section class={cn(CommonStyles.CARD, 'mb-4 sm:mb-6')}>
@@ -205,7 +222,7 @@
 		bind:value={searchKeyword}
 	/>
 	<div class="border-border-default mt-4 border-t-2">
-		<div class={cn()}>
+		<div>
 			<!-- Selected Tags -->
 			<div
 				class={cn(
@@ -310,5 +327,13 @@
 				{/each}
 			</div>
 		</div>
+	</div>
+	<div>
+		<SelectChip
+			bind:value={selectedCategory}
+			options={categoryOptions}
+			placeholder="전체 출처"
+			onchange={handleCategoryChange}
+		/>
 	</div>
 </section>

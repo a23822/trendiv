@@ -1,52 +1,35 @@
 <script lang="ts">
-	/**
-	 * Chip - 선택 가능한 칩/태그 버튼
-	 *
-	 * @prop active - 활성화 상태 (기본: false)
-	 * @prop disabled - 비활성화 상태 (기본: false)
-	 */
 	import { CommonStyles } from '$lib/constants/styles';
 	import IconClose from '$lib/icons/icon_close.svelte';
 	import { cn } from '$lib/utils/ClassMerge';
-	import type { Snippet } from 'svelte';
+	import Chip, { type ChipProps } from './Chip.svelte';
 
-	interface Props {
-		active?: boolean;
-		disabled?: boolean;
+	interface Props extends ChipProps {
 		hasClose?: boolean;
-		onclick?: () => void;
-		children: Snippet;
 	}
 
 	let {
+		hasClose = false,
+		children,
+		class: className,
 		active = false,
 		disabled = false,
-		hasClose = false,
-		onclick,
-		children
+		...rest
 	}: Props = $props();
 </script>
 
-<button
-	type="button"
-	class={cn(
-		'group/chip min-h-10 px-4',
-		'rounded-full border border-gray-200',
-		'bg-gray-300/40',
-		CommonStyles.DEFAULT_TRANSITION,
-		'bg-gray-300/50 text-sm font-semibold text-gray-700',
-		'sm:hover:border-gray-500 sm:hover:text-gray-900',
-		'disabled:cursor-not-allowed disabled:opacity-50',
-		`${active && 'bg-forest-300 sm:bg-forest-300/80 text-gray-0-fixed sm:hover:bg-forest-300 sm:hover:text-gray-0-fixed'}`
-	)}
-	aria-pressed={active}
+<Chip
+	element="button"
+	{active}
 	{disabled}
-	{onclick}
+	class={className}
+	{...rest}
 >
 	<span class="flex items-center justify-center gap-1">
 		<span class="flex-1">
 			{@render children()}
 		</span>
+
 		{#if hasClose}
 			<span
 				class={cn(
@@ -61,4 +44,4 @@
 			</span>
 		{/if}
 	</span>
-</button>
+</Chip>
