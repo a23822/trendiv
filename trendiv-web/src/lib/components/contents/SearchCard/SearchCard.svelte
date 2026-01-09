@@ -7,7 +7,7 @@
 	import IconRefresh from '$lib/icons/icon_refresh.svelte';
 	import IconTag from '$lib/icons/icon_tag.svelte';
 	import { cn } from '$lib/utils/ClassMerge';
-	import { tick, onDestroy } from 'svelte';
+	import { tick, onDestroy, onMount } from 'svelte';
 
 	interface Props {
 		tags?: string[];
@@ -255,14 +255,7 @@
 	}
 </script>
 
-<!-- 템플릿은 동일 -->
-<section
-	class={cn(
-		CommonStyles.CARD,
-		'mb-4 sm:mb-6',
-		'top-header-height sticky right-0 left-0 z-999'
-	)}
->
+<section class={cn(CommonStyles.CARD, 'mb-4 sm:mb-6')}>
 	<h2 class="sr-only">검색 카드</h2>
 	<SearchBar
 		{onsearch}

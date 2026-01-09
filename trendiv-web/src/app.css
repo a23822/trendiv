@@ -244,6 +244,16 @@
 	[role='button']:not(:disabled) {
 		cursor: pointer;
 	}
+
+	/* Popover 기본 스타일 리셋 */
+	[popover] {
+		margin: 0;
+		padding: 0;
+		border: none;
+		background: transparent;
+		overflow: visible;
+		inset: auto;
+	}
 }
 
 @layer utilities {

@@ -3,6 +3,7 @@
 	import ArticleCard from '$lib/components/contents/ArticleCard/ArticleCard.svelte';
 	import HeroSection from '$lib/components/contents/HeroSection.svelte';
 	import SearchCard from '$lib/components/contents/SearchCard/SearchCard.svelte';
+	import FloatingButtonArea from '$lib/components/layout/Floating/FloatingButtonArea.svelte';
 	import Header from '$lib/components/layout/Header/Header.svelte';
 	import ArticleModal from '$lib/components/modal/ArticleModal/ArticleModal.svelte';
 	import { auth } from '$lib/stores/auth.svelte.js';
@@ -278,6 +279,8 @@
 		fetchTrends(true);
 	}
 
+	let isFilterModalOpen = $state(false);
+
 	function openModal(trend: Trend) {
 		modal.open(ArticleModal, {
 			trend: trend
@@ -362,4 +365,5 @@
 			{/if}
 		</div>
 	</div>
+	<FloatingButtonArea onfilter={() => (isFilterModalOpen = true)} />
 </main>
