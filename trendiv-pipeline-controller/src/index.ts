@@ -34,6 +34,8 @@ if (!PIPELINE_API_KEY) {
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
+let isPipelineRunning = false;
+
 // 🛠️ 쿼리 파라미터 안전 파싱 (배열 방지)
 const parseStringQuery = (query: unknown): string => {
   if (Array.isArray(query)) return String(query[0] || "").trim();
@@ -203,6 +205,12 @@ if (process.env.BATCH_MODE === "true") {
     "/api/pipeline/run",
     adminLimiter,
     async (req: Request, res: Response) => {
+      // 중복 실행 방지 체크
+      if (isPipelineRunning) {
+        console.warn("⚠️ 파이프라인이 이미 실행 중입니다.");
+        return res.status(429).json({ error: "Pipeline is already running" });
+      }
+
       // ✅ 헤더 값 안전 추출
       const clientKey =
         getHeaderValue(req.headers["x-api-key"]) ||
@@ -218,7 +226,17 @@ if (process.env.BATCH_MODE === "true") {
         return res.status(401).json({ error: "Unauthorized" });
       }
 
+      // 즉시 응답 반환 (Timeout 방지)
+      res.status(202).json({
+        success: true,
+        message: "Pipeline triggered successfully. Running in background.",
+        jobId: Date.now(),
+      });
+
       console.log("👆 [Manual] 실행 요청됨 (동기 실행 모드)");
+
+      console.log("👆 [Manual] 실행 시작 (Background)");
+      isPipelineRunning = true;
 
       try {
         const result = await runPipeline();
@@ -232,6 +250,9 @@ if (process.env.BATCH_MODE === "true") {
         res
           .status(500)
           .json({ error: "Pipeline execution failed", details: String(err) });
+      } finally {
+        isPipelineRunning = false;
+        console.log("🏁 [Background] 실행 종료 (Lock 해제)");
       }
     }
   );

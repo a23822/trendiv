@@ -27,7 +27,9 @@
 >
 	<span class="flex items-center justify-center gap-1">
 		<span class="flex-1">
-			{@render children()}
+			{#if children}
+				{@render children()}
+			{/if}
 		</span>
 
 		{#if hasClose}
