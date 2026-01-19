@@ -81,7 +81,7 @@
 		isManualScroll = true;
 
 		const containerWidth = containerRef.clientWidth;
-		const pageAmount = containerWidth * 0.8; // 영역의 80% 만큼만 이동해서 어느정도 연속성있어보이게
+		const pageAmount = containerWidth * 0.8;
 		const { minX, maxX } = getScrollBounds();
 
 		let newX = translateX - direction * pageAmount;
@@ -90,11 +90,14 @@
 		translateX = newX;
 	}
 
-	// 스크롤 가능 여부
+	// ✅ 스크롤 가능 여부 - 값으로 평가
 	let canScrollLeft = $derived(translateX < 0);
-	let canScrollRight = $derived(() => {
+
+	// ✅ 수정: 함수가 아닌 값으로
+	let canScrollRight = $derived.by(() => {
 		const { minX } = getScrollBounds();
-		return translateX > minX;
+		// 소수점 오차 대응
+		return translateX > minX + 1;
 	});
 </script>
 

@@ -9,7 +9,9 @@
 	}
 
 	// 모델명에서 시리즈 추출
-	function getSeriesKey(aiModel: string): string {
+	function getSeriesKey(aiModel: string | undefined | null): string {
+		if (!aiModel) return 'unknown';
+
 		const lowerModel = aiModel.toLowerCase();
 		if (lowerModel.startsWith('gemini')) return 'Gemini';
 		if (lowerModel.startsWith('grok')) return 'Grok';
@@ -30,6 +32,13 @@
 		class: className
 	}: AiModelPickerProps = $props();
 
+	// ✅ selectedIndex 범위 보정
+	const safeSelectedIndex = $derived(
+		items.length === 0
+			? 0
+			: Math.min(Math.max(0, selectedIndex), items.length - 1)
+	);
+
 	// --- State ---
 	let isOpen = $state(false);
 	let isClosing = $state(false);
@@ -48,7 +57,7 @@
 				groups[seriesKey] = { models: [] };
 			}
 			groups[seriesKey].models.push({
-				id: crypto.randomUUID(),
+				id: `${seriesKey}-${index}`, // ✅ crypto.randomUUID() 대신 안정적인 키
 				displayName: aiModel,
 				originalIndex: index
 			});
@@ -57,19 +66,19 @@
 		return groups;
 	});
 
-	// 실제 선택된 모델 정보 (헤더에 표시)
-	const selectedaiModel = $derived(items[selectedIndex] || items[0]);
+	// 실제 선택된 모델 정보 (빈 배열 방어)
+	const selectedaiModel = $derived(items[safeSelectedIndex] ?? null);
 	const selectedSeriesKey = $derived(getSeriesKey(selectedaiModel));
 
 	// 선택된 모델의 id (groupedModels에서 가져옴)
 	const selectedModelId = $derived.by(() => {
 		const models = groupedModels[selectedSeriesKey]?.models || [];
-		const found = models.find((m) => m.originalIndex === selectedIndex);
+		const found = models.find((m) => m.originalIndex === safeSelectedIndex);
 		return found?.id || '';
 	});
 
-	// 선택된 모델의 표시명 (그냥 모델명 그대로)
-	const selectedDisplayName = $derived(selectedaiModel);
+	// 선택된 모델의 표시명
+	const selectedDisplayName = $derived(selectedaiModel ?? '모델 없음');
 
 	// 현재 보고 있는 시리즈 (펼쳤을 때 휠에 표시)
 	const activeSeriesKey = $derived(viewingSeries || selectedSeriesKey);
@@ -82,10 +91,20 @@
 	// 사용 가능한 시리즈 목록
 	const availableSeries = $derived(Object.keys(groupedModels));
 
+	// ✅ 모델이 있는지 여부
+	const hasModels = $derived(items.length > 0);
+
 	// --- Effects ---
 	$effect(() => {
 		if (!isOpen) {
 			viewingSeries = null;
+		}
+	});
+
+	// ✅ selectedIndex가 범위를 벗어나면 보정
+	$effect(() => {
+		if (items.length > 0 && selectedIndex !== safeSelectedIndex) {
+			selectedIndex = safeSelectedIndex;
 		}
 	});
 
@@ -112,6 +131,9 @@
 	function toggleDetails(e: Event) {
 		e.preventDefault();
 
+		// ✅ 모델이 없으면 열지 않음
+		if (!hasModels) return;
+
 		if (isClosing) return;
 
 		if (isOpen) {
@@ -133,7 +155,8 @@
 	<summary
 		class={cn(
 			'bg-bg-main',
-			'cursor-pointer list-none [&::-webkit-details-marker]:hidden'
+			'cursor-pointer list-none [&::-webkit-details-marker]:hidden',
+			!hasModels && 'cursor-not-allowed opacity-50'
 		)}
 		onclick={toggleDetails}
 	>
@@ -148,11 +171,13 @@
 			)}
 		>
 			<div class={cn('flex items-center gap-2 overflow-hidden')}>
-				<IconLogoModel
-					model={selectedaiModel}
-					size={16}
-					id={selectedModelId}
-				/>
+				{#if selectedaiModel}
+					<IconLogoModel
+						model={selectedaiModel}
+						size={16}
+						id={selectedModelId}
+					/>
+				{/if}
 				<span class="truncate text-lg">
 					{capitalizeFirst(selectedDisplayName)}
 				</span>
@@ -164,14 +189,16 @@
 					'text-gray-500 group-hover:text-gray-700'
 				)}
 			>
-				<span class="text-sm">{isOpen ? '접기' : '변경'}</span>
-				<IconArrowVertical
-					size={16}
-					class={cn(
-						'transition-transform duration-300',
-						isOpen && 'rotate-180'
-					)}
-				/>
+				{#if hasModels}
+					<span class="text-sm">{isOpen ? '접기' : '변경'}</span>
+					<IconArrowVertical
+						size={16}
+						class={cn(
+							'transition-transform duration-300',
+							isOpen && 'rotate-180'
+						)}
+					/>
+				{/if}
 			</div>
 		</div>
 		<!-- 높이 애니메이션용 div -->
@@ -262,7 +289,7 @@
 				>
 					<div class="scrollbar-hide h-full overflow-y-auto py-6">
 						{#each viewingSeriesModels as model (model.id)}
-							{@const isSelected = model.originalIndex === selectedIndex}
+							{@const isSelected = model.originalIndex === safeSelectedIndex}
 							<button
 								type="button"
 								class={cn(

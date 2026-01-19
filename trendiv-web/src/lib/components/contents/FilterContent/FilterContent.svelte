@@ -68,23 +68,6 @@
 	// props 변경 감지하여 애니메이션 상태 동기화
 	// ─────────────────────────────────────────
 
-	let prevSelectedTags = $state<string[]>([]);
-
-	$effect(() => {
-		// props가 외부에서 변경되었을 때 애니메이션 상태 동기화
-		const currentSelected = selectedTags;
-		const prev = prevSelectedTags;
-
-		// 초기화 또는 외부 변경 감지
-		if (JSON.stringify(currentSelected) !== JSON.stringify(prev)) {
-			// 애니메이션 중이 아닐 때만 즉시 동기화
-			if (animatingTags.size === 0 && !isResetting) {
-				syncAnimationState(currentSelected);
-			}
-			prevSelectedTags = [...currentSelected];
-		}
-	});
-
 	function syncAnimationState(selected: string[]) {
 		animatedSelectedTags = selected.map((name) => ({
 			name,
@@ -113,7 +96,19 @@
 			animatedUnselectedTags.length === 0
 		) {
 			syncAnimationState(selectedTags);
-			prevSelectedTags = [...selectedTags];
+		}
+	});
+
+	// 외부에서 selectedTags가 변경되었을 때 동기화 (애니메이션 중이 아닐 때만)
+	let lastSyncedTags = $state<string[]>([]);
+
+	$effect(() => {
+		const currentKey = selectedTags.join(',');
+		const lastKey = lastSyncedTags.join(',');
+
+		if (currentKey !== lastKey && animatingTags.size === 0 && !isResetting) {
+			syncAnimationState(selectedTags);
+			lastSyncedTags = [...selectedTags];
 		}
 	});
 
@@ -141,7 +136,7 @@
 	}
 
 	// ─────────────────────────────────────────
-	// 태그 선택/해제 (애니메이션 + 부모에게 위임)
+	// 태그 선택/해제 (즉시 부모에게 알림 + 애니메이션)
 	// ─────────────────────────────────────────
 
 	async function showContainer() {
@@ -156,6 +151,15 @@
 		if (animatingTags.has(tag)) return;
 		animatingTags.add(tag);
 
+		// ✅ 내부 상태 기준으로 계산 (hiding 중인 것 제외)
+		const currentSelected = animatedSelectedTags
+			.filter((t) => !t.is_hiding)
+			.map((t) => t.name);
+		const newSelected = [...currentSelected, tag];
+
+		lastSyncedTags = newSelected;
+		onchange?.(newSelected);
+
 		const isFirstTag =
 			animatedSelectedTags.length === 0 ||
 			animatedSelectedTags.every((t) => t.is_hiding);
@@ -164,7 +168,6 @@
 			await showContainer();
 		}
 
-		// 애니메이션 상태 업데이트
 		animatedUnselectedTags = animatedUnselectedTags.map((t) =>
 			t.name === tag ? { ...t, is_hiding: true, is_showing: false } : t
 		);
@@ -182,7 +185,6 @@
 		});
 
 		safeTimeout(() => {
-			// 애니메이션 완료 후 정리
 			animatedSelectedTags = animatedSelectedTags.map((t) =>
 				t.name === tag ? { ...t, is_showing: false } : t
 			);
@@ -190,17 +192,20 @@
 				(t) => t.name !== tag
 			);
 			animatingTags.delete(tag);
-
-			// ✅ 부모에게 변경 위임
-			const newSelected = [...selectedTags, tag];
-			prevSelectedTags = newSelected;
-			onchange?.(newSelected);
 		}, ANIMATION_DURATION);
 	}
 
 	async function unselectTag(tag: string) {
 		if (animatingTags.has(tag)) return;
 		animatingTags.add(tag);
+
+		// ✅ 내부 상태 기준으로 계산 (해제할 태그와 hiding 중인 것 제외)
+		const currentSelected = animatedSelectedTags
+			.filter((t) => !t.is_hiding && t.name !== tag)
+			.map((t) => t.name);
+
+		lastSyncedTags = currentSelected;
+		onchange?.(currentSelected);
 
 		const isLastTag =
 			animatedSelectedTags.filter((t) => !t.is_hiding).length === 1;
@@ -235,11 +240,6 @@
 			if (isLastTag) {
 				containerState = 'hidden';
 			}
-
-			// ✅ 부모에게 변경 위임
-			const newSelected = selectedTags.filter((t) => t !== tag);
-			prevSelectedTags = newSelected;
-			onchange?.(newSelected);
 		}, ANIMATION_DURATION);
 	}
 
@@ -247,7 +247,11 @@
 		if (isResetting) return;
 		isResetting = true;
 
-		const currentSelectedNames = [...selectedTags];
+		// ✅ 빈 배열로 초기화
+		lastSyncedTags = [];
+		onchange?.([]);
+
+		const currentSelectedNames = animatedSelectedTags.map((t) => t.name);
 
 		containerState = 'hiding';
 
@@ -284,10 +288,6 @@
 			animatingTags.clear();
 			isResetting = false;
 			containerState = 'hidden';
-
-			// ✅ 부모에게 변경 위임
-			prevSelectedTags = [];
-			onchange?.([]);
 		}, ANIMATION_DURATION);
 	}
 

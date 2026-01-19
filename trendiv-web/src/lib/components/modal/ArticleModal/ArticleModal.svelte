@@ -30,7 +30,7 @@
 	// --- State: Data ---
 	let selectedIndex = $state(0);
 
-	const iconId = $derived(`article-modal-${trend.id}`);
+	const iconId = $derived(`article-modal-${trend?.id ?? ''}`);
 	// --- Derived: Data ---
 	const isBookmarked = $derived(
 		trend ? bookmarks.isBookmarked(trend.link) : false

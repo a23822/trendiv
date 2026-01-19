@@ -55,13 +55,13 @@
 	bind:this={dialog}
 	onclose={handleNativeClose}
 	onclick={handleBackdropClick}
-	class={cn('m-auto', 'modal-transition', className)}
+	class={cn('m-auto rounded-2xl', 'modal-transition', className)}
 >
 	<div
 		class={cn(
 			'flex flex-col',
 			'max-h-[inherit]',
-			'bg-bg-main rounded-2xl shadow-xl',
+			'bg-bg-main shadow-xl',
 			'p-4 sm:p-6'
 		)}
 	>

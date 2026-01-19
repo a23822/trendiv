@@ -12,7 +12,8 @@
 		selectedTags?: string[];
 		categoryList?: string[];
 		selectedCategory?: string[];
-		onselectCategory?: (category: string) => void;
+		// ✅ 카테고리도 배열로 전달하는 콜백 추가
+		onchangeCategory?: (categories: string[]) => void;
 		onchange?: (selectedTags: string[]) => void;
 		onapply?: () => void;
 	}
@@ -23,24 +24,28 @@
 		selectedTags = [],
 		categoryList = [],
 		selectedCategory = [],
-		onselectCategory,
+		onchangeCategory,
 		onchange,
 		onapply
 	}: Props = $props();
 
-	// ✅ 로컬 상태 (모달 내부에서만 사용)
+	// 로컬 상태 (모달 내부에서만 사용)
 	let localSelectedTags = $state<string[]>([]);
 	let localSelectedCategory = $state<string[]>([]);
 
-	// ✅ 모달 열릴 때 props로 초기화
+	// ✅ 모달이 "열리는 순간"에만 초기화 (편집 중 덮어쓰기 방지)
+	let wasOpen = $state(false);
+
 	$effect(() => {
-		if (open) {
+		if (open && !wasOpen) {
+			// open이 false → true로 변할 때만 실행
 			localSelectedTags = [...selectedTags];
 			localSelectedCategory = [...selectedCategory];
 		}
+		wasOpen = open;
 	});
 
-	// ✅ 로컬 상태 변경 핸들러
+	// 로컬 상태 변경 핸들러
 	function handleTagChange(newTags: string[]) {
 		localSelectedTags = newTags;
 	}
@@ -55,27 +60,16 @@
 		}
 	}
 
-	// ✅ 적용 버튼 - 부모에게 최종 결과 전달
+	// ✅ 적용 버튼 - 배열로 한 번에 전달
 	function handleApply() {
 		onchange?.(localSelectedTags);
-
-		// 카테고리 변경사항도 전달
-		const addedCategories = localSelectedCategory.filter(
-			(c) => !selectedCategory.includes(c)
-		);
-		const removedCategories = selectedCategory.filter(
-			(c) => !localSelectedCategory.includes(c)
-		);
-
-		[...addedCategories, ...removedCategories].forEach((cat) => {
-			onselectCategory?.(cat);
-		});
-
+		onchangeCategory?.(localSelectedCategory); // ✅ 배열 통째로 전달
 		onapply?.();
+		modal.close();
 		open = false;
 	}
 
-	// ✅ 초기화 버튼
+	// 초기화 버튼
 	function handleReset() {
 		localSelectedTags = [];
 		localSelectedCategory = [];
