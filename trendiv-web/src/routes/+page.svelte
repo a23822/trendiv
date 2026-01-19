@@ -3,8 +3,10 @@
 	import ArticleCard from '$lib/components/contents/ArticleCard/ArticleCard.svelte';
 	import HeroSection from '$lib/components/contents/HeroSection.svelte';
 	import SearchCard from '$lib/components/contents/SearchCard/SearchCard.svelte';
+	import FloatingButtonArea from '$lib/components/layout/Floating/FloatingButtonArea.svelte';
 	import Header from '$lib/components/layout/Header/Header.svelte';
 	import ArticleModal from '$lib/components/modal/ArticleModal/ArticleModal.svelte';
+	import FilterModal from '$lib/components/modal/FilterModal/FilterModal.svelte';
 	import { auth } from '$lib/stores/auth.svelte.js';
 	import { modal } from '$lib/stores/modal.svelte.js';
 	import type { Trend } from '$lib/types';
@@ -115,7 +117,6 @@
 	let lastProcessedCount = $state(0);
 	let lastColumnCount = $state(2);
 
-	// columnCount를 $derived로 분리 (1px 변경마다 재계산 방지)
 	const columnCount = $derived(innerWidth < 640 ? 1 : 2);
 
 	function estimateHeight(trend: Trend): number {
@@ -137,13 +138,10 @@
 	}
 
 	$effect(() => {
-		// 1. 감지할 의존성 명시 (trends나 columnCount가 변할 때만 실행)
 		const currentTrends = trends;
 		const cols = columnCount;
 
-		// 2. 내부 로직은 untrack으로 감싸서 cachedColumns 변경이 이 effect를 다시 트리거하지 않게 함
 		untrack(() => {
-			// 컬럼 수 변경 시 전체 리셋
 			if (cols !== lastColumnCount) {
 				lastColumnCount = cols;
 				resetMasonryCache();
@@ -155,33 +153,28 @@
 				}
 			}
 
-			// 1컬럼 모드
 			if (cols === 1) {
 				cachedColumns = [currentTrends];
 				lastProcessedCount = currentTrends.length;
 				return;
 			}
 
-			// trends가 줄어들었거나(필터링) 완전히 새로운 데이터면 리셋
-			// (첫 번째 아이템 ID가 다르면 새 데이터로 판단)
 			const firstCachedId = cachedColumns[0]?.[0]?.id;
 			const firstTrendId = currentTrends[0]?.id;
 
 			if (
-				currentTrends.length === 0 || // 결과 없으면 무조건 리셋
+				currentTrends.length === 0 ||
 				currentTrends.length < lastProcessedCount ||
 				(firstCachedId && firstTrendId && firstCachedId !== firstTrendId)
 			) {
 				resetMasonryCache();
 			}
 
-			// 새로 추가된 아이템만 처리 (증분 업데이트)
 			for (let i = lastProcessedCount; i < currentTrends.length; i++) {
 				const trend = currentTrends[i];
-				// 여기서 cachedHeights를 읽어도 untrack 내부라 재실행되지 않음
 				const shorter = cachedHeights[0] <= cachedHeights[1] ? 0 : 1;
 
-				cachedColumns[shorter].push(trend); // push 사용 (배열 복사 비용 절감)
+				cachedColumns[shorter].push(trend);
 				cachedHeights[shorter] += estimateHeight(trend);
 			}
 
@@ -190,20 +183,24 @@
 	});
 
 	// =============================================
-	// fetchTrends (reset 시 캐시 리셋 추가)
+	// fetchTrends
 	// =============================================
 	async function fetchTrends(reset = false) {
 		if (isLoadingMore && !reset) return;
 
+		// 현재 요청의 컨트롤러를 로컬 변수로 저장
+		const currentController = new AbortController();
+
+		// 이전 요청 중단
 		abortController?.abort();
-		abortController = new AbortController();
+		abortController = currentController;
 
 		if (reset) {
 			isSearching = true;
 			page = 1;
 			hasMore = true;
 			trends = [];
-			resetMasonryCache(); // ← 캐시 리셋 추가
+			resetMasonryCache();
 		} else {
 			isLoadingMore = true;
 			page += 1;
@@ -222,7 +219,7 @@
 			}
 
 			const res = await fetch(`${API_URL}/api/trends?${params}`, {
-				signal: abortController.signal
+				signal: currentController.signal
 			});
 
 			if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
@@ -250,7 +247,11 @@
 		} finally {
 			isLoadingMore = false;
 			isSearching = false;
-			abortController = null; // 메모리 정리
+
+			// 내가 생성한 컨트롤러일 때만 null 처리
+			if (abortController === currentController) {
+				abortController = null;
+			}
 		}
 	}
 
@@ -264,11 +265,13 @@
 		fetchTrends(true);
 	}
 
+	// ✅ SearchCard용 - 즉시 API 호출
 	function handleTagChange(newTags: string[]) {
 		selectedTags = newTags;
 		fetchTrends(true);
 	}
 
+	// ✅ SearchCard용 - 즉시 API 호출
 	function handleCategorySelect(category: string) {
 		if (selectedCategories.includes(category)) {
 			selectedCategories = selectedCategories.filter((c) => c !== category);
@@ -278,9 +281,33 @@
 		fetchTrends(true);
 	}
 
-	function openModal(trend: Trend) {
+	// ✅ 모달용 - API 호출 없이 상태만 변경
+	function handleModalTagChange(newTags: string[]) {
+		selectedTags = newTags;
+	}
+
+	// ✅ 모달용 - API 호출 없이 상태만 변경
+	function handleModalCategoryChange(categories: string[]) {
+		selectedCategories = categories;
+	}
+
+	function openArticleModal(trend: Trend) {
 		modal.open(ArticleModal, {
 			trend: trend
+		});
+	}
+
+	// ✅ 모달 열기 - onapply에서만 API 호출
+	function openFilterModal() {
+		modal.open(FilterModal, {
+			open: true,
+			tags: popularTags,
+			categoryList: categoryList,
+			selectedTags: selectedTags,
+			selectedCategory: selectedCategories,
+			onchange: handleModalTagChange,
+			onchangeCategory: handleModalCategoryChange,
+			onapply: () => fetchTrends(true)
 		});
 	}
 
@@ -320,7 +347,6 @@
 				bind:searchKeyword
 				{selectedTags}
 				tags={popularTags}
-				{isLoadingMore}
 				{categoryList}
 				selectedCategory={selectedCategories}
 				onselectCategory={handleCategorySelect}
@@ -340,7 +366,7 @@
 							{#each column as trend (trend.id)}
 								<ArticleCard
 									{trend}
-									onclick={() => openModal(trend)}
+									onclick={() => openArticleModal(trend)}
 								/>
 							{/each}
 						</div>
@@ -362,4 +388,5 @@
 			{/if}
 		</div>
 	</div>
+	<FloatingButtonArea onfilter={openFilterModal} />
 </main>
