@@ -26,14 +26,18 @@ COPY trendiv-code-reviewer-module/package.json ./trendiv-code-reviewer-module/
 RUN pnpm install --frozen-lockfile
 
 # 6. 전체 소스 코드 복사 (재료 손질)
-# 이제 진짜 코드를 다 집어넣습니다.
 COPY . .
 
-# 7. 포트 열기 (서빙 구멍 뚫기)
+# 7. 빌드 실행 (이미지 생성 단계에서 미리 JS로 변환)
+# trendiv-pipeline-controller만 빌드하거나, 모노레포 전체를 빌드합니다.
+# 안전하게 전체 의존성을 고려하여 파이프라인 컨트롤러를 빌드합니다.
+RUN pnpm --filter trendiv-pipeline-controller build
+
+# 8. 포트 열기 (서빙 구멍 뚫기)
 # Pipeline Controller (3000), Code Reviewer (3004)
 EXPOSE 3000 3004
 
-# 8. 실행 명령어 (요리 내가기)
+# 9. 실행 명령어 (요리 내가기)
 # 기본적으로 파이프라인 컨트롤러를 실행합니다.
 WORKDIR /app/trendiv-pipeline-controller
 CMD ["pnpm", "start"]
