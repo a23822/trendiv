@@ -65,12 +65,6 @@
 	--color-info-subtle: rgb(var(--info-subtle));
 	--color-info-text: rgb(var(--info-text));
 
-	/* Shadow (색상 변수로 등록) */
-	--shadow-sm: var(--shadow-sm);
-	--shadow-md: var(--shadow-md);
-	--shadow-lg: var(--shadow-lg);
-	--shadow-xl: var(--shadow-xl);
-
 	/* Mint Palette */
 	--color-mint-0: rgb(var(--mint-0));
 	--color-mint-50: rgb(var(--mint-50));
@@ -288,25 +282,25 @@
 @layer base {
 	.scroll-locked {
 		overflow: hidden;
-		padding-right: var(--scrollbar-gap); /* 변수 사용! */
+		padding-right: var(--spacing-scrollbar-gap); /* 변수 사용! */
 	}
 
 	/* [크롬, 사파리, 엣지]*/
 	::-webkit-scrollbar {
 		width: 10px;
 		height: 10px;
-		background-color: #f8fafc;
+		background-color: var(--color-gray-100);
 	}
 
 	::-webkit-scrollbar-thumb {
-		background-color: #148a7d;
+		background-color: var(--color-mint-600);
 		border-radius: 9999px;
 		background-clip: padding-box;
 		border: 2px solid transparent;
 	}
 
 	::-webkit-scrollbar-thumb:hover {
-		background-color: #b2ebe3;
+		background-color: var(--color-mint-300);
 		border-radius: 9999px;
 		border: 2px solid transparent;
 		background-clip: content-box;
@@ -315,13 +309,16 @@
 	/* [파이어폭스] */
 	* {
 		scrollbar-width: thin;
-		scrollbar-color: #148a7d transparent;
+		scrollbar-color: var(--color-mint-600) transparent;
 	}
 
 	.dark {
-		/* [크롬, 사파리, 엣지]*/
 		&::-webkit-scrollbar {
-			background-color: #111;
+			background-color: var(--color-gray-100);
+		}
+
+		&::-webkit-scrollbar-thumb {
+			background-color: var(--color-mint-500);
 		}
 	}
 }

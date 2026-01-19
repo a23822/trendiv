@@ -188,8 +188,12 @@
 	async function fetchTrends(reset = false) {
 		if (isLoadingMore && !reset) return;
 
+		// 현재 요청의 컨트롤러를 로컬 변수로 저장
+		const currentController = new AbortController();
+
+		// 이전 요청 중단
 		abortController?.abort();
-		abortController = new AbortController();
+		abortController = currentController;
 
 		if (reset) {
 			isSearching = true;
@@ -215,7 +219,7 @@
 			}
 
 			const res = await fetch(`${API_URL}/api/trends?${params}`, {
-				signal: abortController.signal
+				signal: currentController.signal
 			});
 
 			if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
@@ -243,7 +247,11 @@
 		} finally {
 			isLoadingMore = false;
 			isSearching = false;
-			abortController = null;
+
+			// 내가 생성한 컨트롤러일 때만 null 처리
+			if (abortController === currentController) {
+				abortController = null;
+			}
 		}
 	}
 
