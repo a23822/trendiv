@@ -162,25 +162,52 @@ export const runPipeline = async (): Promise<PipelineResult> => {
 
       // D. 분석 실행
       let analysisResults: AnalysisResult[] = [];
+
+      const attemptedIds = cleanData.map((item) => item.id);
+
       try {
         // 주의: analyzer.service 내부에서 X 카테고리는 Gemini가 분석 못하므로 Skip(null) 처리됨
         const rawResults = await runAnalysis(cleanData);
         if (!Array.isArray(rawResults)) {
           console.error("runAnalysis returned invalid data");
-          continue;
         }
         analysisResults = rawResults.filter(
           (r) => r && typeof r.id === "number"
         );
       } catch (e) {
         console.error(`      ⚠️ Batch ${loopCount} Analysis Failed:`, e);
-        continue;
       }
 
       // E. DB 업데이트 (벌크 처리)
       const ids = analysisResults.map((r) => r.id);
 
-      // 🆕 결과가 없으면(전부 X라서 스킵되었거나 에러) 다음 배치로
+      // 분석에 실패한 ID(시도는 했으나 결과에 없는 ID)를 찾아 'REJECTED' 처리
+      const successIds = new Set(ids);
+      const failedIds = attemptedIds.filter((id) => !successIds.has(id));
+
+      if (failedIds.length > 0) {
+        console.log(
+          `      🛑 Marking ${failedIds.length} items as REJECTED (Error Loop Prevention)...`
+        );
+
+        const failedUpdates = failedIds.map((id) => ({
+          id: id,
+          status: "REJECTED",
+        }));
+
+        const { error: failError } = await supabase
+          .from("trend")
+          .upsert(failedUpdates, { onConflict: "id" });
+
+        if (failError) {
+          console.error(
+            "      ❌ Failed status update error:",
+            failError.message
+          );
+        }
+      }
+
+      // 결과가 없으면(전부 X라서 스킵되었거나 에러) 다음 배치로
       if (ids.length === 0) {
         console.log("      ⚠️ 유효한 분석 결과 없음 (X 항목일 수 있음), 스킵");
         await delay(1000);
