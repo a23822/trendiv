@@ -315,19 +315,20 @@ export const runPipeline = async (): Promise<PipelineResult> => {
         }
       }
 
-      if (analyzedUpdates.length > 0) {
+      const allUpdates = [...analyzedUpdates, ...rejectedUpdates];
+
+      if (allUpdates.length > 0) {
         const { error } = await supabase
           .from("trend")
-          .upsert(analyzedUpdates, { onConflict: "id" });
-        if (error)
-          console.error("      ⚠️ Analyzed upsert failed:", error.message);
-      }
-      if (rejectedUpdates.length > 0) {
-        const { error } = await supabase
-          .from("trend")
-          .upsert(rejectedUpdates, { onConflict: "id" });
-        if (error)
-          console.error("      ⚠️ Rejected upsert failed:", error.message);
+          .upsert(allUpdates, { onConflict: "id" });
+
+        if (error) {
+          console.error("      ⚠️ Batch upsert failed:", error.message);
+        } else {
+          console.log(
+            `      💾 Saved batch updates: ${analyzedUpdates.length} analyzed, ${rejectedUpdates.length} rejected.`
+          );
+        }
       }
 
       console.log("      😴 Waiting 2s for Rate Limit...");

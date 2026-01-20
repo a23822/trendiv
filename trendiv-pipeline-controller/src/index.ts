@@ -205,18 +205,17 @@ if (process.env.BATCH_MODE === "true") {
     "/api/pipeline/run",
     adminLimiter,
     async (req: Request, res: Response) => {
-      // 중복 실행 방지 체크
+      // 1. 중복 실행 방지 체크
       if (isPipelineRunning) {
         console.warn("⚠️ 파이프라인이 이미 실행 중입니다.");
         return res.status(429).json({ error: "Pipeline is already running" });
       }
 
-      // ✅ 헤더 값 안전 추출
+      // 2. 인증 체크 (기존 로직 유지)
       const clientKey =
         getHeaderValue(req.headers["x-api-key"]) ||
         getHeaderValue(req.headers["authorization"]);
 
-      // ✅ Timing-safe 비교
       const isValid =
         safeCompare(clientKey, PIPELINE_API_KEY || "") ||
         safeCompare(clientKey, `Bearer ${PIPELINE_API_KEY || ""}`);
@@ -226,21 +225,29 @@ if (process.env.BATCH_MODE === "true") {
         return res.status(401).json({ error: "Unauthorized" });
       }
 
-      // 즉시 응답 반환 (Timeout 방지)
-      res.status(202).json({
-        success: true,
-        message: "Pipeline triggered successfully. Running in background.",
-        jobId: Date.now(),
-      });
-
-      console.log("👆 [Manual] 실행 요청됨 (동기 실행 모드)");
-      console.log("👆 [Manual] 실행 시작 (Background)");
+      // 검증이 끝나자마자 즉시 Lock
+      console.log("👆 [Manual] 실행 요청됨 -> 즉시 Lock 설정");
       isPipelineRunning = true;
 
-      // 백그라운드 작업 시작 (await을 여기서 하지 않고, 결과를 로그로만 남김)
-      // res 객체는 이미 응답을 보냈으므로 여기서 절대 사용하면 안 됩니다.
+      try {
+        // 3. 클라이언트에게 "접수됨" 응답 발송
+        res.status(202).json({
+          success: true,
+          message: "Pipeline triggered successfully. Running in background.",
+          jobId: Date.now(),
+        });
+      } catch (err) {
+        // 만약 응답 중 에러가 나면 Lock을 풀어줘야 함
+        isPipelineRunning = false;
+        console.error("❌ 응답 전송 실패:", err);
+        return;
+      }
+
+      console.log("👆 [Manual] 백그라운드 작업 시작");
+
+      // 4. 백그라운드 작업 시작
+      // (여기서 isPipelineRunning = true를 또 할 필요 없음)
       (async () => {
-        isPipelineRunning = true;
         try {
           const result = await runPipeline();
 
@@ -257,6 +264,7 @@ if (process.env.BATCH_MODE === "true") {
         } catch (err) {
           console.error("❌ [Background] 파이프라인 예외 발생:", err);
         } finally {
+          // 작업이 끝나면 Lock 해제
           isPipelineRunning = false;
           console.log("🏁 [Background] 실행 종료 (Lock 해제)");
         }
