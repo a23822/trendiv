@@ -53,9 +53,7 @@
 	let animatedSelectedTags = $state<AnimatedTag[]>([]);
 	let animatedUnselectedTags = $state<AnimatedTag[]>([]);
 	let openSections = $state(
-		new Set<string>(
-			defaultOpenSections?.length ? defaultOpenSections : ['tag', 'source']
-		)
+		new Set<string>(defaultOpenSections?.length ? defaultOpenSections : ['tag'])
 	);
 	let containerState = $state<'hidden' | 'showing' | 'visible' | 'hiding'>(
 		'hidden'

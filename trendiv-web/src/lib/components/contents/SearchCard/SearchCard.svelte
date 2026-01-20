@@ -61,5 +61,6 @@
 		{onselectCategory}
 		{onchange}
 		variant="collapsible"
+		defaultOpenSections={['tag']}
 	/>
 </section>
