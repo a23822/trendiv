@@ -3,11 +3,7 @@ import dotenv from "dotenv";
 import path from "path";
 // trendiv-analysis-module의 소스 코드를 상대 경로로 직접 import 합니다.
 // (monorepo 설정에 따라 패키지명 import가 안될 경우를 대비한 안전한 방식)
-import { GrokService } from "../../../trendiv-analysis-module/src/services/grok.service";
-import {
-  AnalysisResult,
-  Trend,
-} from "../../../trendiv-analysis-module/src/types";
+import { GrokService, AnalysisResult, Trend } from "trendiv-analysis-module";
 
 // 환경 변수 로드 (fix_sources.ts와 동일한 경로 참조)
 dotenv.config({ path: path.resolve(__dirname, "../../../.env") });
@@ -57,7 +53,7 @@ const runGrokAnalysisForX = async () => {
   for (const trend of trends) {
     try {
       console.log(
-        `\nAnalyzing [${trend.id}] ${trend.title.substring(0, 30)}...`
+        `\nAnalyzing [${trend.id}] ${trend.title.substring(0, 30)}...`,
       );
 
       // X 데이터는 내용(content)이 빈약하므로 analyzeWithContent 대신

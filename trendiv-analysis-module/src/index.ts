@@ -15,6 +15,7 @@ import { delay } from './utils/helpers';
 
 // Re-export types for backward compatibility
 export type { AnalysisResult, Trend, PipelineResult } from './types';
+export { GrokService } from './services/grok.service';
 
 // ---------------------------------------------------------
 // 🔧 Environment Setup

@@ -31,7 +31,7 @@ COPY . .
 # 7. 빌드 실행 (이미지 생성 단계에서 미리 JS로 변환)
 # trendiv-pipeline-controller만 빌드하거나, 모노레포 전체를 빌드합니다.
 # 안전하게 전체 의존성을 고려하여 파이프라인 컨트롤러를 빌드합니다.
-RUN pnpm --filter trendiv-pipeline-controller build
+RUN pnpm --filter trendiv-pipeline-controller... build
 
 # 8. 포트 열기 (서빙 구멍 뚫기)
 # Pipeline Controller (3000), Code Reviewer (3004)
