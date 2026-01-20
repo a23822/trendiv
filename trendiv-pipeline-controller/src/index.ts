@@ -109,7 +109,7 @@ if (process.env.BATCH_MODE === "true") {
   // ==========================================
   const corsOriginEnv = process.env.FRONTEND_URL || "http://localhost:5173";
   const corsOrigin = corsOriginEnv.includes(",")
-    ? corsOriginEnv.split(",")
+    ? corsOriginEnv.split(",").map((s) => s.trim())
     : corsOriginEnv;
 
   app.use(cors({ origin: corsOrigin, credentials: true }));

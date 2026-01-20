@@ -194,23 +194,29 @@ export const runPipeline = async (): Promise<PipelineResult> => {
           `      🛑 Marking ${failedIds.length} items as REJECTED (Error Loop Prevention)...`
         );
 
-        // ✅ [수정] 에러 마커 추가 - 나중에 디버깅 용이
-        const failedUpdates = failedIds.map((id) => ({
-          id: id,
-          status: "REJECTED",
-          analysis_results: [
-            {
-              aiModel: "SYSTEM",
-              score: 0,
-              reason: "분석 실패 (콘텐츠 수집 불가 또는 API 오류)",
-              title_ko: "",
-              oneLineSummary: "",
-              keyPoints: [],
-              tags: ["_ANALYSIS_FAILED"],
-              analyzedAt: new Date().toISOString(),
-            },
-          ],
-        }));
+        // 에러 마커 추가 - 나중에 디버깅 용이
+        const failedUpdates = failedIds.map((id) => {
+          const originalItem = targetItems.find((t: any) => t.id === id);
+          const existingHistory = originalItem?.analysis_results || [];
+
+          return {
+            id: id,
+            status: "REJECTED",
+            analysis_results: [
+              ...existingHistory,
+              {
+                aiModel: "SYSTEM",
+                score: 0,
+                reason: "분석 실패 (콘텐츠 수집 불가 또는 API 오류)",
+                title_ko: "",
+                oneLineSummary: "",
+                keyPoints: [],
+                tags: ["_ANALYSIS_FAILED"],
+                analyzedAt: new Date().toISOString(),
+              },
+            ],
+          };
+        });
 
         const { error: failError } = await supabase
           .from("trend")
@@ -548,7 +554,12 @@ async function saveAnalysisResults(
   supabase: SupabaseClient,
   results: AnalysisResult[]
 ): Promise<void> {
-  if (results.length === 0) return;
+  if (!Array.isArray(results) || results.length === 0) {
+    console.warn(
+      "      ⚠️ saveAnalysisResults: 유효하지 않은 결과값, 저장 건너뜀."
+    );
+    return;
+  }
 
   const ids = results.map((r) => r.id);
 
