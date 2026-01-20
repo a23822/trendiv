@@ -234,26 +234,33 @@ if (process.env.BATCH_MODE === "true") {
       });
 
       console.log("👆 [Manual] 실행 요청됨 (동기 실행 모드)");
-
       console.log("👆 [Manual] 실행 시작 (Background)");
       isPipelineRunning = true;
 
-      try {
-        const result = await runPipeline();
-        res.json({
-          success: true,
-          message: "Pipeline executed successfully",
-          result,
-        });
-      } catch (err) {
-        console.error("❌ 실행 실패:", err);
-        res
-          .status(500)
-          .json({ error: "Pipeline execution failed", details: String(err) });
-      } finally {
-        isPipelineRunning = false;
-        console.log("🏁 [Background] 실행 종료 (Lock 해제)");
-      }
+      // 백그라운드 작업 시작 (await을 여기서 하지 않고, 결과를 로그로만 남김)
+      // res 객체는 이미 응답을 보냈으므로 여기서 절대 사용하면 안 됩니다.
+      (async () => {
+        isPipelineRunning = true;
+        try {
+          const result = await runPipeline();
+
+          if (result.success) {
+            console.log(
+              `✅ [Background] 파이프라인 성공 완료: ${result.count}건 처리`
+            );
+          } else {
+            console.error(
+              "❌ [Background] 파이프라인 로직 실패:",
+              result.error
+            );
+          }
+        } catch (err) {
+          console.error("❌ [Background] 파이프라인 예외 발생:", err);
+        } finally {
+          isPipelineRunning = false;
+          console.log("🏁 [Background] 실행 종료 (Lock 해제)");
+        }
+      })();
     }
   );
 

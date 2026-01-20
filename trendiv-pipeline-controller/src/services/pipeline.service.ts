@@ -58,7 +58,7 @@ interface PipelineResult {
 }
 
 // 🆕 상수
-const MAX_LOOP_COUNT = 100; // 무한루프 방지
+const MAX_LOOP_COUNT = 20; // ✅ [수정] 100 → 20 (안전장치 강화)
 const BATCH_DELAY_MS = 2000;
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -162,26 +162,30 @@ export const runPipeline = async (): Promise<PipelineResult> => {
 
       // D. 분석 실행
       let analysisResults: AnalysisResult[] = [];
-
       const attemptedIds = cleanData.map((item) => item.id);
 
       try {
         // 주의: analyzer.service 내부에서 X 카테고리는 Gemini가 분석 못하므로 Skip(null) 처리됨
         const rawResults = await runAnalysis(cleanData);
+
+        // ✅ [수정] 배열 체크 후 else로 처리 (런타임 에러 방지)
         if (!Array.isArray(rawResults)) {
           console.error("runAnalysis returned invalid data");
+          // analysisResults는 빈 배열로 유지 → 아래에서 전부 failedIds로 처리됨
+        } else {
+          analysisResults = rawResults.filter(
+            (r) => r && typeof r.id === "number"
+          );
         }
-        analysisResults = rawResults.filter(
-          (r) => r && typeof r.id === "number"
-        );
       } catch (e) {
         console.error(`      ⚠️ Batch ${loopCount} Analysis Failed:`, e);
+        // ✅ continue 없음 - 아래 failedIds 로직에서 전부 REJECTED 처리됨
       }
 
       // E. DB 업데이트 (벌크 처리)
       const ids = analysisResults.map((r) => r.id);
 
-      // 분석에 실패한 ID(시도는 했으나 결과에 없는 ID)를 찾아 'REJECTED' 처리
+      // ✅ 분석에 실패한 ID(시도는 했으나 결과에 없는 ID)를 찾아 'REJECTED' 처리
       const successIds = new Set(ids);
       const failedIds = attemptedIds.filter((id) => !successIds.has(id));
 
@@ -190,9 +194,22 @@ export const runPipeline = async (): Promise<PipelineResult> => {
           `      🛑 Marking ${failedIds.length} items as REJECTED (Error Loop Prevention)...`
         );
 
+        // ✅ [수정] 에러 마커 추가 - 나중에 디버깅 용이
         const failedUpdates = failedIds.map((id) => ({
           id: id,
           status: "REJECTED",
+          analysis_results: [
+            {
+              aiModel: "SYSTEM",
+              score: 0,
+              reason: "분석 실패 (콘텐츠 수집 불가 또는 API 오류)",
+              title_ko: "",
+              oneLineSummary: "",
+              keyPoints: [],
+              tags: ["_ANALYSIS_FAILED"],
+              analyzedAt: new Date().toISOString(),
+            },
+          ],
         }));
 
         const { error: failError } = await supabase
@@ -406,7 +423,7 @@ export const runGeminiProAnalysis = async (): Promise<void> => {
           date: item.date,
           source: item.source,
           category: item.category,
-          content: item.content, // 👈 [수정 2] DB에 저장된 본문이 있으면 전달
+          content: item.content,
         });
       }
     }
@@ -498,7 +515,7 @@ export const runGrokAnalysis = async (): Promise<void> => {
           date: item.date,
           source: item.source,
           category: item.category,
-          content: item.content, // 👈 [수정 3] DB에 저장된 본문이 있으면 전달
+          content: item.content,
         });
       }
     }
