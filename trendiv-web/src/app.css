@@ -264,10 +264,16 @@
 }
 
 @layer utilities {
-	.theme-transitioning,
-	.theme-transitioning *,
-	.theme-transitioning *::before,
-	.theme-transitioning *::after {
+	.theme-transitioning {
+		transition: none;
+	}
+
+	.theme-transitioning *:not(.toggle_theme, .toggle_theme *) {
+		transition: none;
+	}
+
+	.theme-transitioning *:not(.toggle_theme, .toggle_theme *)::before,
+	.theme-transitioning *:not(.toggle_theme, .toggle_theme *)::after {
 		transition: none;
 	}
 }
