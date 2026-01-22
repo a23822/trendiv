@@ -18,6 +18,13 @@
 		};
 	});
 
+	$effect(() => {
+		// 애니메이션 중이 아닐 때만 외부 변경 동기화
+		if (animatingTo === null && visualDark !== theme.isDark) {
+			visualDark = theme.isDark;
+		}
+	});
+
 	function handleToggle() {
 		if (animatingTo) return;
 
@@ -33,6 +40,8 @@
 
 <button
 	type="button"
+	role="switch"
+	aria-checked={theme.isDark}
 	class={cn(
 		'relative w-full transform-gpu overflow-hidden',
 		'h-header-height',
