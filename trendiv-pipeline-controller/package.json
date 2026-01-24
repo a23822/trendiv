@@ -21,6 +21,8 @@
     "express-rate-limit": "^8.2.1",
     "node-cron": "^4.2.1",
     "nodemailer": "^7.0.11",
+    "playwright-extra": "^4.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
     "resend": "^6.5.2",
     "trendiv-analysis-module": "workspace:*",
     "trendiv-result-module": "workspace:*",
