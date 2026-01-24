@@ -16,35 +16,37 @@ export const TARGETS: ScraperConfig[] = [
     type: 'rss',
     url: 'https://hnrss.org/newest?q=web&points=100',
   },
+  // 마크업 핵심 (CSS, HTML, 접근성, 웹 디자인)
   {
-    name: 'Reddit',
+    name: 'Reddit Web Markup',
     category: 'Reddit',
     type: 'rss',
-    url: 'https://www.reddit.com/r/css+html+accessibility+a11y/top/.rss?t=day',
+    url: 'https://www.reddit.com/r/css+html+accessibility+a11y+web_design/top/.rss?t=day',
   },
+  // iOS Safari 이슈 참고용
   {
-    name: 'Reddit',
+    name: 'Reddit iOS',
     category: 'Reddit',
     type: 'rss',
-    url: 'https://www.reddit.com/r/androiddev/top/.rss?t=week',
+    url: 'https://www.reddit.com/r/ios/top/.rss?t=week',
   },
+  // StackOverflow - 공식 API 사용 (Cloudflare 우회)
   {
-    name: 'StackOverflow',
-    category: 'StackOverflow',
-    type: 'rss',
-    url: 'https://stackoverflow.com/feeds/tag?tagnames=ios+or+swift&sort=newest',
-  },
-  {
-    name: 'StackOverflow',
+    name: 'StackOverflow Web',
     category: 'StackOverflow',
     type: 'stackoverflow',
-    url: 'css;html;accessibility',
+    url: 'css;html;accessibility;a11y',
+  },
+  {
+    name: 'StackOverflow iOS',
+    category: 'StackOverflow',
+    type: 'stackoverflow',
+    url: 'ios;safari',
   },
 
   // =================================================
   // 2. YouTube (Grouped by Platform)
   // =================================================
-  // 유튜브는 채널이 많고 개별 채널보다는 '유튜브 영상'이라는 포맷이 중요하므로 묶습니다.
   {
     name: 'Kevin Powell',
     category: 'YouTube',
@@ -79,19 +81,16 @@ export const TARGETS: ScraperConfig[] = [
   // =================================================
   //  YouTube Keywords (API - 발굴 개념 / 비용 100)
   // =================================================
-  // 주의: 하루 쿼터(10,000) 고려하여 너무 많이 등록하지 말 것.
-  // 예: 1시간마다 실행 시 24회 * 100점 = 2,400점 소모 (안전)
   {
     name: 'YouTube Search',
     category: 'YouTube',
-    type: 'youtube_search', // API 모드
-    url: 'html | css | a11y | Web accessibility', // 검색어
+    type: 'youtube_search',
+    url: 'html | css | a11y | Web accessibility',
   },
 
   // =================================================
   // 3. Official Blogs (Each Name = Category)
   // =================================================
-  // 블로그는 각각이 하나의 독립된 미디어이므로 이름을 카테고리로 사용합니다.
   {
     name: 'MDN Web Docs',
     category: 'MDN Web Docs',
@@ -109,13 +108,15 @@ export const TARGETS: ScraperConfig[] = [
     category: 'Smashing Magazine',
     type: 'rss',
     url: 'https://www.smashingmagazine.com/feed/',
+    useProxy: true,
   },
-  {
-    name: 'Apple Developer',
-    category: 'Apple Developer',
-    type: 'rss',
-    url: 'https://developer.apple.com/news/rss/news.rss',
-  },
+  // ❌ Apple Developer - Cloud Run IP 차단
+  // {
+  //   name: 'Apple Developer',
+  //   category: 'Apple Developer',
+  //   type: 'rss',
+  //   url: 'https://developer.apple.com/news/rss/news.rss',
+  // },
   {
     name: 'iOS Dev Weekly',
     category: 'iOS Dev Weekly',
@@ -152,11 +153,12 @@ export const TARGETS: ScraperConfig[] = [
     type: 'rss',
     url: 'https://www.xda-developers.com/feed/',
   },
+  // ✅ React Blog
   {
     name: 'React Blog',
     category: 'React Blog',
     type: 'rss',
-    url: 'https://react.dev/feed.xml',
+    url: 'https://react.dev/rss.xml',
   },
   {
     name: 'Vercel Blog',

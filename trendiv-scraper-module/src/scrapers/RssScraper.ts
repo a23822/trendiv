@@ -3,12 +3,33 @@ import axios from 'axios';
 import { chromium } from 'playwright';
 import { Scraper, ScraperConfig, TrendItem } from './interface';
 
+// rss2json 응답 타입
+interface Rss2JsonItem {
+  title: string;
+  link: string;
+  pubDate: string;
+  description?: string;
+  content?: string;
+}
+
+interface Rss2JsonResponse {
+  status: string;
+  items: Rss2JsonItem[];
+}
+
 export class RssScraper implements Scraper {
   private parser = new Parser();
+  private readonly RSS2JSON_API = 'https://api.rss2json.com/v1/api.json';
 
   async scrape(config: ScraperConfig): Promise<TrendItem[]> {
     console.log(`📡 [RSS] ${config.name} 수집 시작...`);
 
+    // 프록시 모드
+    if (config.useProxy) {
+      return this.fetchWithProxy(config);
+    }
+
+    // 기존 로직
     let xmlData = '';
 
     try {
@@ -20,12 +41,11 @@ export class RssScraper implements Scraper {
           Accept:
             'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
         },
-        timeout: 5000, // 5초만 대기
+        timeout: 5000,
         responseType: 'text',
       });
       xmlData = response.data;
     } catch (error: any) {
-      // 406(Not Acceptable)이나 403(Forbidden) 에러 시 브라우저 모드로 전환
       if (
         error.response &&
         (error.response.status === 406 || error.response.status === 403)
@@ -43,19 +63,16 @@ export class RssScraper implements Scraper {
     if (!xmlData) return [];
 
     try {
-      // 데이터 전처리 (Swift.org 에러 해결용: BOM 및 공백 제거)
       const cleanXml = xmlData
         .toString()
         .trim()
-        .replace(/^\uFEFF/, '') // BOM 제거
-        // XML 태그가 아닌 '<' 문자(코드 스니펫의 부등호 등)를 '&lt;'로 변환
-        // 정규식 설명: < 뒤에 공백(\s)이나 숫자([0-9])가 오면 태그가 아니라고 판단하여 치환
+        .replace(/^\uFEFF/, '')
         .replace(/<(?=\s|[0-9])/g, '&lt;');
 
       const feed = await this.parser.parseString(cleanXml);
 
       return feed.items.map((item) => {
-        const summary =
+        const content =
           item.contentSnippet || item.content || item.summary || '';
         const date = item.isoDate || item.pubDate || new Date().toISOString();
 
@@ -65,10 +82,46 @@ export class RssScraper implements Scraper {
           date: date,
           source: config.name,
           category: config.category,
+          content: content,
         };
       });
     } catch (parseError) {
       console.error(`❌ [RSS] ${config.name} 파싱 에러:`, parseError);
+      return [];
+    }
+  }
+
+  private async fetchWithProxy(config: ScraperConfig): Promise<TrendItem[]> {
+    console.log(`   🔄 Using rss2json proxy...`);
+
+    try {
+      const response = await axios.get<Rss2JsonResponse>(this.RSS2JSON_API, {
+        params: {
+          rss_url: config.url,
+        },
+        timeout: 10000,
+      });
+
+      if (response.data.status !== 'ok') {
+        console.error(
+          `❌ [RSS Proxy] ${config.name} 실패: ${response.data.status}`,
+        );
+        return [];
+      }
+
+      const items = response.data.items.map((item) => ({
+        title: item.title?.trim() || '제목 없음',
+        link: item.link || '',
+        date: item.pubDate || new Date().toISOString(),
+        source: config.name,
+        category: config.category,
+        content: item.description || item.content || '',
+      }));
+
+      console.log(`   ✅ Proxy success: ${items.length}개 수집`);
+      return items;
+    } catch (error: any) {
+      console.error(`❌ [RSS Proxy] ${config.name} 실패: ${error.message}`);
       return [];
     }
   }
@@ -82,14 +135,13 @@ export class RssScraper implements Scraper {
 
     try {
       const page = await context.newPage();
-      // 페이지에 접속해서 서버가 주는 원본 텍스트(XML)를 받아옴
       const response = await page.goto(url, {
         waitUntil: 'domcontentloaded',
         timeout: 30000,
       });
 
       if (!response) throw new Error('No response');
-      return await response.text(); // XML 내용을 텍스트로 반환
+      return await response.text();
     } catch (e) {
       console.error(`❌ 브라우저 모드 실패:`, e);
       return '';

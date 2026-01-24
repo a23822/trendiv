@@ -33,6 +33,7 @@ export class AnalyzerService {
    */
   async analyzeTrend(trend: Trend): Promise<AnalysisResult | null> {
     const isXCategory = trend.category === 'X';
+    const isReddit = trend.category === 'Reddit';
 
     const shouldUseGrok =
       this.forceProvider === 'grok' || (!this.forceProvider && isXCategory);
@@ -45,8 +46,18 @@ export class AnalyzerService {
     let fetchedScreenshot: string | null = null;
     let isUsedStoredContent = false;
 
-    // 1. 라이브 스크래핑 시도 (X 카테고리 제외)
-    if (!isXCategory) {
+    // Reddit은 fetch 스킵
+    if (isReddit) {
+      if (trend.content && trend.content.length > 0) {
+        console.log(
+          `      ⏭️ Reddit detected - using stored content (${trend.content.length} chars)`,
+        );
+        fetchedContent = trend.content;
+        isUsedStoredContent = true;
+      } else {
+        console.log(`      ⚠️ Reddit detected but no stored content available`);
+      }
+    } else if (!isXCategory) {
       try {
         console.log(
           `      Trying live fetch for: ${trend.title.substring(0, 20)}...`,
