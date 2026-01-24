@@ -4,6 +4,7 @@ export interface TrendItem {
   date?: string;
   source: string;
   category: string;
+  content?: string;
 }
 
 export interface ScraperConfig {
@@ -18,6 +19,7 @@ export interface ScraperConfig {
     | 'stackoverflow';
   url: string;
   selector?: string;
+  useProxy?: boolean;
 }
 
 export interface Scraper {
