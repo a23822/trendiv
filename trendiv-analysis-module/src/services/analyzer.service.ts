@@ -1,8 +1,3 @@
-/**
- * Main Analysis Orchestrator
- * Coordinates content fetching and AI analysis
- */
-
 import { Browser } from 'playwright';
 import { AnalysisResult, Trend } from '../types';
 import { ContentService } from './content.service';
@@ -56,6 +51,8 @@ export class AnalyzerService {
         console.log(
           `      Trying live fetch for: ${trend.title.substring(0, 20)}...`,
         );
+        console.log(`      📍 URL: ${trend.link}`);
+        console.log(`      📍 Category: ${trend.category}`);
 
         const { content, screenshot } =
           await this.contentService.fetchContentWithScreenshot(
@@ -65,10 +62,17 @@ export class AnalyzerService {
 
         // content 객체에서 실제 텍스트(.content)만 추출
         fetchedContent = content?.content || '';
-
         fetchedScreenshot = screenshot || null;
-      } catch (e) {
-        console.warn(`      ⚠️ Live fetch failed, checking DB content...`);
+
+        console.log(`      ✅ Fetch success: ${fetchedContent.length} chars`);
+      } catch (e: any) {
+        console.error(`      ❌ Live fetch FAILED`);
+        console.error(`      📍 URL: ${trend.link}`);
+        console.error(`      📍 Category: ${trend.category}`);
+        console.error(`      📍 Error name: ${e?.name}`);
+        console.error(`      📍 Error message: ${e?.message}`);
+        console.error(`      📍 Error stack: ${e?.stack?.substring(0, 500)}`);
+        console.warn(`      ⚠️ Falling back to DB content...`);
       }
     }
 
@@ -122,8 +126,10 @@ export class AnalyzerService {
           aiModel: this.grokService.getModelName(),
           analyzedAt: new Date().toISOString(),
         };
-      } catch (error) {
-        console.error(`❌ Grok analysis failed:`, error);
+      } catch (error: any) {
+        console.error(`❌ Grok analysis failed:`);
+        console.error(`      📍 Error name: ${error?.name}`);
+        console.error(`      📍 Error message: ${error?.message}`);
         return null;
       }
     }
@@ -169,8 +175,10 @@ export class AnalyzerService {
 
       console.log(`      ⚠️ No content or screenshot available`);
       return null;
-    } catch (error) {
-      console.error(`❌ Gemini analysis failed:`, error);
+    } catch (error: any) {
+      console.error(`❌ Gemini analysis failed:`);
+      console.error(`      📍 Error name: ${error?.name}`);
+      console.error(`      📍 Error message: ${error?.message}`);
       return null;
     }
   }
