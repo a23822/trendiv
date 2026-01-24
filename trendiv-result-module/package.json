@@ -6,7 +6,7 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "start": "ts-node src/index.ts",
-    "build": "tsc"
+    "build": "tsc && cp src/template.mjml dist/template.mjml"
   },
   "keywords": [],
   "author": "",
