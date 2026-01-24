@@ -4,6 +4,7 @@
 	import { CommonStyles } from '$lib/constants/styles';
 	import IconRefresh from '$lib/icons/icon_refresh.svelte';
 	import { modal } from '$lib/stores/modal.svelte.js';
+	import type { ArticleStatusFilter } from '$lib/types';
 	import { cn } from '$lib/utils/ClassMerge';
 
 	interface Props {
@@ -12,9 +13,10 @@
 		selectedTags?: string[];
 		categoryList?: string[];
 		selectedCategory?: string[];
-		// ✅ 카테고리도 배열로 전달하는 콜백 추가
+		statusFilter?: ArticleStatusFilter;
 		onchangeCategory?: (categories: string[]) => void;
 		onchange?: (selectedTags: string[]) => void;
+		onstatusChange?: (status: ArticleStatusFilter) => void;
 		onapply?: () => void;
 	}
 
@@ -24,16 +26,19 @@
 		selectedTags = [],
 		categoryList = [],
 		selectedCategory = [],
+		statusFilter = 'all',
 		onchangeCategory,
 		onchange,
+		onstatusChange,
 		onapply
 	}: Props = $props();
 
 	// 로컬 상태 (모달 내부에서만 사용)
 	let localSelectedTags = $state<string[]>([]);
 	let localSelectedCategory = $state<string[]>([]);
+	let localStatusFilter = $state<ArticleStatusFilter>('all');
 
-	// ✅ 모달이 "열리는 순간"에만 초기화 (편집 중 덮어쓰기 방지)
+	// 모달이 "열리는 순간"에만 초기화 (편집 중 덮어쓰기 방지)
 	let wasOpen = $state(false);
 
 	$effect(() => {
@@ -60,7 +65,7 @@
 		}
 	}
 
-	// ✅ 적용 버튼 - 배열로 한 번에 전달
+	// 적용 버튼 - 배열로 한 번에 전달
 	function handleApply() {
 		onchange?.(localSelectedTags);
 		onchangeCategory?.(localSelectedCategory); // ✅ 배열 통째로 전달
@@ -149,8 +154,10 @@
 			selectedTags={localSelectedTags}
 			{categoryList}
 			selectedCategory={localSelectedCategory}
+			statusFilter={localStatusFilter}
 			onchange={handleTagChange}
 			onselectCategory={handleCategorySelect}
+			{onstatusChange}
 			variant="flat"
 		/>
 	</div>

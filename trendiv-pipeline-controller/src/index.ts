@@ -128,11 +128,11 @@ if (process.env.BATCH_MODE === "true") {
         // 1. 파라미터 파싱 (기본적인 페이지, limit 등)
         const page = Math.max(
           1,
-          parseInt(parseStringQuery(req.query.page)) || 1
+          parseInt(parseStringQuery(req.query.page)) || 1,
         );
         const limit = Math.min(
           100,
-          Math.max(1, parseInt(parseStringQuery(req.query.limit)) || 20)
+          Math.max(1, parseInt(parseStringQuery(req.query.limit)) || 20),
         );
 
         // 검색어, 날짜 필터 파싱
@@ -159,6 +159,9 @@ if (process.env.BATCH_MODE === "true") {
         const sortBy = parseStringQuery(req.query.sortBy) || "latest"; // 'latest', 'score', 'old'
         const minScore = parseInt(parseStringQuery(req.query.minScore)) || 0;
 
+        const userId = parseStringQuery(req.query.userId) || null;
+        const statusFilter = parseStringQuery(req.query.statusFilter) || "all";
+
         // 2. 통합 RPC 함수 호출
         const { data: rpcData, error } = await supabase.rpc(
           "search_trends_by_filter",
@@ -172,7 +175,9 @@ if (process.env.BATCH_MODE === "true") {
             p_sort_by: sortBy, // 정렬 기준
             p_page: page,
             p_limit: limit,
-          }
+            p_user_id: userId,
+            p_status_filter: statusFilter,
+          },
         );
 
         if (error) throw error;
@@ -197,7 +202,7 @@ if (process.env.BATCH_MODE === "true") {
         const message = error instanceof Error ? error.message : String(error);
         res.status(500).json({ error: "데이터 로드 실패", details: message });
       }
-    }
+    },
   );
 
   // 🔒 파이프라인 수동 실행
@@ -253,12 +258,12 @@ if (process.env.BATCH_MODE === "true") {
 
           if (result.success) {
             console.log(
-              `✅ [Background] 파이프라인 성공 완료: ${result.count}건 처리`
+              `✅ [Background] 파이프라인 성공 완료: ${result.count}건 처리`,
             );
           } else {
             console.error(
               "❌ [Background] 파이프라인 로직 실패:",
-              result.error
+              result.error,
             );
           }
         } catch (err) {
@@ -269,7 +274,7 @@ if (process.env.BATCH_MODE === "true") {
           console.log("🏁 [Background] 실행 종료 (Lock 해제)");
         }
       })();
-    }
+    },
   );
 
   // 구독 API
@@ -301,7 +306,7 @@ if (process.env.BATCH_MODE === "true") {
         console.error("구독 에러:", error);
         return res.status(500).json({ error: "구독 처리 실패" });
       }
-    }
+    },
   );
 
   const server = app.listen(PORT, () => {

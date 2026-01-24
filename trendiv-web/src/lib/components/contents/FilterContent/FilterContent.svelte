@@ -2,6 +2,7 @@
 	module
 	lang="ts"
 >
+	import type { ArticleStatusFilter } from '$lib/types';
 	import type { Component } from 'svelte';
 
 	export interface FilterContentProps {
@@ -9,8 +10,12 @@
 		selectedTags?: string[];
 		categoryList?: string[];
 		selectedCategory?: string[];
+		/** 개인화 필터 상태 */
+		statusFilter?: ArticleStatusFilter;
 		onselectCategory?: (category: string) => void;
 		onchange?: (selectedTags: string[]) => void;
+		/** 개인화 필터 변경 콜백 */
+		onstatusChange?: (status: ArticleStatusFilter) => void;
 		variant?: 'collapsible' | 'flat';
 		defaultOpenSections?: string[];
 	}
@@ -20,9 +25,12 @@
 	import SearchChip from '$lib/components/pure/Chip/SearchChip.svelte';
 	import { CommonStyles } from '$lib/constants/styles';
 	import IconArrowVertical from '$lib/icons/icon_arrow_vertical.svelte';
+	import IconBookmark from '$lib/icons/icon_bookmark.svelte';
 	import IconDocument from '$lib/icons/icon_document.svelte';
+	import IconHide from '$lib/icons/icon_hide.svelte';
 	import IconRefresh from '$lib/icons/icon_refresh.svelte';
 	import IconTag from '$lib/icons/icon_tag.svelte';
+	import IconUser from '$lib/icons/icon_user.svelte';
 	import { cn } from '$lib/utils/ClassMerge';
 	import { tick, onDestroy } from 'svelte';
 
@@ -31,8 +39,10 @@
 		selectedTags = [],
 		categoryList = [],
 		selectedCategory = [],
+		statusFilter = 'all',
 		onselectCategory,
 		onchange,
+		onstatusChange,
 		variant = 'collapsible',
 		defaultOpenSections
 	}: FilterContentProps = $props();
@@ -149,7 +159,7 @@
 		if (animatingTags.has(tag)) return;
 		animatingTags.add(tag);
 
-		// ✅ 내부 상태 기준으로 계산 (hiding 중인 것 제외)
+		// 내부 상태 기준으로 계산 (hiding 중인 것 제외)
 		const currentSelected = animatedSelectedTags
 			.filter((t) => !t.is_hiding)
 			.map((t) => t.name);
@@ -197,7 +207,7 @@
 		if (animatingTags.has(tag)) return;
 		animatingTags.add(tag);
 
-		// ✅ 내부 상태 기준으로 계산 (해제할 태그와 hiding 중인 것 제외)
+		// 내부 상태 기준으로 계산 (해제할 태그와 hiding 중인 것 제외)
 		const currentSelected = animatedSelectedTags
 			.filter((t) => !t.is_hiding && t.name !== tag)
 			.map((t) => t.name);
@@ -245,7 +255,7 @@
 		if (isResetting) return;
 		isResetting = true;
 
-		// ✅ 빈 배열로 초기화
+		// 빈 배열로 초기화
 		lastSyncedTags = [];
 		onchange?.([]);
 
@@ -290,9 +300,20 @@
 	}
 
 	// ─────────────────────────────────────────
+	// 개인화 필터 핸들러
+	// ─────────────────────────────────────────
+
+	function handleStatusChange(status: ArticleStatusFilter) {
+		onstatusChange?.(status);
+	}
+
+	// ─────────────────────────────────────────
 	// 파생 상태
 	// ─────────────────────────────────────────
 
+	let isPersonalOpen = $derived(
+		variant === 'flat' || openSections.has('personal')
+	);
 	let isTagOpen = $derived(variant === 'flat' || openSections.has('tag'));
 	let isSourceOpen = $derived(variant === 'flat' || openSections.has('source'));
 </script>
@@ -317,7 +338,7 @@
 		>
 			<Icon
 				class="shrink-0"
-				size={12}
+				size={16}
 			/>
 			<span class="truncate">{label}</span>
 			<IconArrowVertical
@@ -363,6 +384,38 @@
 	{:else}
 		{@render children()}
 	{/if}
+{/snippet}
+
+{#snippet personalChips()}
+	<div class="mt-4 flex flex-wrap gap-2">
+		<SearchChip
+			active={statusFilter === 'all'}
+			onclick={() => handleStatusChange('all')}
+		>
+			전체
+		</SearchChip>
+		<SearchChip
+			active={statusFilter === 'bookmarked'}
+			onclick={() => handleStatusChange('bookmarked')}
+		>
+			<span class="flex items-center gap-1.5">
+				<IconBookmark
+					size={14}
+					filled={statusFilter === 'bookmarked'}
+				/>
+				<span>북마크</span>
+			</span>
+		</SearchChip>
+		<SearchChip
+			active={statusFilter === 'hidden'}
+			onclick={() => handleStatusChange('hidden')}
+		>
+			<span class="flex items-center gap-1.5">
+				<IconHide size={14} />
+				<span>숨김 목록</span>
+			</span>
+		</SearchChip>
+	</div>
 {/snippet}
 
 {#snippet tagChips()}
@@ -508,3 +561,14 @@
 		{@render sectionWrapper(isSourceOpen, sourceChips)}
 	</div>
 {/if}
+
+<!-- 개인화 섹션 -->
+<div
+	class={cn(
+		'border-border-default mt-4 border-t-2',
+		variant === 'flat' && 'pt-4'
+	)}
+>
+	{@render sectionHeader('personal', '개인화', IconUser, isPersonalOpen)}
+	{@render sectionWrapper(isPersonalOpen, personalChips)}
+</div>

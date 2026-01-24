@@ -3,6 +3,7 @@
 	import SearchBar from '$lib/components/pure/Search/SearchBar.svelte';
 	import { CommonStyles } from '$lib/constants/styles';
 	import IconFilter from '$lib/icons/icon_filter.svelte';
+	import type { ArticleStatusFilter } from '$lib/types';
 	import { cn } from '$lib/utils/ClassMerge';
 
 	interface Props {
@@ -10,11 +11,13 @@
 		selectedTags?: string[];
 		searchKeyword?: string;
 		categoryList: string[];
+		statusFilter?: ArticleStatusFilter;
 		selectedCategory?: string[];
 		onselectCategory?: (category: string) => void;
 		onsearch?: (value: string) => void;
 		onclear?: () => void;
 		onchange?: (selectedTags: string[]) => void;
+		onstatusChange?: (status: ArticleStatusFilter) => void;
 	}
 
 	let {
@@ -23,10 +26,12 @@
 		searchKeyword = $bindable(''),
 		categoryList,
 		selectedCategory = [],
+		statusFilter = 'all',
 		onselectCategory,
 		onsearch,
 		onclear,
-		onchange
+		onchange,
+		onstatusChange
 	}: Props = $props();
 </script>
 
@@ -57,9 +62,11 @@
 		{tags}
 		{selectedTags}
 		{categoryList}
+		{statusFilter}
 		{selectedCategory}
 		{onselectCategory}
 		{onchange}
+		{onstatusChange}
 		variant="collapsible"
 		defaultOpenSections={['tag']}
 	/>

@@ -3,10 +3,12 @@
 	import KeywordTag from '$lib/components/pure/Tag/keywordTag.svelte';
 	import { CommonStyles } from '$lib/constants/styles';
 	import IconBookmark from '$lib/icons/icon_bookmark.svelte';
+	import IconHide from '$lib/icons/icon_hide.svelte';
 	import IconLink from '$lib/icons/icon_link.svelte';
 	import IconLogoModel from '$lib/icons/icon_logo_model.svelte';
 	import IconLogoSource from '$lib/icons/icon_logo_source.svelte';
 	import { bookmarks } from '$lib/stores/bookmarks.svelte';
+	import { hiddenArticles } from '$lib/stores/hiddenarticles.svelte';
 	import type { Trend, AnalysisResult } from '$lib/types';
 	import { cn } from '$lib/utils/ClassMerge';
 	import { formatDate } from '$lib/utils/date';
@@ -43,9 +45,16 @@
 
 	const isBookmarked = $derived(bookmarks.isBookmarked(trend.link));
 
+	const isHidden = $derived(hiddenArticles.isHidden(trend.link));
+
 	function handleBookmark(e: MouseEvent) {
 		e.stopPropagation();
 		bookmarks.toggle(trend);
+	}
+
+	function handleHide(e: MouseEvent) {
+		e.stopPropagation();
+		hiddenArticles.toggle(trend);
 	}
 
 	const displayDate = $derived(formatDate(trend.date));
@@ -65,7 +74,7 @@
 	<!-- articleCard - header -->
 	<div class="relative z-10 mb-4 flex flex-col gap-2">
 		<!-- aiInfoArea -->
-		<div class="flex h-5 items-center justify-between">
+		<div class="flex h-5 items-center justify-between gap-1">
 			<div class="flex items-center gap-2 overflow-hidden">
 				<!-- Score -->
 				<div
@@ -104,17 +113,29 @@
 				onclick={handleBookmark}
 				class={cn(
 					'flex h-6 w-6 shrink-0 items-center justify-center rounded-full',
-					'text-(--color-gray-400) hover:bg-(--color-primary-subtle) hover:text-(--color-primary)',
+					'ml-auto',
+					'hover:bg-primary-subtle hover:text-primary text-gray-400',
 					CommonStyles.DEFAULT_TRANSITION_COLOR
 				)}
 			>
 				<span class="sr-only">
 					{isBookmarked ? '북마크 해제' : '북마크 추가'}
 				</span>
-				<div class="h-4 w-4">
+				<div>
 					<IconBookmark filled={isBookmarked} />
 				</div>
 			</button>
+			<button
+				type="button"
+				onclick={handleHide}
+				class={cn(
+					'flex h-6 w-6 shrink-0 items-center justify-center rounded-full',
+					'hover:bg-alert-subtle hover:text-alert text-gray-400',
+					CommonStyles.DEFAULT_TRANSITION_COLOR
+				)}
+				><span class="sr-only">{isHidden ? '숨김 해제' : '숨김 추가'}</span>
+				<div><IconHide /></div></button
+			>
 		</div>
 
 		<!-- metaInfoArea -->

@@ -9,7 +9,7 @@
 	import FilterModal from '$lib/components/modal/FilterModal/FilterModal.svelte';
 	import { auth } from '$lib/stores/auth.svelte.js';
 	import { modal } from '$lib/stores/modal.svelte.js';
-	import type { Trend } from '$lib/types';
+	import type { Trend, ArticleStatusFilter } from '$lib/types';
 	import type { PageData } from './$types';
 	import { onMount, untrack } from 'svelte';
 
@@ -26,6 +26,9 @@
 	//filter - category
 	let categoryList = $derived(data.categories ?? []);
 	let selectedCategories = $state<string[]>([]);
+
+	// 개인화 필터 상태
+	let statusFilter = $state<ArticleStatusFilter>('all');
 
 	let abortController: AbortController | null = null;
 
@@ -96,7 +99,7 @@
 			});
 
 			if (res.ok) {
-				alert(auth.user ? '✅ 구독 완료!' : '✅ 메일함을 확인해주세요.');
+				alert(auth.user ? '구독 완료!' : '메일함을 확인해주세요.');
 				if (!auth.user) email = '';
 			} else {
 				const err = await res.json();
@@ -218,6 +221,12 @@
 				params.append('category', selectedCategories.join(','));
 			}
 
+			// 개인화 필터 파라미터 추가
+			if (auth.user?.id) {
+				params.append('userId', auth.user.id);
+			}
+			params.append('statusFilter', statusFilter);
+
 			const res = await fetch(`${API_URL}/api/trends?${params}`, {
 				signal: currentController.signal
 			});
@@ -265,13 +274,13 @@
 		fetchTrends(true);
 	}
 
-	// ✅ SearchCard용 - 즉시 API 호출
+	// SearchCard용 - 즉시 API 호출
 	function handleTagChange(newTags: string[]) {
 		selectedTags = newTags;
 		fetchTrends(true);
 	}
 
-	// ✅ SearchCard용 - 즉시 API 호출
+	// SearchCard용 - 즉시 API 호출
 	function handleCategorySelect(category: string) {
 		if (selectedCategories.includes(category)) {
 			selectedCategories = selectedCategories.filter((c) => c !== category);
@@ -281,14 +290,35 @@
 		fetchTrends(true);
 	}
 
-	// ✅ 모달용 - API 호출 없이 상태만 변경
+	// SearchCard용 - 개인화 필터 변경 (즉시 API 호출)
+	function handleStatusFilterChange(status: ArticleStatusFilter) {
+		// 북마크/숨김 필터는 로그인 필요
+		if (status !== 'all' && !auth.user) {
+			auth.openLoginModal();
+			return;
+		}
+		statusFilter = status;
+		fetchTrends(true);
+	}
+
+	// 모달용 - API 호출 없이 상태만 변경
 	function handleModalTagChange(newTags: string[]) {
 		selectedTags = newTags;
 	}
 
-	// ✅ 모달용 - API 호출 없이 상태만 변경
+	// 모달용 - API 호출 없이 상태만 변경
 	function handleModalCategoryChange(categories: string[]) {
 		selectedCategories = categories;
+	}
+
+	// 모달용 - 개인화 필터 상태만 변경
+	function handleModalStatusFilterChange(status: ArticleStatusFilter) {
+		// 북마크/숨김 필터는 로그인 필요
+		if (status !== 'all' && !auth.user) {
+			auth.openLoginModal();
+			return;
+		}
+		statusFilter = status;
 	}
 
 	function openArticleModal(trend: Trend) {
@@ -297,7 +327,7 @@
 		});
 	}
 
-	// ✅ 모달 열기 - onapply에서만 API 호출
+	// 모달 열기 - onapply에서만 API 호출
 	function openFilterModal() {
 		modal.open(FilterModal, {
 			open: true,
@@ -305,8 +335,10 @@
 			categoryList: categoryList,
 			selectedTags: selectedTags,
 			selectedCategory: selectedCategories,
+			statusFilter: statusFilter,
 			onchange: handleModalTagChange,
 			onchangeCategory: handleModalCategoryChange,
+			onstatusChange: handleModalStatusFilterChange,
 			onapply: () => fetchTrends(true)
 		});
 	}
@@ -349,7 +381,9 @@
 				tags={popularTags}
 				{categoryList}
 				selectedCategory={selectedCategories}
+				{statusFilter}
 				onselectCategory={handleCategorySelect}
+				onstatusChange={handleStatusFilterChange}
 				onsearch={handleSearch}
 				onclear={handleClear}
 				onchange={handleTagChange}
@@ -358,7 +392,15 @@
 			{#if isSearching}
 				<div class="py-32 text-center text-gray-400">로딩 중...</div>
 			{:else if trends.length === 0}
-				<div class="py-32 text-center text-gray-400">결과가 없습니다.</div>
+				<div class="py-32 text-center text-gray-400">
+					{#if statusFilter === 'bookmarked'}
+						북마크한 아티클이 없습니다.
+					{:else if statusFilter === 'hidden'}
+						숨김 처리한 아티클이 없습니다.
+					{:else}
+						결과가 없습니다.
+					{/if}
+				</div>
 			{:else}
 				<div class="grid grid-cols-1 items-start gap-6 sm:grid-cols-2">
 					{#each cachedColumns as column, colIndex (colIndex)}

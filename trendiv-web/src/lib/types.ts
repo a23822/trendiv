@@ -21,6 +21,14 @@ export interface Trend {
 	content?: string;
 }
 
+export interface HiddenArticle {
+	id: number;
+	user_id: string;
+	article_url: string;
+	article_title?: string;
+	created_at: string;
+}
+
 export interface Bookmark {
 	id: number;
 	user_id: string;
@@ -31,3 +39,5 @@ export interface Bookmark {
 	article_date?: string;
 	created_at: string;
 }
+
+export type ArticleStatusFilter = 'all' | 'bookmarked' | 'hidden';
