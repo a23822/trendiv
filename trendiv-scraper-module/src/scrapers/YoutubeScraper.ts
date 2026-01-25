@@ -26,7 +26,7 @@ export class YoutubeScraper implements Scraper {
           title: item.title || '제목 없음',
           link: link,
           date: item.isoDate || new Date().toISOString(),
-          summary: description.substring(0, 200) + '...',
+          content: '',
           source: config.name,
           category: config.category,
         };

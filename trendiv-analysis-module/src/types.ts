@@ -3,6 +3,7 @@
  */
 
 export interface AnalysisResult {
+  id?: number;
   aiModel: string;
   score: number;
   reason: string;
