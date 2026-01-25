@@ -20,14 +20,14 @@ export const TARGETS: ScraperConfig[] = [
   {
     name: 'Reddit Web Markup',
     category: 'Reddit',
-    type: 'rss',
+    type: 'reddit',
     url: 'https://www.reddit.com/r/css+html+accessibility+a11y+web_design/top/.rss?t=day',
   },
   // iOS Safari 이슈 참고용
   {
     name: 'Reddit iOS',
     category: 'Reddit',
-    type: 'rss',
+    type: 'reddit',
     url: 'https://www.reddit.com/r/ios/top/.rss?t=week',
   },
   // StackOverflow - 공식 API 사용 (Cloudflare 우회)

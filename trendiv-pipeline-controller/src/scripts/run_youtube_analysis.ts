@@ -9,7 +9,7 @@ import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { runAnalysis } from "trendiv-analysis-module";
 
 // 배치 설정
-const BATCH_SIZE = 1;
+const BATCH_SIZE = 20;
 const BATCH_DELAY_MS = 3000; // 배치 간 딜레이 (API 제한 방지)
 
 /**

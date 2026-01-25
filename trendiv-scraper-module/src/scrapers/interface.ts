@@ -16,7 +16,8 @@ export interface ScraperConfig {
     | 'youtube_search'
     | 'youtube'
     | 'google_search'
-    | 'stackoverflow';
+    | 'stackoverflow'
+    | 'reddit';
   url: string;
   selector?: string;
   useProxy?: boolean;
