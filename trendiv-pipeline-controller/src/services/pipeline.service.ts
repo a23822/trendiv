@@ -201,7 +201,11 @@ export const runPipeline = async (): Promise<PipelineResult> => {
 
           return {
             id: id,
+            link: originalItem?.link || "",
             title: originalItem?.title || "제목 없음",
+            source: originalItem?.source,
+            category: originalItem?.category,
+            date: originalItem?.date,
             status: "REJECTED",
             analysis_results: [
               ...existingHistory,
@@ -292,15 +296,14 @@ export const runPipeline = async (): Promise<PipelineResult> => {
         });
         const representResult = sortedHistory[0];
 
+        if (!originalItem) continue;
+
         // 2️⃣ 공통 데이터 payload 구성
         const commonPayload = {
-          id: result.id,
+          ...originalItem,
           title: result.title_ko || originalItem?.title || "제목 없음",
           analysis_results: updatedHistory,
           represent_result: representResult || null,
-          source: originalItem?.source,
-          category: originalItem?.category,
-          date: originalItem?.date,
         };
 
         if (result.score > 0) {
