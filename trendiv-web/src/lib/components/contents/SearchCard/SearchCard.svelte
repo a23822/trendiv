@@ -11,12 +11,14 @@
 		selectedTags?: string[];
 		searchKeyword?: string;
 		categoryList: string[];
-		statusFilter?: ArticleStatusFilter;
 		selectedCategory?: string[];
+		/** 개인화 필터 상태 */
+		statusFilter?: ArticleStatusFilter;
 		onselectCategory?: (category: string) => void;
 		onsearch?: (value: string) => void;
 		onclear?: () => void;
 		onchange?: (selectedTags: string[]) => void;
+		/** 개인화 필터 변경 콜백 */
 		onstatusChange?: (status: ArticleStatusFilter) => void;
 	}
 
@@ -24,14 +26,14 @@
 		tags = [],
 		selectedTags = [],
 		searchKeyword = $bindable(''),
-		categoryList,
+		categoryList = [],
 		selectedCategory = [],
 		statusFilter = 'all',
-		onselectCategory,
-		onsearch,
-		onclear,
-		onchange,
-		onstatusChange
+		onselectCategory = () => {},
+		onsearch = () => {},
+		onclear = () => {},
+		onchange = () => {},
+		onstatusChange = () => {}
 	}: Props = $props();
 </script>
 
@@ -62,12 +64,12 @@
 		{tags}
 		{selectedTags}
 		{categoryList}
-		{statusFilter}
 		{selectedCategory}
+		{statusFilter}
 		{onselectCategory}
 		{onchange}
 		{onstatusChange}
 		variant="collapsible"
-		defaultOpenSections={['tag']}
+		defaultOpenSections={['personal']}
 	/>
 </section>

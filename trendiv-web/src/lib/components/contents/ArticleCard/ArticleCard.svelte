@@ -9,7 +9,7 @@
 	import IconLogoSource from '$lib/icons/icon_logo_source.svelte';
 	import { bookmarks } from '$lib/stores/bookmarks.svelte';
 	import { hiddenArticles } from '$lib/stores/hiddenarticles.svelte';
-	import type { Trend, AnalysisResult } from '$lib/types';
+	import type { Trend } from '$lib/types';
 	import { cn } from '$lib/utils/ClassMerge';
 	import { formatDate } from '$lib/utils/date';
 	import { capitalizeFirst } from '$lib/utils/string';
@@ -57,7 +57,8 @@
 		hiddenArticles.toggle(trend);
 	}
 
-	const displayDate = $derived(formatDate(trend.date));
+	// 날짜 안전 체크
+	const displayDate = $derived(trend.date ? formatDate(trend.date) : '');
 </script>
 
 <div
@@ -111,6 +112,7 @@
 			<button
 				type="button"
 				onclick={handleBookmark}
+				title={isBookmarked ? '북마크 해제' : '북마크 추가'}
 				class={cn(
 					'flex h-6 w-6 shrink-0 items-center justify-center rounded-full',
 					'ml-auto',
@@ -128,6 +130,7 @@
 			<button
 				type="button"
 				onclick={handleHide}
+				title={isHidden ? '숨김 해제' : '숨김 추가'}
 				class={cn(
 					'flex h-6 w-6 shrink-0 items-center justify-center rounded-full',
 					'hover:bg-alert-subtle hover:text-alert text-gray-400',
@@ -178,8 +181,9 @@
 	<!-- articleCard - footer -->
 	<div class="relative z-10 mt-auto flex flex-col gap-4">
 		<!-- tagGroup -->
+		<!-- 키 중복 방지 (인덱스 추가) -->
 		<div class="flex flex-wrap gap-1.5">
-			{#each displayTags as tag (tag)}
+			{#each displayTags as tag, i (tag + '-' + i)}
 				<KeywordTag {tag} />
 			{/each}
 		</div>

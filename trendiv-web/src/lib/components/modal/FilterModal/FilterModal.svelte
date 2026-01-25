@@ -46,6 +46,7 @@
 			// open이 false → true로 변할 때만 실행
 			localSelectedTags = [...selectedTags];
 			localSelectedCategory = [...selectedCategory];
+			localStatusFilter = statusFilter; // 추가: statusFilter 초기화
 		}
 		wasOpen = open;
 	});
@@ -65,10 +66,15 @@
 		}
 	}
 
+	function handleStatusChange(status: ArticleStatusFilter) {
+		localStatusFilter = status;
+	}
+
 	// 적용 버튼 - 배열로 한 번에 전달
 	function handleApply() {
 		onchange?.(localSelectedTags);
-		onchangeCategory?.(localSelectedCategory); // ✅ 배열 통째로 전달
+		onchangeCategory?.(localSelectedCategory);
+		onstatusChange?.(localStatusFilter);
 		onapply?.();
 		modal.close();
 		open = false;
@@ -78,6 +84,7 @@
 	function handleReset() {
 		localSelectedTags = [];
 		localSelectedCategory = [];
+		localStatusFilter = 'all';
 	}
 </script>
 
@@ -102,6 +109,7 @@
 
 {#snippet footerComponent()}
 	{@const totalCount = localSelectedTags.length + localSelectedCategory.length}
+	{@const hasStatusFilter = localStatusFilter !== 'all'}
 
 	<div
 		class={cn(
@@ -111,7 +119,14 @@
 		)}
 	>
 		<div class="flex items-center text-sm text-gray-500">
-			{#if totalCount > 0}
+			{#if totalCount > 0 || hasStatusFilter}
+				{#if hasStatusFilter}
+					<span
+						class="before:mx-2 before:text-gray-300 before:content-['|'] first:before:content-none"
+					>
+						{localStatusFilter === 'bookmarked' ? '북마크' : '숨김'}
+					</span>
+				{/if}
 				{#if localSelectedTags.length > 0}
 					<span
 						class="before:mx-2 before:text-gray-300 before:content-['|'] first:before:content-none"
@@ -157,7 +172,7 @@
 			statusFilter={localStatusFilter}
 			onchange={handleTagChange}
 			onselectCategory={handleCategorySelect}
-			{onstatusChange}
+			onstatusChange={handleStatusChange}
 			variant="flat"
 		/>
 	</div>
