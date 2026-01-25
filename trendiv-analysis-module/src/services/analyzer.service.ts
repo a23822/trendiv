@@ -4,12 +4,14 @@ import { ContentService } from './content.service';
 import { BrowserService } from './browser.service';
 import { GeminiService } from './gemini.service';
 import { GrokService } from './grok.service';
+import { YouTubeService } from './youtube.service';
 
 export class AnalyzerService {
   private contentService: ContentService;
   private browserService: BrowserService;
   private geminiService: GeminiService;
   private grokService: GrokService | null;
+  private youtubeService: YouTubeService;
 
   private forceProvider: 'gemini' | 'grok' | null = null;
 
@@ -22,6 +24,7 @@ export class AnalyzerService {
     this.browserService = new BrowserService(browser);
     this.geminiService = geminiService;
     this.grokService = grokService || null;
+    this.youtubeService = new YouTubeService();
   }
 
   setForceProvider(provider: 'gemini' | 'grok') {
@@ -32,11 +35,21 @@ export class AnalyzerService {
    * Analyze a single trend item
    */
   async analyzeTrend(trend: Trend): Promise<AnalysisResult | null> {
+    const isYoutube =
+      trend.category === 'Youtube' ||
+      trend.source?.toLowerCase().includes('youtube');
     const isXCategory = trend.category === 'X';
     const isReddit = trend.category === 'Reddit';
 
     const shouldUseGrok =
       this.forceProvider === 'grok' || (!this.forceProvider && isXCategory);
+
+    // ---------------------------------------------------------
+    // 1️⃣ YouTube
+    // ---------------------------------------------------------
+    if (isYoutube) {
+      return await this.youtubeService.getAnalysis(trend, this.geminiService);
+    }
 
     // ---------------------------------------------------------
     // 콘텐츠 확보 전략 (Fallback to DB)

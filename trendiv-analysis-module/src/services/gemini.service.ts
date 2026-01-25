@@ -2,21 +2,26 @@
  * Gemini AI Analysis Service
  */
 
-import { GoogleGenerativeAI, GenerativeModel } from '@google/generative-ai';
+import {
+  GoogleGenerativeAI,
+  GenerativeModel,
+  Part,
+} from '@google/generative-ai';
 import { CONFIG } from '../config';
 import { GeminiAnalysisResponse } from '../types';
 import { GeminiAPIError, isRetryableError } from '../utils/errors';
 import { delay, parseGeminiResponse } from '../utils/helpers';
 
 export class GeminiService {
+  private genAI: GoogleGenerativeAI;
   private model: GenerativeModel;
   private modelName: string;
 
   constructor(apiKey: string, modelName?: string) {
     this.modelName = modelName || CONFIG.gemini.defaultModel;
-    const genAI = new GoogleGenerativeAI(apiKey);
+    this.genAI = new GoogleGenerativeAI(apiKey);
 
-    this.model = genAI.getGenerativeModel({
+    this.model = this.genAI.getGenerativeModel({
       model: this.modelName,
       generationConfig: {
         responseMimeType: 'application/json',
@@ -26,6 +31,41 @@ export class GeminiService {
 
   getModelName(): string {
     return this.modelName;
+  }
+
+  async analyzeYoutubeVideo(
+    videoUrl: string,
+    title: string,
+    category: string,
+  ): Promise<GeminiAnalysisResponse> {
+    // 💡 YouTube 전용 모델 결정 (Pro 제한 로직)
+    let targetModelName = this.modelName;
+    if (!CONFIG.youtube.allowProModels && targetModelName.includes('pro')) {
+      targetModelName = CONFIG.gemini.defaultModel || 'gemini-3-flash-preview'; // Pro 대신 Flash 강제 사용
+    }
+
+    const modelInstance = this.genAI.getGenerativeModel({
+      model: targetModelName,
+    });
+    const promptText = this.buildPrompt(
+      title,
+      'YouTube Video',
+      category,
+      '영상 내용을 분석하세요.',
+    );
+
+    // 💡 비디오 URL을 포함한 콘텐츠 구성
+    const contents: Part[] = [
+      {
+        fileData: {
+          mimeType: 'video/mp4',
+          fileUri: videoUrl,
+        },
+      },
+      { text: promptText },
+    ];
+
+    return this.generateWithRetry(contents, modelInstance);
   }
 
   /**
@@ -123,15 +163,19 @@ export class GeminiService {
    */
   private async generateWithRetry(
     content: string | any[],
+    modelInstance?: GenerativeModel,
   ): Promise<GeminiAnalysisResponse> {
     const { maxRetries, initialRetryDelay } = CONFIG.gemini;
+
+    const activeModel = modelInstance || this.model;
+
     let waitTime = initialRetryDelay;
     let lastError: unknown;
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        // Gemini에게 요청 발사 🚀
-        const result = await this.model.generateContent(content);
+        // Gemini에게 요청
+        const result = await activeModel.generateContent(content);
         const response = await result.response;
         const text = response.text();
 
@@ -142,11 +186,7 @@ export class GeminiService {
 
         // 재시도 불가능한 에러면 즉시 중단 (예: API 키 오류)
         if (!isRetryableError(error)) {
-          throw new GeminiAPIError(
-            `Non-retryable error (${this.modelName})`,
-            attempt,
-            error,
-          );
+          throw new GeminiAPIError(`Non-retryable error`, attempt, error);
         }
 
         // 마지막 시도였으면 에러 던짐

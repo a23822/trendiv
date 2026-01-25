@@ -40,5 +40,6 @@ export const CONFIG = {
   youtube: {
     maxRetries: 2,
     retryDelay: 1000,
+    allowProModels: false,
   },
 } as const;

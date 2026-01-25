@@ -42,6 +42,7 @@ export class YoutubeSearchScraper implements Scraper {
         title: item.snippet.title,
         link: `https://www.youtube.com/watch?v=${item.id.videoId}`,
         date: item.snippet.publishedAt,
+        content: '',
         source: config.name,
         category: config.category,
       }));
