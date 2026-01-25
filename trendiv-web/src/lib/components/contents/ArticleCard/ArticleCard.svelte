@@ -117,7 +117,8 @@
 					'flex h-6 w-6 shrink-0 items-center justify-center rounded-full',
 					'ml-auto',
 					'hover:bg-primary-subtle hover:text-primary text-gray-400',
-					CommonStyles.DEFAULT_TRANSITION_COLOR
+					CommonStyles.DEFAULT_TRANSITION_COLOR,
+					isBookmarked && 'text-primary'
 				)}
 			>
 				<span class="sr-only">
@@ -134,7 +135,8 @@
 				class={cn(
 					'flex h-6 w-6 shrink-0 items-center justify-center rounded-full',
 					'hover:bg-alert-subtle hover:text-alert text-gray-400',
-					CommonStyles.DEFAULT_TRANSITION_COLOR
+					CommonStyles.DEFAULT_TRANSITION_COLOR,
+					isHidden && 'text-alert'
 				)}
 				><span class="sr-only">{isHidden ? '숨김 해제' : '숨김 추가'}</span>
 				<div><IconHide /></div></button

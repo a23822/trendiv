@@ -1,179 +1,439 @@
 <script lang="ts">
-	import FilterContent from '$lib/components/contents/FilterContent/FilterContent.svelte';
-	import ModalLayout from '$lib/components/modal/ModalLayout.svelte';
-	import { CommonStyles } from '$lib/constants/styles';
-	import IconRefresh from '$lib/icons/icon_refresh.svelte';
+	import { PUBLIC_API_URL } from '$env/static/public';
+	import ArticleCard from '$lib/components/contents/ArticleCard/ArticleCard.svelte';
+	import HeroSection from '$lib/components/contents/HeroSection.svelte';
+	import SearchCard from '$lib/components/contents/SearchCard/SearchCard.svelte';
+	import FloatingButtonArea from '$lib/components/layout/Floating/FloatingButtonArea.svelte';
+	import Header from '$lib/components/layout/Header/Header.svelte';
+	import ArticleModal from '$lib/components/modal/ArticleModal/ArticleModal.svelte';
+	import FilterModal from '$lib/components/modal/FilterModal/FilterModal.svelte';
+	import { auth } from '$lib/stores/auth.svelte.js';
 	import { modal } from '$lib/stores/modal.svelte.js';
-	import type { ArticleStatusFilter } from '$lib/types';
-	import { cn } from '$lib/utils/ClassMerge';
+	import type { Trend, ArticleStatusFilter } from '$lib/types';
+	import type { PageData } from './$types';
+	import { onMount, untrack } from 'svelte';
 
-	interface Props {
-		open?: boolean;
-		tags?: string[];
-		selectedTags?: string[];
-		categoryList?: string[];
-		selectedCategory?: string[];
-		statusFilter?: ArticleStatusFilter;
-		onchangeCategory?: (categories: string[]) => void;
-		onchange?: (selectedTags: string[]) => void;
-		onstatusChange?: (status: ArticleStatusFilter) => void;
-		onapply?: () => void;
+	let { data }: { data: PageData } = $props();
+
+	let trends = $state<Trend[]>(data.trends ?? []);
+	let page = $state(1);
+	let isLoadingMore = $state(false);
+	let hasMore = $state(true);
+	let searchKeyword = $state('');
+	let selectedTags = $state<string[]>([]);
+	let isSearching = $state(false);
+
+	//filter - category
+	let categoryList = $derived(data.categories ?? []);
+	let selectedCategories = $state<string[]>([]);
+
+	// 개인화 필터 상태
+	let statusFilter = $state<ArticleStatusFilter>('all');
+
+	let abortController: AbortController | null = null;
+
+	const API_URL = PUBLIC_API_URL || 'http://127.0.0.1:3000';
+	const popularTags = [
+		'CSS',
+		'HTML',
+		'React',
+		'Accessibility',
+		'iOS',
+		'Performance'
+	];
+
+	// 구독 관련
+	let email = $state('');
+	let isSubmitting = $state(false);
+
+	// resize 디바운스
+	let innerWidth = $state(0);
+	let resizeTimeout: ReturnType<typeof setTimeout>;
+
+	function handleResize() {
+		clearTimeout(resizeTimeout);
+		resizeTimeout = setTimeout(() => {
+			innerWidth = window.innerWidth;
+		}, 150);
 	}
 
-	let {
-		open = $bindable(false),
-		tags = [],
-		selectedTags = [],
-		categoryList = [],
-		selectedCategory = [],
-		statusFilter = 'all',
-		onchangeCategory,
-		onchange,
-		onstatusChange,
-		onapply
-	}: Props = $props();
-
-	// 로컬 상태 (모달 내부에서만 사용)
-	let localSelectedTags = $state<string[]>([]);
-	let localSelectedCategory = $state<string[]>([]);
-	let localStatusFilter = $state<ArticleStatusFilter>('all');
-
-	// 모달이 "열리는 순간"에만 초기화 (편집 중 덮어쓰기 방지)
-	let wasOpen = $state(false);
-
+	// data 변경 감지 (soft navigation 대응)
 	$effect(() => {
-		if (open && !wasOpen) {
-			// open이 false → true로 변할 때만 실행
-			localSelectedTags = [...selectedTags];
-			localSelectedCategory = [...selectedCategory];
-			localStatusFilter = statusFilter;
+		if (data.trends) {
+			trends = data.trends;
 		}
-		wasOpen = open;
 	});
 
-	// 로컬 상태 변경 핸들러
-	function handleTagChange(newTags: string[]) {
-		localSelectedTags = newTags;
-	}
+	$effect(() => {
+		if (auth.user?.email) {
+			email = auth.user.email;
+		}
+	});
 
-	function handleCategorySelect(category: string) {
-		if (localSelectedCategory.includes(category)) {
-			localSelectedCategory = localSelectedCategory.filter(
-				(c) => c !== category
-			);
-		} else {
-			localSelectedCategory = [...localSelectedCategory, category];
+	onMount(() => {
+		innerWidth = window.innerWidth;
+		window.addEventListener('resize', handleResize);
+
+		if (trends.length === 0) {
+			fetchTrends(true);
+		}
+
+		return () => {
+			window.removeEventListener('resize', handleResize);
+			clearTimeout(resizeTimeout);
+			abortController?.abort();
+		};
+	});
+
+	async function handleSubscribe() {
+		const targetEmail = auth.user?.email || email;
+		if (!targetEmail) return;
+
+		isSubmitting = true;
+
+		try {
+			const res = await fetch(`${API_URL}/api/subscribe`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ email: targetEmail })
+			});
+
+			if (res.ok) {
+				alert(auth.user ? '구독 완료!' : '메일함을 확인해주세요.');
+				if (!auth.user) email = '';
+			} else {
+				const err = await res.json();
+				alert(`⚠️ ${err.error || '오류가 발생했습니다.'}`);
+			}
+		} catch {
+			alert('❌ 연결 실패');
+		} finally {
+			isSubmitting = false;
 		}
 	}
 
-	function handleStatusChange(status: ArticleStatusFilter) {
-		localStatusFilter = status;
+	// =============================================
+	// Masonry 증분 처리 관련
+	// =============================================
+	let cachedColumns = $state<Trend[][]>([[], []]);
+	let cachedHeights = $state<number[]>([0, 0]);
+	let lastProcessedCount = $state(0);
+	let lastColumnCount = $state(2);
+
+	const columnCount = $derived(innerWidth < 640 ? 1 : 2);
+
+	function estimateHeight(trend: Trend): number {
+		const analysis = trend.represent_result ?? null;
+
+		const titleLen = (analysis?.title_ko || trend.title || '').length;
+		const summaryLen = (analysis?.oneLineSummary || '').length;
+		const tagCount = analysis?.tags?.length ?? 0;
+
+		return (
+			150 + Math.min(titleLen, 60) + Math.min(summaryLen, 120) + tagCount * 10
+		);
 	}
 
-	// 적용 버튼 - 배열로 한 번에 전달
-	function handleApply() {
-		onchange?.(localSelectedTags);
-		onchangeCategory?.(localSelectedCategory);
-		onstatusChange?.(localStatusFilter);
-		onapply?.();
-		modal.close();
-		open = false;
+	function resetMasonryCache() {
+		cachedColumns = [[], []];
+		cachedHeights = [0, 0];
+		lastProcessedCount = 0;
 	}
 
-	// 초기화 버튼
-	function handleReset() {
-		localSelectedTags = [];
-		localSelectedCategory = [];
-		localStatusFilter = 'all';
+	$effect(() => {
+		const currentTrends = trends;
+		const cols = columnCount;
+
+		untrack(() => {
+			if (cols !== lastColumnCount) {
+				lastColumnCount = cols;
+				resetMasonryCache();
+
+				if (cols === 1) {
+					cachedColumns = [currentTrends];
+					lastProcessedCount = currentTrends.length;
+					return;
+				}
+			}
+
+			if (cols === 1) {
+				cachedColumns = [currentTrends];
+				lastProcessedCount = currentTrends.length;
+				return;
+			}
+
+			const firstCachedId = cachedColumns[0]?.[0]?.id;
+			const firstTrendId = currentTrends[0]?.id;
+
+			if (
+				currentTrends.length === 0 ||
+				currentTrends.length < lastProcessedCount ||
+				(firstCachedId && firstTrendId && firstCachedId !== firstTrendId)
+			) {
+				resetMasonryCache();
+			}
+
+			for (let i = lastProcessedCount; i < currentTrends.length; i++) {
+				const trend = currentTrends[i];
+				const shorter = cachedHeights[0] <= cachedHeights[1] ? 0 : 1;
+
+				cachedColumns[shorter].push(trend);
+				cachedHeights[shorter] += estimateHeight(trend);
+			}
+
+			lastProcessedCount = currentTrends.length;
+		});
+	});
+
+	// =============================================
+	// fetchTrends
+	// =============================================
+	async function fetchTrends(reset = false) {
+		if (isLoadingMore && !reset) return;
+
+		// 현재 요청의 컨트롤러를 로컬 변수로 저장
+		const currentController = new AbortController();
+
+		// 이전 요청 중단
+		abortController?.abort();
+		abortController = currentController;
+
+		if (reset) {
+			isSearching = true;
+			page = 1;
+			hasMore = true;
+			trends = [];
+			resetMasonryCache();
+		} else {
+			isLoadingMore = true;
+			page += 1;
+		}
+
+		try {
+			const params = new URLSearchParams({
+				page: page.toString(),
+				limit: '20',
+				searchKeyword: searchKeyword,
+				tagFilter: selectedTags.join(',')
+			});
+
+			if (selectedCategories.length > 0) {
+				params.append('category', selectedCategories.join(','));
+			}
+
+			// 개인화 필터 파라미터 추가
+			if (auth.user?.id) {
+				params.append('userId', auth.user.id);
+			}
+			params.append('statusFilter', statusFilter);
+
+			const res = await fetch(`${API_URL}/api/trends?${params}`, {
+				signal: currentController.signal
+			});
+
+			if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
+
+			const result = await res.json();
+
+			if (result.success) {
+				if (reset) {
+					trends = result.data;
+				} else {
+					// Set 사용으로 O(N×M) → O(N) 성능 개선
+					const existingIds = new Set(trends.map((t) => t.id));
+					const newItems = result.data.filter(
+						(newTrend: Trend) => !existingIds.has(newTrend.id)
+					);
+					trends = [...trends, ...newItems];
+				}
+				// 무한 루프 방지: 데이터 없거나 total 도달 시 종료
+				if (result.data.length === 0 || trends.length >= result.total) {
+					hasMore = false;
+				}
+			} else {
+				console.error('데이터 로드 실패:', result.error);
+			}
+		} catch (e) {
+			if (e instanceof Error && e.name === 'AbortError') {
+				return;
+			}
+			console.error('API 호출 중 오류 발생:', e);
+		} finally {
+			isLoadingMore = false;
+			isSearching = false;
+
+			// 내가 생성한 컨트롤러일 때만 null 처리
+			if (abortController === currentController) {
+				abortController = null;
+			}
+		}
+	}
+
+	function handleSearch(keyword: string) {
+		searchKeyword = keyword;
+		fetchTrends(true);
+	}
+
+	function handleClear() {
+		searchKeyword = '';
+		fetchTrends(true);
+	}
+
+	// SearchCard용 - 즉시 API 호출
+	function handleTagChange(newTags: string[]) {
+		selectedTags = newTags;
+		fetchTrends(true);
+	}
+
+	// SearchCard용 - 즉시 API 호출
+	function handleCategorySelect(category: string) {
+		if (selectedCategories.includes(category)) {
+			selectedCategories = selectedCategories.filter((c) => c !== category);
+		} else {
+			selectedCategories = [...selectedCategories, category];
+		}
+		fetchTrends(true);
+	}
+
+	// SearchCard용 - 개인화 필터 변경 (즉시 API 호출)
+	function handleStatusFilterChange(status: ArticleStatusFilter) {
+		// 북마크/숨김 필터는 로그인 필요
+		if (status !== 'all' && !auth.user) {
+			auth.openLoginModal();
+			return;
+		}
+		statusFilter = status;
+		fetchTrends(true);
+	}
+
+	// 모달용 - API 호출 없이 상태만 변경
+	function handleModalTagChange(newTags: string[]) {
+		selectedTags = newTags;
+	}
+
+	// 모달용 - API 호출 없이 상태만 변경
+	function handleModalCategoryChange(categories: string[]) {
+		selectedCategories = categories;
+	}
+
+	// 모달용 - 개인화 필터 상태만 변경
+	function handleModalStatusFilterChange(status: ArticleStatusFilter) {
+		// 북마크/숨김 필터는 로그인 필요
+		if (status !== 'all' && !auth.user) {
+			auth.openLoginModal();
+			return;
+		}
+		statusFilter = status;
+	}
+
+	function openArticleModal(trend: Trend) {
+		modal.open(ArticleModal, {
+			trend: trend
+		});
+	}
+
+	// 모달 열기 - onapply에서만 API 호출
+	function openFilterModal() {
+		modal.open(FilterModal, {
+			open: true,
+			tags: popularTags,
+			categoryList: categoryList,
+			selectedTags: selectedTags,
+			selectedCategory: selectedCategories,
+			statusFilter: statusFilter,
+			onchange: handleModalTagChange,
+			onchangeCategory: handleModalCategoryChange,
+			onstatusChange: handleModalStatusFilterChange,
+			onapply: () => fetchTrends(true)
+		});
+	}
+
+	function infiniteScroll(node: HTMLElement) {
+		const observer = new IntersectionObserver((entries) => {
+			if (
+				entries[0].isIntersecting &&
+				hasMore &&
+				!isSearching &&
+				!isLoadingMore
+			) {
+				fetchTrends(false);
+			}
+		});
+
+		observer.observe(node);
+
+		return {
+			destroy() {
+				observer.disconnect();
+			}
+		};
 	}
 </script>
 
-{#snippet headerComponent()}
-	<div class="flex items-center justify-between gap-3">
-		<h2 class="text-xl font-bold text-gray-800">필터</h2>
-		<button
-			type="button"
-			onclick={handleReset}
-			class={cn(
-				'flex items-center gap-1',
-				'text-sm text-gray-700',
-				'sm:text-gray-500 sm:hover:text-gray-700',
-				CommonStyles.DEFAULT_TRANSITION
-			)}
-		>
-			<IconRefresh size={16} />
-			초기화
-		</button>
-	</div>
-{/snippet}
+<Header />
 
-{#snippet footerComponent()}
-	{@const totalCount = localSelectedTags.length + localSelectedCategory.length}
-	{@const hasStatusFilter = localStatusFilter !== 'all'}
+<main>
+	<HeroSection
+		onSubscribe={handleSubscribe}
+		bind:email
+		{isSubmitting}
+	/>
+	<div class="bg-bg-surface min-h-screen">
+		<div class="mx-auto max-w-5xl p-4 sm:p-6">
+			<SearchCard
+				bind:searchKeyword
+				{selectedTags}
+				tags={popularTags}
+				{categoryList}
+				selectedCategory={selectedCategories}
+				{statusFilter}
+				onselectCategory={handleCategorySelect}
+				onstatusChange={handleStatusFilterChange}
+				onsearch={handleSearch}
+				onclear={handleClear}
+				onchange={handleTagChange}
+			/>
 
-	<div
-		class={cn(
-			'flex items-center justify-between gap-3',
-			'border-border-default border-t',
-			'px-5 py-4'
-		)}
-	>
-		<div class="flex items-center text-sm text-gray-500">
-			{#if totalCount > 0 || hasStatusFilter}
-				{#if hasStatusFilter}
-					<span
-						class="before:mx-2 before:text-gray-300 before:content-['|'] first:before:content-none"
+			{#if isSearching}
+				<div class="py-32 text-center text-gray-400">로딩 중...</div>
+			{:else if trends.length === 0}
+				<div class="py-32 text-center text-gray-400">
+					{#if statusFilter === 'bookmarked'}
+						북마크한 아티클이 없습니다.
+					{:else if statusFilter === 'hidden'}
+						숨김 처리한 아티클이 없습니다.
+					{:else}
+						결과가 없습니다.
+					{/if}
+				</div>
+			{:else}
+				<div class="grid grid-cols-1 items-start gap-6 sm:grid-cols-2">
+					{#each cachedColumns as column, colIndex (colIndex)}
+						<div class="flex flex-col gap-6">
+							{#each column as trend (trend.id)}
+								<ArticleCard
+									{trend}
+									onclick={() => openArticleModal(trend)}
+								/>
+							{/each}
+						</div>
+					{/each}
+				</div>
+
+				{#if hasMore}
+					<div
+						use:infiniteScroll
+						class="flex justify-center py-16 text-sm text-gray-400"
 					>
-						{localStatusFilter === 'bookmarked' ? '북마크' : '숨김'}
-					</span>
+						{#if isLoadingMore}
+							로딩 중...
+						{:else}
+							스크롤하여 더 보기
+						{/if}
+					</div>
 				{/if}
-				{#if localSelectedTags.length > 0}
-					<span
-						class="before:mx-2 before:text-gray-300 before:content-['|'] first:before:content-none"
-						>태그 {localSelectedTags.length}</span
-					>
-				{/if}
-				{#if localSelectedCategory.length > 0}
-					<span
-						class="before:mx-2 before:text-gray-300 before:content-['|'] first:before:content-none"
-						>출처 {localSelectedCategory.length}</span
-					>
-				{/if}
-				<span class="ml-2">선택됨</span>
 			{/if}
 		</div>
-		<button
-			type="button"
-			onclick={handleApply}
-			class={cn(
-				'rounded-lg px-4 py-2',
-				'bg-mint-500 text-white',
-				'hover:bg-mint-600',
-				CommonStyles.DEFAULT_TRANSITION
-			)}
-		>
-			적용
-		</button>
 	</div>
-{/snippet}
-
-<ModalLayout
-	bind:open
-	onclose={() => modal.close()}
-	{headerComponent}
-	{footerComponent}
->
-	<div class="py-4">
-		<FilterContent
-			{tags}
-			selectedTags={localSelectedTags}
-			{categoryList}
-			selectedCategory={localSelectedCategory}
-			statusFilter={localStatusFilter}
-			onchange={handleTagChange}
-			onselectCategory={handleCategorySelect}
-			onstatusChange={handleStatusChange}
-			variant="flat"
-		/>
-	</div>
-</ModalLayout>
+	<FloatingButtonArea onfilter={openFilterModal} />
+</main>

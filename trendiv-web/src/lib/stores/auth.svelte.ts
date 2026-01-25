@@ -1,3 +1,4 @@
+import { browser } from '$app/environment';
 import AgreementModalBottom from '$lib/components/modal/AgreementModalBottom.svelte';
 import NoticeModal from '$lib/components/modal/NoticeModal.svelte';
 import { TERMS_TEXT, PRIVACY_TEXT } from '$lib/constants/policy';
@@ -7,21 +8,21 @@ import { modal } from '$lib/stores/modal.svelte.js';
 import type { User } from '@supabase/supabase-js';
 
 class AuthStore {
-	// 1. 상태 선언 ($state)
+	// 상태 선언
 	user = $state<User | null>(null);
 	avatarColor = $state<string>('#fff');
 
 	constructor() {
-		if (supabase) {
-			// Supabase 상태 변경 감지
+		// SSR 안전: 브라우저에서만 구독 설정
+		if (browser && supabase) {
 			supabase.auth.onAuthStateChange((event, session) => {
 				this.user = session?.user || null;
-				this.updateAvatarColor(); // 유저 변경 시 아바타 색상 갱신
+				this.updateAvatarColor();
 			});
 		}
 	}
 
-	// 2. 아바타 색상 로직 (subscribe 대신 메서드로 처리)
+	// 아바타 색상 로직
 	private updateAvatarColor() {
 		if (this.user && !this.user.user_metadata?.avatar_url) {
 			const colors = [
@@ -40,7 +41,7 @@ class AuthStore {
 		}
 	}
 
-	// 3. 로그인 모달 열기
+	// 로그인 모달 열기
 	openLoginModal() {
 		modal.open(NoticeModal, {
 			title: '서비스 이용 동의',
@@ -67,7 +68,7 @@ class AuthStore {
 		});
 	}
 
-	// 4. 구글 로그인 실행
+	// 구글 로그인 실행
 	async signInWithGoogle(redirectTo?: string) {
 		if (!supabase) return;
 		try {
@@ -84,7 +85,7 @@ class AuthStore {
 		}
 	}
 
-	// 5. 로그아웃 실행
+	// 로그아웃 실행
 	async signOut() {
 		if (!supabase) return;
 		await supabase.auth.signOut();
