@@ -6,6 +6,7 @@ import { GoogleSearchScraper } from './scrapers/GoogleSearchScraper';
 import { StackOverflowScraper } from './scrapers/StackOverflowScraper';
 import { YoutubeSearchScraper } from './scrapers/YoutubeSearchScraper';
 import { TrendItem } from './scrapers/interface';
+import { RedditScraper } from './scrapers/RedditScraper';
 
 import dotenv from 'dotenv';
 import path from 'path';
@@ -63,6 +64,9 @@ export async function scrapeAll(days: number = 7): Promise<TrendItem[]> {
           break;
         case 'stackoverflow':
           results = await new StackOverflowScraper().scrape(target);
+          break;
+        case 'reddit':
+          results = await new RedditScraper().scrape(target);
           break;
         default:
           console.warn(`⚠️ 알 수 없는 타입: ${target.type}`);
