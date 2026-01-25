@@ -1,14 +1,15 @@
 import { Browser } from 'playwright';
 import { AnalysisResult, Trend } from '../types';
 import { ContentService } from './content.service';
-import { BrowserService } from './browser.service';
 import { GeminiService } from './gemini.service';
 import { GrokService } from './grok.service';
 import { YouTubeService } from './youtube.service';
 
+// 콘텐츠 길이 상수 (통일된 기준)
+const MIN_CONTENT_LENGTH = 200;
+
 export class AnalyzerService {
   private contentService: ContentService;
-  private browserService: BrowserService;
   private geminiService: GeminiService;
   private grokService: GrokService | null;
   private youtubeService: YouTubeService;
@@ -21,7 +22,6 @@ export class AnalyzerService {
     grokService?: GrokService,
   ) {
     this.contentService = new ContentService(browser);
-    this.browserService = new BrowserService(browser);
     this.geminiService = geminiService;
     this.grokService = grokService || null;
     this.youtubeService = new YouTubeService();
@@ -139,10 +139,8 @@ export class AnalyzerService {
     }
 
     // 2. [Fallback] 라이브 콘텐츠가 부실하면 DB에 저장된 본문 사용
-    const MIN_LIVE_LENGTH = 100;
-
     if (
-      fetchedContent.length < MIN_LIVE_LENGTH &&
+      fetchedContent.length < MIN_CONTENT_LENGTH &&
       trend.content &&
       trend.content.length > fetchedContent.length
     ) {
@@ -206,10 +204,8 @@ export class AnalyzerService {
 
     // B. Gemini 실행
     try {
-      const minLength = 200;
-
       // 1️⃣ 텍스트 모드
-      if (fetchedContent.length > minLength) {
+      if (fetchedContent.length >= MIN_CONTENT_LENGTH) {
         console.log(`      📝 Using Gemini (Text Mode)...`);
         const prompt = this.geminiService.buildPrompt(
           trend.title,

@@ -45,15 +45,26 @@ export class GeminiService {
   /**
    * 🎬 YouTube 영상 분석 (Direct URL 지원)
    * 새 SDK에서는 YouTube URL을 fileUri로 직접 전달 가능
+   * @param videoUrl - YouTube 영상 URL
+   * @param title - 영상 제목
+   * @param category - 카테고리
+   * @param modelOverride - 사용할 모델명 (선택, 기본값: Pro 제한 로직 적용)
    */
   async analyzeYoutubeVideo(
     videoUrl: string,
     title: string,
     category: string,
+    modelOverride?: string,
   ): Promise<GeminiAnalysisResponse> {
-    // 💡 YouTube 전용 모델 결정 (Pro 제한 로직)
-    let targetModelName = this.modelName;
-    if (!CONFIG.youtube.allowProModels && targetModelName.includes('pro')) {
+    // 💡 모델 결정: 외부 지정 > Pro 제한 로직 > 기본 모델
+    let targetModelName = modelOverride || this.modelName;
+
+    // modelOverride가 없을 때만 Pro 제한 로직 적용
+    if (
+      !modelOverride &&
+      !CONFIG.youtube.allowProModels &&
+      targetModelName.includes('pro')
+    ) {
       targetModelName = CONFIG.gemini.defaultModel || 'gemini-3-flash-preview';
     }
 
@@ -138,24 +149,34 @@ export class GeminiService {
   /**
    * 📝 텍스트 분석
    * 일관성을 위해 Content[] 형식으로 감싸서 전달
+   * @param prompt - 분석할 프롬프트
+   * @param modelOverride - 사용할 모델명 (선택, 기본값: 생성자에서 설정한 모델)
    */
-  async analyze(prompt: string): Promise<GeminiAnalysisResponse> {
+  async analyze(
+    prompt: string,
+    modelOverride?: string,
+  ): Promise<GeminiAnalysisResponse> {
     const contents: Content[] = [
       {
         role: 'user',
         parts: [{ text: prompt }],
       },
     ];
-    return this.generateWithRetry(contents);
+    return this.generateWithRetry(contents, modelOverride);
   }
 
   /**
    * 📸 이미지 분석
+   * @param base64Image - Base64 인코딩된 이미지
+   * @param title - 제목
+   * @param category - 카테고리
+   * @param modelOverride - 사용할 모델명 (선택)
    */
   async analyzeImage(
     base64Image: string,
     title: string,
     category: string,
+    modelOverride?: string,
   ): Promise<GeminiAnalysisResponse> {
     const promptText = this.generateSystemPrompt(
       title,
@@ -180,7 +201,7 @@ export class GeminiService {
       },
     ];
 
-    return this.generateWithRetry(contents);
+    return this.generateWithRetry(contents, modelOverride);
   }
 
   /**

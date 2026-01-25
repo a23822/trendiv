@@ -63,7 +63,8 @@ export class YouTubeService {
           transcript,
         );
 
-        const analysis = await geminiService.analyze(prompt);
+        // 💡 결정된 모델을 실제 API 호출에 전달
+        const analysis = await geminiService.analyze(prompt, usedModel);
 
         // null 체크
         if (!analysis) {
@@ -87,10 +88,12 @@ export class YouTubeService {
         `      🎥 No transcript. Using Gemini Video Understanding...`,
       );
 
+      // 💡 결정된 모델을 실제 API 호출에 전달
       const analysis = await geminiService.analyzeYoutubeVideo(
         link,
         title,
         category,
+        usedModel,
       );
 
       // null 체크
