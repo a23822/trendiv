@@ -35,9 +35,15 @@ export class AnalyzerService {
    * 카테고리/소스 판별 유틸리티
    */
   private isYoutubeContent(trend: Trend): boolean {
+    const category = trend.category?.toLowerCase() || '';
+    const source = trend.source?.toLowerCase() || '';
+    const link = trend.link?.toLowerCase() || '';
+
     return (
-      trend.category === 'Youtube' ||
-      trend.source?.toLowerCase().includes('youtube') === true
+      category === 'youtube' ||
+      source.includes('youtube') ||
+      link.includes('youtube.com') ||
+      link.includes('youtu.be')
     );
   }
 
@@ -59,7 +65,12 @@ export class AnalyzerService {
       return null;
     }
 
+    console.log(
+      `[DEBUG] Category: "${trend.category}", Source: "${trend.source}", Link: "${trend.link}"`,
+    );
+
     const isYoutube = this.isYoutubeContent(trend);
+    console.log(`[DEBUG] isYoutube: ${isYoutube}`);
     const isXCategory = this.isXContent(trend);
     const isReddit = this.isRedditContent(trend);
 

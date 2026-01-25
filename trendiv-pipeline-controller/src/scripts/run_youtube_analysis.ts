@@ -58,7 +58,7 @@ const main = async () => {
     const { count, error: countError } = await supabase
       .from("trend")
       .select("*", { count: "exact", head: true })
-      .eq("category", "Youtube")
+      .ilike("category", "youtube")
       .eq("status", "RAW");
 
     if (countError) throw countError;
@@ -87,7 +87,7 @@ const main = async () => {
       const { data: targetItems, error: fetchError } = await supabase
         .from("trend")
         .select("*")
-        .eq("category", "Youtube")
+        .ilike("category", "youtube")
         .eq("status", "RAW")
         .gt("id", lastId)
         .order("id", { ascending: true })
@@ -117,6 +117,7 @@ const main = async () => {
 
       // 3. 분석 실행
       console.log("\n🚀 Gemini 분석 시작...\n");
+      console.log("아이템 예시:", targetItems[0].category);
       const analysisResults = await runAnalysis(targetItems);
 
       if (!analysisResults || analysisResults.length === 0) {
