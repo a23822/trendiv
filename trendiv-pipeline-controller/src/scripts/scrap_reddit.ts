@@ -34,6 +34,11 @@ async function testReddit() {
   try {
     const results = await scraper.scrape(testTarget);
 
+    if (!results || !Array.isArray(results) || results.length === 0) {
+      console.warn("⚠️ 수집된 데이터가 없습니다.");
+      process.exit(0); // 결과가 없는 것은 에러가 아니므로 정상 종료
+    }
+
     if (results.length > 0) {
       console.log(
         `✅ 수집 성공! 총 ${results.length}개의 포스트를 가져왔습니다.\n`,

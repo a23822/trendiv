@@ -66,33 +66,35 @@ export class RedditScraper implements Scraper {
     if (!token) return [];
 
     try {
-      // 🔍 URL에서 서브레딧 추출
-      const match = config.url.match(/\/r\/([^/]+)/);
-      const subreddit = match ? match[1] : 'all';
+      const urlObj = new URL(config.url);
+      const pathParts = urlObj.pathname.split('/').filter(Boolean);
+      const rIndex = pathParts.indexOf('r');
+      const subreddit = rIndex !== -1 ? pathParts[rIndex + 1] : 'all';
 
-      let sort = 'hot';
-      if (config.url.includes('/top')) sort = 'top';
-      else if (config.url.includes('/new')) sort = 'new';
+      const sort = pathParts.includes('top')
+        ? 'top'
+        : pathParts.includes('new')
+          ? 'new'
+          : 'hot';
 
       const response = await axios.get(
         `https://oauth.reddit.com/r/${subreddit}/${sort}`,
         {
           params: {
             limit: 15,
-            ...(sort === 'top' && {
-              t: config.url.includes('t=week') ? 'week' : 'day',
-            }),
+            t: urlObj.searchParams.get('t') || 'day',
           },
           headers: {
             Authorization: `Bearer ${token}`,
             'User-Agent': 'Trendiv/0.1 by TrendivBot',
           },
+          timeout: 10000,
         },
       );
 
-      const posts: RedditPost[] = response.data.data.children;
+      const posts = response.data?.data?.children || [];
 
-      return posts.map((post) => ({
+      return posts.map((post: any) => ({
         title: post.data.title,
         link: `https://www.reddit.com${post.data.permalink}`,
         date: new Date(post.data.created_utc * 1000).toISOString(),
