@@ -18,11 +18,10 @@
 	interface Props {
 		trend: Trend;
 		onclick?: () => void;
+		isForceExpand?: boolean;
 	}
 
-	let { trend, onclick }: Props = $props();
-
-	let isHiddenHovered = $state(false);
+	let { trend, onclick, isForceExpand = false }: Props = $props();
 
 	// 분석 결과 가져오기
 	const analysis = $derived(
@@ -49,6 +48,10 @@
 	const isBookmarked = $derived(bookmarks.isBookmarked(trend.link));
 
 	const isHidden = $derived(hiddenArticles.isHidden(trend.link));
+	let isHiddenHovered = $state(false);
+
+	// 숨김 상태이더라도 강제 확장 모드라면 접지 않음
+	const isCollapsed = $derived(isHidden && !isForceExpand);
 
 	function handleBookmark(e: MouseEvent) {
 		e.stopPropagation();
@@ -65,15 +68,6 @@
 
 	// 애니메이션 진행 상태를 추적하는 state
 	let isAnimating = $state(false);
-
-	// 애니메이션 시작/종료 핸들러
-	function handleTransitionStart() {
-		isAnimating = true;
-	}
-
-	function handleTransitionEnd() {
-		isAnimating = false;
-	}
 </script>
 
 <div
@@ -90,9 +84,9 @@
 	<div
 		class={cn(
 			'grid',
-			(isHidden || isAnimating) && 'overflow-hidden',
+			(isCollapsed || isAnimating) && 'overflow-hidden',
 			'transition-[grid-template-rows] duration-500 ease-in-out',
-			isHidden ? 'grid-rows-[0fr]' : 'grid-rows-[1fr]'
+			isCollapsed ? 'grid-rows-[0fr]' : 'grid-rows-[1fr]'
 		)}
 		ontransitionstart={(e) => {
 			if (e.propertyName === 'grid-template-rows') isAnimating = true;
@@ -104,9 +98,9 @@
 		<div
 			class={cn(
 				'min-h-0',
-				(isHidden || isAnimating) && 'overflow-hidden',
+				(isCollapsed || isAnimating) && 'overflow-hidden',
 				'transition-opacity duration-500 ease-in-out',
-				isHidden ? 'opacity-0' : 'opacity-100'
+				isCollapsed ? 'opacity-0' : 'opacity-100'
 			)}
 		>
 			<!-- articleCard - header -->
@@ -289,7 +283,7 @@
 		</div>
 	</div>
 
-	{#if isHidden}
+	{#if isHidden && !isForceExpand}
 		<div
 			class={cn('absolute inset-0')}
 			in:fade={{ duration: 500 }}

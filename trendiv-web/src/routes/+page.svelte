@@ -8,12 +8,16 @@
 	import ArticleModal from '$lib/components/modal/ArticleModal/ArticleModal.svelte';
 	import FilterModal from '$lib/components/modal/FilterModal/FilterModal.svelte';
 	import { auth } from '$lib/stores/auth.svelte.js';
+	import { hiddenArticles } from '$lib/stores/hiddenarticles.svelte';
 	import { modal } from '$lib/stores/modal.svelte.js';
 	import type { Trend, ArticleStatusFilter } from '$lib/types';
 	import type { PageData } from './$types';
 	import { onMount, untrack } from 'svelte';
 
 	let { data }: { data: PageData } = $props();
+
+	// 개인화 필터 상태
+	let statusFilter = $state<ArticleStatusFilter>('all');
 
 	let trends = $state<Trend[]>(data.trends ?? []);
 	let page = $state(1);
@@ -26,9 +30,6 @@
 	//filter - category
 	let categoryList = $derived(data.categories ?? []);
 	let selectedCategories = $state<string[]>([]);
-
-	// 개인화 필터 상태
-	let statusFilter = $state<ArticleStatusFilter>('all');
 
 	let abortController: AbortController | null = null;
 
@@ -59,9 +60,21 @@
 
 	// data 변경 감지 (soft navigation 대응)
 	$effect(() => {
-		if (data.trends) {
-			trends = data.trends;
-		}
+		// 이 effect는 data.trends 또는 statusFilter가 바뀔 때만 실행됩니다.
+		const source = data.trends;
+		const currentFilter = statusFilter;
+
+		untrack(() => {
+			// hiddenArticles.isHidden을 untrack 내부에서 호출하여
+			// '숨김' 버튼 클릭 시 이 effect가 다시 실행되는 것을 방지합니다.
+			// (즉, 클릭 시에는 배열에서 삭제되지 않고 카드만 접힙니다.)
+			if (source) {
+				trends =
+					currentFilter === 'hidden'
+						? source
+						: source.filter((t) => !hiddenArticles.isHidden(t.link));
+			}
+		});
 	});
 
 	$effect(() => {
@@ -236,17 +249,29 @@
 			const result = await res.json();
 
 			if (result.success) {
-				if (reset) {
-					trends = result.data;
-				} else {
-					// Set 사용으로 O(N×M) → O(N) 성능 개선
-					const existingIds = new Set(trends.map((t) => t.id));
-					const newItems = result.data.filter(
-						(newTrend: Trend) => !existingIds.has(newTrend.id)
-					);
-					trends = [...trends, ...newItems];
-				}
-				// 무한 루프 방지: 데이터 없거나 total 도달 시 종료
+				const currentFilter = statusFilter;
+
+				untrack(() => {
+					// 새로 가져온 데이터 중 이미 숨김 처리된 것은 제외
+					const incoming =
+						currentFilter === 'hidden'
+							? result.data
+							: result.data.filter(
+									(t: Trend) => !hiddenArticles.isHidden(t.link)
+								);
+
+					if (reset) {
+						trends = incoming;
+					} else {
+						const existingIds = new Set(trends.map((t) => t.id));
+						const newItems = incoming.filter(
+							(t: any) => !existingIds.has(t.id)
+						);
+						trends = [...trends, ...newItems];
+					}
+				});
+
+				// 무한 루프 방지 조건 (전체 개수와 비교)
 				if (result.data.length === 0 || trends.length >= result.total) {
 					hasMore = false;
 				}
@@ -414,6 +439,7 @@
 								<ArticleCard
 									{trend}
 									onclick={() => openArticleModal(trend)}
+									isForceExpand={statusFilter === 'hidden'}
 								/>
 							{/each}
 						</div>
