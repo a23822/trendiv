@@ -32,9 +32,9 @@ importers:
 
   trendiv-analysis-module:
     dependencies:
-      '@google/generative-ai':
-        specifier: ^0.24.1
-        version: 0.24.1
+      '@google/genai':
+        specifier: ^1.30.0
+        version: 1.30.0
       axios:
         specifier: ^1.13.2
         version: 1.13.2

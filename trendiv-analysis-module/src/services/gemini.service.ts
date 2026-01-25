@@ -1,38 +1,51 @@
 /**
  * Gemini AI Analysis Service
+ * Migrated to @google/genai SDK (Google GenAI SDK)
  */
 
-import {
-  GoogleGenerativeAI,
-  GenerativeModel,
-  Part,
-} from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 import { CONFIG } from '../config';
 import { GeminiAnalysisResponse } from '../types';
 import { GeminiAPIError, isRetryableError } from '../utils/errors';
 import { delay, parseGeminiResponse } from '../utils/helpers';
 
+// Content 타입 정의 (새 SDK용)
+interface ContentPart {
+  text?: string;
+  inlineData?: {
+    data: string;
+    mimeType: string;
+  };
+  fileData?: {
+    fileUri: string;
+    mimeType?: string;
+  };
+}
+
+interface Content {
+  role?: 'user' | 'model';
+  parts: ContentPart[];
+}
+
 export class GeminiService {
-  private genAI: GoogleGenerativeAI;
-  private model: GenerativeModel;
+  private ai: GoogleGenAI;
   private modelName: string;
 
   constructor(apiKey: string, modelName?: string) {
     this.modelName = modelName || CONFIG.gemini.defaultModel;
-    this.genAI = new GoogleGenerativeAI(apiKey);
 
-    this.model = this.genAI.getGenerativeModel({
-      model: this.modelName,
-      generationConfig: {
-        responseMimeType: 'application/json',
-      },
-    });
+    // 새 SDK: GoogleGenAI 클라이언트 생성
+    this.ai = new GoogleGenAI({ apiKey });
   }
 
   getModelName(): string {
     return this.modelName;
   }
 
+  /**
+   * 🎬 YouTube 영상 분석 (Direct URL 지원)
+   * 새 SDK에서는 YouTube URL을 fileUri로 직접 전달 가능
+   */
   async analyzeYoutubeVideo(
     videoUrl: string,
     title: string,
@@ -41,12 +54,9 @@ export class GeminiService {
     // 💡 YouTube 전용 모델 결정 (Pro 제한 로직)
     let targetModelName = this.modelName;
     if (!CONFIG.youtube.allowProModels && targetModelName.includes('pro')) {
-      targetModelName = CONFIG.gemini.defaultModel || 'gemini-3-flash-preview'; // Pro 대신 Flash 강제 사용
+      targetModelName = CONFIG.gemini.defaultModel || 'gemini-3-flash-preview';
     }
 
-    const modelInstance = this.genAI.getGenerativeModel({
-      model: targetModelName,
-    });
     const promptText = this.buildPrompt(
       title,
       'YouTube Video',
@@ -54,22 +64,27 @@ export class GeminiService {
       '영상 내용을 분석하세요.',
     );
 
-    // 💡 비디오 URL을 포함한 콘텐츠 구성
-    const contents: Part[] = [
+    // 💡 새 SDK: YouTube URL을 fileUri에 직접 전달 + mimeType 명시 (안정성)
+    const contents: Content[] = [
       {
-        fileData: {
-          mimeType: 'video/mp4',
-          fileUri: videoUrl,
-        },
+        role: 'user',
+        parts: [
+          {
+            fileData: {
+              fileUri: videoUrl,
+              mimeType: 'video/mp4',
+            },
+          },
+          { text: promptText },
+        ],
       },
-      { text: promptText },
     ];
 
-    return this.generateWithRetry(contents, modelInstance);
+    return this.generateWithRetry(contents, targetModelName);
   }
 
   /**
-   * 공통 프롬프트 생성기 (변수로 추출)
+   * 공통 프롬프트 생성기
    */
   private generateSystemPrompt(
     title: string,
@@ -121,11 +136,17 @@ export class GeminiService {
   }
 
   /**
-   * 📝 텍스트 분석 (기존 유지)
+   * 📝 텍스트 분석
+   * 일관성을 위해 Content[] 형식으로 감싸서 전달
    */
   async analyze(prompt: string): Promise<GeminiAnalysisResponse> {
-    // 재시도 로직을 공통 함수(generateWithRetry)로 위임하여 코드 중복 제거
-    return this.generateWithRetry(prompt);
+    const contents: Content[] = [
+      {
+        role: 'user',
+        parts: [{ text: prompt }],
+      },
+    ];
+    return this.generateWithRetry(contents);
   }
 
   /**
@@ -136,7 +157,6 @@ export class GeminiService {
     title: string,
     category: string,
   ): Promise<GeminiAnalysisResponse> {
-    // 공통 프롬프트 생성 (이미지 분석용 멘트 삽입)
     const promptText = this.generateSystemPrompt(
       title,
       'Screenshot Analysis',
@@ -144,47 +164,63 @@ export class GeminiService {
       '(아래 첨부된 스크린샷 이미지를 분석하여 내용을 파악하세요)',
     );
 
-    const parts = [
-      promptText,
+    // 새 SDK: contents 배열 형식
+    const contents: Content[] = [
       {
-        inlineData: {
-          data: base64Image,
-          mimeType: 'image/jpeg',
-        },
+        role: 'user',
+        parts: [
+          {
+            inlineData: {
+              data: base64Image,
+              mimeType: 'image/jpeg',
+            },
+          },
+          { text: promptText },
+        ],
       },
     ];
 
-    return this.generateWithRetry(parts);
+    return this.generateWithRetry(contents);
   }
 
   /**
    * 재시도 로직이 포함된 실행기 (공통 함수)
-   * 텍스트든 이미지든 에러 나면 알아서 재시도합니다.
+   * 새 SDK API 방식으로 변경
    */
   private async generateWithRetry(
-    content: string | any[],
-    modelInstance?: GenerativeModel,
+    contents: Content[],
+    modelOverride?: string,
   ): Promise<GeminiAnalysisResponse> {
     const { maxRetries, initialRetryDelay } = CONFIG.gemini;
-
-    const activeModel = modelInstance || this.model;
+    const targetModel = modelOverride || this.modelName;
 
     let waitTime = initialRetryDelay;
     let lastError: unknown;
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        // Gemini에게 요청
-        const result = await activeModel.generateContent(content);
-        const response = await result.response;
-        const text = response.text();
+        // 새 SDK: ai.models.generateContent() 사용
+        const response = await this.ai.models.generateContent({
+          model: targetModel,
+          contents: contents,
+          config: {
+            responseMimeType: 'application/json',
+          },
+        });
 
-        // 지저분한 문자열을 깔끔한 JSON 객체로 변환 (ParseResponse)
+        // 새 SDK: response.text 직접 접근 (함수 호출 아님)
+        const text = response.text;
+
+        if (!text) {
+          throw new Error('Empty response from Gemini API');
+        }
+
+        // JSON 파싱
         return parseGeminiResponse<GeminiAnalysisResponse>(text);
       } catch (error) {
         lastError = error;
 
-        // 재시도 불가능한 에러면 즉시 중단 (예: API 키 오류)
+        // 재시도 불가능한 에러면 즉시 중단
         if (!isRetryableError(error)) {
           throw new GeminiAPIError(`Non-retryable error`, attempt, error);
         }
@@ -198,7 +234,7 @@ export class GeminiService {
           );
         }
 
-        // 잠시 대기 후 재시도 (Exponential Backoff)
+        // Exponential Backoff
         console.warn(
           `      ⚠️ Gemini retry ${attempt}/${maxRetries} (waiting ${waitTime}ms)...`,
         );
@@ -223,12 +259,10 @@ export class GeminiService {
     category: string,
     content: string,
   ): string {
-    // 내용이 너무 길면 자르기
     const truncatedContent = content.substring(
       0,
       CONFIG.gemini.maxContentLength,
     );
-    // 공통 함수 호출
     return this.generateSystemPrompt(title, source, category, truncatedContent);
   }
 }

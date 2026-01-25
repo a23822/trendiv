@@ -32,23 +32,60 @@ export class AnalyzerService {
   }
 
   /**
+   * 카테고리/소스 판별 유틸리티
+   */
+  private isYoutubeContent(trend: Trend): boolean {
+    return (
+      trend.category === 'Youtube' ||
+      trend.source?.toLowerCase().includes('youtube') === true
+    );
+  }
+
+  private isXContent(trend: Trend): boolean {
+    return trend.category === 'X';
+  }
+
+  private isRedditContent(trend: Trend): boolean {
+    return trend.category === 'Reddit';
+  }
+
+  /**
    * Analyze a single trend item
    */
   async analyzeTrend(trend: Trend): Promise<AnalysisResult | null> {
-    const isYoutube =
-      trend.category === 'Youtube' ||
-      trend.source?.toLowerCase().includes('youtube');
-    const isXCategory = trend.category === 'X';
-    const isReddit = trend.category === 'Reddit';
+    // 필수 필드 검증
+    if (!trend.id) {
+      console.error('      ❌ Trend ID is missing. Skipping analysis.');
+      return null;
+    }
+
+    const isYoutube = this.isYoutubeContent(trend);
+    const isXCategory = this.isXContent(trend);
+    const isReddit = this.isRedditContent(trend);
 
     const shouldUseGrok =
       this.forceProvider === 'grok' || (!this.forceProvider && isXCategory);
+
+    // 안전한 제목 추출
+    const safeTitle = trend.title?.substring(0, 20) ?? 'No Title';
 
     // ---------------------------------------------------------
     // 1️⃣ YouTube
     // ---------------------------------------------------------
     if (isYoutube) {
-      return await this.youtubeService.getAnalysis(trend, this.geminiService);
+      const result = await this.youtubeService.getAnalysis(
+        trend,
+        this.geminiService,
+      );
+
+      // YouTube 결과에도 id 보장
+      if (result) {
+        return {
+          ...result,
+          id: trend.id,
+        } as AnalysisResult;
+      }
+      return null;
     }
 
     // ---------------------------------------------------------
@@ -63,7 +100,7 @@ export class AnalyzerService {
     if (isReddit) {
       if (trend.content && trend.content.length > 0) {
         console.log(
-          `      ⏭️ Reddit detected - using stored content (${trend.content.length} chars)`,
+          `      ⭐️ Reddit detected - using stored content (${trend.content.length} chars)`,
         );
         fetchedContent = trend.content;
         isUsedStoredContent = true;
@@ -72,9 +109,7 @@ export class AnalyzerService {
       }
     } else if (!isXCategory) {
       try {
-        console.log(
-          `      Trying live fetch for: ${trend.title.substring(0, 20)}...`,
-        );
+        console.log(`      Trying live fetch for: ${safeTitle}...`);
         console.log(`      📍 URL: ${trend.link}`);
         console.log(`      📍 Category: ${trend.category}`);
 
@@ -89,13 +124,16 @@ export class AnalyzerService {
         fetchedScreenshot = screenshot || null;
 
         console.log(`      ✅ Fetch success: ${fetchedContent.length} chars`);
-      } catch (e: any) {
+      } catch (e: unknown) {
+        const error = e as Error;
         console.error(`      ❌ Live fetch FAILED`);
         console.error(`      📍 URL: ${trend.link}`);
         console.error(`      📍 Category: ${trend.category}`);
-        console.error(`      📍 Error name: ${e?.name}`);
-        console.error(`      📍 Error message: ${e?.message}`);
-        console.error(`      📍 Error stack: ${e?.stack?.substring(0, 500)}`);
+        console.error(`      📍 Error name: ${error?.name}`);
+        console.error(`      📍 Error message: ${error?.message}`);
+        console.error(
+          `      📍 Error stack: ${error?.stack?.substring(0, 500)}`,
+        );
         console.warn(`      ⚠️ Falling back to DB content...`);
       }
     }
@@ -134,8 +172,11 @@ export class AnalyzerService {
             fetchedContent,
           );
 
+          if (!analysis) return null;
+
           return {
             ...analysis,
+            id: trend.id,
             aiModel: this.grokService.getModelName(),
             analyzedAt: new Date().toISOString(),
             content: isUsedStoredContent ? undefined : fetchedContent,
@@ -145,26 +186,29 @@ export class AnalyzerService {
         // X 카테고리
         console.log(`      🦅 Using Grok API (X post)...`);
         const analysis = await this.grokService.analyze(trend);
+
+        if (!analysis) return null;
+
         return {
           ...analysis,
+          id: trend.id,
           aiModel: this.grokService.getModelName(),
           analyzedAt: new Date().toISOString(),
         };
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const err = error as Error;
         console.error(`❌ Grok analysis failed:`);
-        console.error(`      📍 Error name: ${error?.name}`);
-        console.error(`      📍 Error message: ${error?.message}`);
+        console.error(`      📍 Error name: ${err?.name}`);
+        console.error(`      📍 Error message: ${err?.message}`);
         return null;
       }
     }
 
     // B. Gemini 실행
     try {
-      // 1️⃣ 텍스트 모드
-      const isYoutube =
-        trend.source && trend.source.toLowerCase().includes('youtube');
-      const minLength = isYoutube ? 20 : 200;
+      const minLength = 200;
 
+      // 1️⃣ 텍스트 모드
       if (fetchedContent.length > minLength) {
         console.log(`      📝 Using Gemini (Text Mode)...`);
         const prompt = this.geminiService.buildPrompt(
@@ -174,8 +218,12 @@ export class AnalyzerService {
           fetchedContent,
         );
         const analysis = await this.geminiService.analyze(prompt);
+
+        if (!analysis) return null;
+
         return {
           ...analysis,
+          id: trend.id,
           aiModel: this.geminiService.getModelName(),
           analyzedAt: new Date().toISOString(),
           content: isUsedStoredContent ? undefined : fetchedContent,
@@ -190,8 +238,12 @@ export class AnalyzerService {
           trend.title,
           trend.category,
         );
+
+        if (!analysis) return null;
+
         return {
           ...analysis,
+          id: trend.id,
           aiModel: this.geminiService.getModelName(),
           analyzedAt: new Date().toISOString(),
         };
@@ -199,10 +251,11 @@ export class AnalyzerService {
 
       console.log(`      ⚠️ No content or screenshot available`);
       return null;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as Error;
       console.error(`❌ Gemini analysis failed:`);
-      console.error(`      📍 Error name: ${error?.name}`);
-      console.error(`      📍 Error message: ${error?.message}`);
+      console.error(`      📍 Error name: ${err?.name}`);
+      console.error(`      📍 Error message: ${err?.message}`);
       return null;
     }
   }
