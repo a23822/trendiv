@@ -70,6 +70,5 @@
 		{onchange}
 		{onstatusChange}
 		variant="collapsible"
-		defaultOpenSections={['personal']}
 	/>
 </section>
