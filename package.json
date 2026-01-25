@@ -4,7 +4,7 @@
   "private": true,
   "description": "Trendiv Root Package",
   "scripts": {
-    "deploy": "docker build --platform linux/amd64 -t asia-northeast3-docker.pkg.dev/trendiv/trendiv-repo/trendiv-backend:latest . && docker push asia-northeast3-docker.pkg.dev/trendiv/trendiv-repo/trendiv-backend:latest",
+    "deploy": "pnpm --filter trendiv-result-module build && pnpm --filter trendiv-pipeline-controller... build && docker build --platform linux/amd64 -t asia-northeast3-docker.pkg.dev/trendiv/trendiv-repo/trendiv-backend:latest . && docker push asia-northeast3-docker.pkg.dev/trendiv/trendiv-repo/trendiv-backend:latest",
     "install:all": "pnpm install",
     "start:backend": "pnpm --filter trendiv-pipeline-controller start"
   },

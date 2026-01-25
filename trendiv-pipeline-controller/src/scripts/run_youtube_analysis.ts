@@ -9,7 +9,7 @@ import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { runAnalysis } from "trendiv-analysis-module";
 
 // 배치 설정
-const BATCH_SIZE = 50;
+const BATCH_SIZE = 1;
 const BATCH_DELAY_MS = 3000; // 배치 간 딜레이 (API 제한 방지)
 
 /**
@@ -139,8 +139,7 @@ const main = async () => {
 
       const updates = analysisResults.map((result) => {
         const original = targetMap.get(result.id);
-        const title =
-          result.title_ko || original?.title?.substring(0, 40) || "Unknown";
+        const finalTitle = result.title_ko || original?.title || "제목 없음";
 
         // 분석 방식 추정 (content 유무로 판단)
         let analysisMethod = "unknown";
@@ -158,7 +157,7 @@ const main = async () => {
         console.log(
           `\n   ${scoreEmoji} [ID: ${result.id}] Score: ${result.score}/10`,
         );
-        console.log(`      📌 제목: ${title}`);
+        console.log(`      📌 제목: ${finalTitle}`);
         console.log(`      🤖 모델: ${result.aiModel}`);
         console.log(
           `      🎬 분석방식: ${analysisMethod === "transcript" ? "자막(Transcript)" : "영상직접분석(Video Understanding)"}`,
@@ -183,6 +182,11 @@ const main = async () => {
 
         return {
           id: result.id,
+          title: finalTitle,
+          link: original?.link,
+          date: original?.date,
+          source: original?.source,
+          category: original?.category,
           status: result.score > 0 ? "ANALYZED" : "REJECTED",
           represent_result: newHistoryItem,
           // 기존 이력 유지 + 새 결과 추가

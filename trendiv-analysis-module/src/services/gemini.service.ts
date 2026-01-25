@@ -3,7 +3,7 @@
  * Migrated to @google/genai SDK (Google GenAI SDK)
  */
 
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI, HarmCategory, HarmBlockThreshold } from '@google/genai';
 import { CONFIG } from '../config';
 import { GeminiAnalysisResponse } from '../types';
 import { GeminiAPIError, isRetryableError } from '../utils/errors';
@@ -215,6 +215,25 @@ export class GeminiService {
     const { maxRetries, initialRetryDelay } = CONFIG.gemini;
     const targetModel = modelOverride || this.modelName;
 
+    // 🛡️ 비속어 등으로 인한 차단을 방지하기 위해 필터 해제
+    const safetySettings = [
+      {
+        category: HarmCategory.HARM_CATEGORY_HARASSMENT,
+        threshold: HarmBlockThreshold.BLOCK_NONE,
+      },
+      {
+        category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+        threshold: HarmBlockThreshold.BLOCK_NONE,
+      },
+      {
+        category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+        threshold: HarmBlockThreshold.BLOCK_NONE,
+      },
+      {
+        category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+        threshold: HarmBlockThreshold.BLOCK_NONE,
+      },
+    ];
     let waitTime = initialRetryDelay;
     let lastError: unknown;
 
@@ -226,6 +245,7 @@ export class GeminiService {
           contents: contents,
           config: {
             responseMimeType: 'application/json',
+            safetySettings: safetySettings,
           },
         });
 

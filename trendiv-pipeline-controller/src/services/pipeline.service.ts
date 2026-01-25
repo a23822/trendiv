@@ -131,7 +131,7 @@ export const runPipeline = async (): Promise<PipelineResult> => {
         {
           target_model: targetModel,
           batch_size: 10,
-        }
+        },
       );
 
       if (error) {
@@ -146,7 +146,7 @@ export const runPipeline = async (): Promise<PipelineResult> => {
       }
 
       console.log(
-        `      [Batch ${loopCount}/${MAX_LOOP_COUNT}] Analyzing ${targetItems.length} items...`
+        `      [Batch ${loopCount}/${MAX_LOOP_COUNT}] Analyzing ${targetItems.length} items...`,
       );
 
       // C. 분석 데이터 정제
@@ -174,7 +174,7 @@ export const runPipeline = async (): Promise<PipelineResult> => {
           // analysisResults는 빈 배열로 유지 → 아래에서 전부 failedIds로 처리됨
         } else {
           analysisResults = rawResults.filter(
-            (r) => r && typeof r.id === "number"
+            (r) => r && typeof r.id === "number",
           );
         }
       } catch (e) {
@@ -191,7 +191,7 @@ export const runPipeline = async (): Promise<PipelineResult> => {
 
       if (failedIds.length > 0) {
         console.log(
-          `      🛑 Marking ${failedIds.length} items as REJECTED (Error Loop Prevention)...`
+          `      🛑 Marking ${failedIds.length} items as REJECTED (Error Loop Prevention)...`,
         );
 
         // 에러 마커 추가 - 나중에 디버깅 용이
@@ -201,6 +201,7 @@ export const runPipeline = async (): Promise<PipelineResult> => {
 
           return {
             id: id,
+            title: originalItem?.title || "제목 없음",
             status: "REJECTED",
             analysis_results: [
               ...existingHistory,
@@ -225,7 +226,7 @@ export const runPipeline = async (): Promise<PipelineResult> => {
         if (failError) {
           console.error(
             "      ❌ Failed status update error:",
-            failError.message
+            failError.message,
           );
         }
       }
@@ -252,8 +253,12 @@ export const runPipeline = async (): Promise<PipelineResult> => {
 
       for (const result of analysisResults) {
         const current = currentItems.find(
-          (item: TrendDbItem) => item.id === result.id
+          (item: TrendDbItem) => item.id === result.id,
         );
+
+        // 1️⃣ 원본 아이템
+        const originalItem = cleanData.find((item) => item.id === result.id);
+
         const existingHistory: AnalysisEntry[] =
           current?.analysis_results || [];
 
@@ -261,16 +266,16 @@ export const runPipeline = async (): Promise<PipelineResult> => {
           aiModel: result.aiModel,
           score: result.score,
           reason: result.reason,
-          title_ko: result.title_ko,
-          oneLineSummary: result.oneLineSummary,
-          keyPoints: result.keyPoints,
-          tags: result.tags,
+          title_ko: result.title_ko || originalItem?.title || "제목 없음",
+          oneLineSummary: result.oneLineSummary || "",
+          keyPoints: result.keyPoints || [],
+          tags: result.tags || [],
           analyzedAt: new Date().toISOString(),
         };
 
         const updatedHistory = [...existingHistory];
         const existingIndex = existingHistory.findIndex(
-          (r) => r.aiModel === result.aiModel
+          (r) => r.aiModel === result.aiModel,
         );
 
         if (existingIndex !== -1) {
@@ -280,24 +285,33 @@ export const runPipeline = async (): Promise<PipelineResult> => {
         }
 
         const sortedHistory = [...updatedHistory].sort((a, b) => {
-          if (b.score !== a.score) return b.score - a.score; // 점수 높은순
+          if (b.score !== a.score) return b.score - a.score;
           return (
             new Date(b.analyzedAt).getTime() - new Date(a.analyzedAt).getTime()
-          ); // 최신순
+          );
         });
         const representResult = sortedHistory[0];
 
+        // 2️⃣ 공통 데이터 payload 구성
+        const commonPayload = {
+          id: result.id,
+          title: result.title_ko || originalItem?.title || "제목 없음",
+          analysis_results: updatedHistory,
+          represent_result: representResult || null,
+          source: originalItem?.source,
+          category: originalItem?.category,
+          date: originalItem?.date,
+        };
+
         if (result.score > 0) {
           analyzedUpdates.push({
-            id: result.id,
-            analysis_results: updatedHistory,
+            ...commonPayload,
             status: "ANALYZED",
-            content: result.content, // ✅ 정상: 1차 분석 결과를 저장
-            represent_result: representResult || null,
+            content: result.content || originalItem?.content,
           });
-          const originalItem = cleanData.find((item) => item.id === result.id);
+
           allValidTrends.push({
-            title: result.title_ko || originalItem?.title || "",
+            title: commonPayload.title,
             oneLineSummary: result.oneLineSummary,
             tags: result.tags,
             score: result.score,
@@ -306,18 +320,17 @@ export const runPipeline = async (): Promise<PipelineResult> => {
           totalSuccessCount++;
         } else {
           rejectedUpdates.push({
-            id: result.id,
-            analysis_results: updatedHistory,
+            ...commonPayload,
             status: "REJECTED",
-            represent_result: representResult || null,
           });
-          console.log(`      🗑️ Rejected (Score 0): ID ${result.id}`);
+          console.log(` 🗑️ Rejected (Score 0): ID ${result.id}`);
         }
       }
 
       const allUpdates = [...analyzedUpdates, ...rejectedUpdates];
 
       if (allUpdates.length > 0) {
+        console.log("DEBUG: Final Payload Sample", allUpdates[0]);
         const { error } = await supabase
           .from("trend")
           .upsert(allUpdates, { onConflict: "id" });
@@ -326,7 +339,7 @@ export const runPipeline = async (): Promise<PipelineResult> => {
           console.error("      ⚠️ Batch upsert failed:", error.message);
         } else {
           console.log(
-            `      💾 Saved batch updates: ${analyzedUpdates.length} analyzed, ${rejectedUpdates.length} rejected.`
+            `      💾 Saved batch updates: ${analyzedUpdates.length} analyzed, ${rejectedUpdates.length} rejected.`,
           );
         }
       }
@@ -369,7 +382,7 @@ export const runPipeline = async (): Promise<PipelineResult> => {
 
     const duration = ((Date.now() - startTime) / 1000).toFixed(2);
     console.log(
-      `🎉 [Pipeline] All Done! processed total ${totalSuccessCount} items in ${duration}s`
+      `🎉 [Pipeline] All Done! processed total ${totalSuccessCount} items in ${duration}s`,
     );
     return { success: true, count: totalSuccessCount };
   } catch (error) {
@@ -439,13 +452,13 @@ export const runGeminiProAnalysis = async (): Promise<void> => {
 
   if (targets.length === 0) {
     console.log(
-      `   ✅ [Gemini Pro] 최근 ${page * BATCH_SIZE}개 항목 모두 완료.`
+      `   ✅ [Gemini Pro] 최근 ${page * BATCH_SIZE}개 항목 모두 완료.`,
     );
     return;
   }
 
   console.log(
-    `   🎯 Gemini Pro Targets: ${targets.length} items (Model: ${modelName})`
+    `   🎯 Gemini Pro Targets: ${targets.length} items (Model: ${modelName})`,
   );
 
   try {
@@ -465,7 +478,7 @@ export const runGeminiProAnalysis = async (): Promise<void> => {
 // ---------------------------------------------------------
 export const runGrokAnalysis = async (): Promise<void> => {
   console.log(
-    "🦅 [Grok Analysis] Starting analysis (X: Raw/Analyzed, Others: Analyzed)..."
+    "🦅 [Grok Analysis] Starting analysis (X: Raw/Analyzed, Others: Analyzed)...",
   );
 
   const supabaseUrl = process.env.SUPABASE_URL;
@@ -535,7 +548,7 @@ export const runGrokAnalysis = async (): Promise<void> => {
   }
 
   console.log(
-    `   🎯 Grok Targets: ${targets.length} items (Model: ${modelName})`
+    `   🎯 Grok Targets: ${targets.length} items (Model: ${modelName})`,
   );
 
   try {
@@ -553,11 +566,11 @@ export const runGrokAnalysis = async (): Promise<void> => {
 // 💾 결과 저장 헬퍼 (품질 관리를 위해 하나라도 0점이면 REJECTED 처리)
 async function saveAnalysisResults(
   supabase: SupabaseClient,
-  results: AnalysisResult[]
+  results: AnalysisResult[],
 ): Promise<void> {
   if (!Array.isArray(results) || results.length === 0) {
     console.warn(
-      "      ⚠️ saveAnalysisResults: 유효하지 않은 결과값, 저장 건너뜀."
+      "      ⚠️ saveAnalysisResults: 유효하지 않은 결과값, 저장 건너뜀.",
     );
     return;
   }
@@ -583,7 +596,7 @@ async function saveAnalysisResults(
   // 2. 메모리에서 데이터 가공
   for (const result of results) {
     const current = currentItems.find(
-      (item: TrendDbItem) => item.id === result.id
+      (item: TrendDbItem) => item.id === result.id,
     );
     const history: AnalysisEntry[] = current?.analysis_results || [];
 
@@ -610,7 +623,7 @@ async function saveAnalysisResults(
     if (!isHighQuality) {
       const zeroModel = history.find((h) => h.score === 0)?.aiModel;
       console.log(
-        `      🗑️ [Quality Control] 0점 발생 (ID: ${result.id}, Model: ${zeroModel})`
+        `      🗑️ [Quality Control] 0점 발생 (ID: ${result.id}, Model: ${zeroModel})`,
       );
     }
 
@@ -623,6 +636,7 @@ async function saveAnalysisResults(
 
     const updateData: any = {
       id: result.id, // upsert를 위해 ID 필수
+      title: result.title_ko || "제목 없음",
       analysis_results: history,
       status: newStatus,
       represent_result: sortedHistory[0] || null,
@@ -646,7 +660,7 @@ async function saveAnalysisResults(
       console.error("      ❌ Bulk Save Failed:", error.message);
     } else {
       console.log(
-        `      ✅ Bulk Save Success: ${updates.length} items updated.`
+        `      ✅ Bulk Save Success: ${updates.length} items updated.`,
       );
     }
   }
