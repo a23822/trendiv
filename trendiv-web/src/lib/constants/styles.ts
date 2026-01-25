@@ -1,6 +1,6 @@
 import { cn } from '$lib/utils/ClassMerge';
 
-const BASE_TRANSITION = 'transition-all duration-200 ease-in-out';
+const BASE_TRANSITION = 'transition-all duration-300 ease-in-out';
 const BASE_TRANSITION_COLOR = 'transition-colors duration-300 ease-in-out';
 export const CommonStyles = {
 	CARD: cn(
