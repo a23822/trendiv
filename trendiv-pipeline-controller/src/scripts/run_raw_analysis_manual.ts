@@ -86,6 +86,11 @@ const main = async () => {
 
             return {
               id: result.id,
+              title: original?.title,
+              link: original?.link,
+              date: original?.date,
+              source: original?.source,
+              category: original?.category,
               analysis_results: newHistory,
               status: result.score > 0 ? "ANALYZED" : "REJECTED",
               represent_result: newHistory.sort((a, b) => b.score - a.score)[0],
