@@ -1,3 +1,4 @@
+import { browser } from '$app/environment';
 import { supabase } from '$lib/stores/db';
 import type { Trend, HiddenArticle } from '$lib/types';
 import { auth } from './auth.svelte.js';
@@ -11,7 +12,8 @@ class HiddenArticlesStore {
 	private processingUrls = new Set<string>();
 
 	constructor() {
-		if (supabase) {
+		// SSR 안전: 브라우저에서만 구독 설정
+		if (browser && supabase) {
 			supabase.auth.onAuthStateChange((event, session) => {
 				if (session?.user) {
 					this.fetchHiddenArticles(session.user.id);
@@ -29,6 +31,7 @@ class HiddenArticlesStore {
 
 	/** 관심없음 목록 불러오기 */
 	async fetchHiddenArticles(userId?: string) {
+		// supabase 가드
 		if (!supabase) return;
 
 		const targetId = userId || auth.user?.id;
@@ -66,7 +69,7 @@ class HiddenArticlesStore {
 			return;
 		}
 
-		// 중복 클릭 방지
+		//  중복 클릭 방지
 		if (this.processingUrls.has(article.link)) {
 			return;
 		}
@@ -131,7 +134,7 @@ class HiddenArticlesStore {
 				}
 			}
 		} finally {
-			// 처리 완료 후 Set에서 제거
+			// ✅ 추가: 처리 완료 후 Set에서 제거
 			this.processingUrls.delete(article.link);
 		}
 	}
