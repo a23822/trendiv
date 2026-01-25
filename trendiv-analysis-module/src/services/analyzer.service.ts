@@ -36,7 +36,7 @@ export class AnalyzerService {
    */
   private isYoutubeContent(trend: Trend): boolean {
     return (
-      trend.category === 'Youtube' ||
+      trend.category === 'YouTube' ||
       trend.source?.toLowerCase().includes('youtube') === true
     );
   }

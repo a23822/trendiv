@@ -58,7 +58,7 @@ const main = async () => {
     const { count, error: countError } = await supabase
       .from("trend")
       .select("*", { count: "exact", head: true })
-      .eq("category", "Youtube")
+      .eq("category", "YouTube")
       .eq("status", "RAW");
 
     if (countError) throw countError;
@@ -87,7 +87,7 @@ const main = async () => {
       const { data: targetItems, error: fetchError } = await supabase
         .from("trend")
         .select("*")
-        .eq("category", "Youtube")
+        .eq("category", "YouTube")
         .eq("status", "RAW")
         .gt("id", lastId)
         .order("id", { ascending: true })
