@@ -201,7 +201,11 @@ export const runPipeline = async (): Promise<PipelineResult> => {
 
           return {
             id: id,
+            link: originalItem?.link || "",
             title: originalItem?.title || "제목 없음",
+            source: originalItem?.source,
+            category: originalItem?.category,
+            date: originalItem?.date,
             status: "REJECTED",
             analysis_results: [
               ...existingHistory,
@@ -240,7 +244,7 @@ export const runPipeline = async (): Promise<PipelineResult> => {
 
       const { data: currentItems } = await supabase
         .from("trend")
-        .select("id, analysis_results")
+        .select("*")
         .in("id", ids);
 
       if (!currentItems) {
@@ -292,15 +296,14 @@ export const runPipeline = async (): Promise<PipelineResult> => {
         });
         const representResult = sortedHistory[0];
 
+        if (!originalItem) continue;
+
         // 2️⃣ 공통 데이터 payload 구성
         const commonPayload = {
-          id: result.id,
+          ...originalItem,
           title: result.title_ko || originalItem?.title || "제목 없음",
           analysis_results: updatedHistory,
           represent_result: representResult || null,
-          source: originalItem?.source,
-          category: originalItem?.category,
-          date: originalItem?.date,
         };
 
         if (result.score > 0) {
@@ -580,7 +583,7 @@ async function saveAnalysisResults(
   // 1. 현재 DB 상태 한 번에 조회
   const { data: currentItems } = await supabase
     .from("trend")
-    .select("id, analysis_results")
+    .select("*")
     .in("id", ids);
 
   if (!currentItems) {
@@ -598,6 +601,14 @@ async function saveAnalysisResults(
     const current = currentItems.find(
       (item: TrendDbItem) => item.id === result.id,
     );
+
+    if (!current) {
+      console.warn(
+        `⚠️ ID ${result.id}에 해당하는 원본 데이터를 찾을 수 없어 스킵합니다.`,
+      );
+      continue;
+    }
+
     const history: AnalysisEntry[] = current?.analysis_results || [];
 
     const newEntry: AnalysisEntry = {
@@ -635,7 +646,8 @@ async function saveAnalysisResults(
     });
 
     const updateData: any = {
-      id: result.id, // upsert를 위해 ID 필수
+      ...current,
+      id: result.id,
       title: result.title_ko || "제목 없음",
       analysis_results: history,
       status: newStatus,
