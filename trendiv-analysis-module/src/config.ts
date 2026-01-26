@@ -87,48 +87,67 @@ export const CONFIG = {
 
     tagGuide: `[태그 생성 규칙 (필수 준수)]
 1. 태그는 기본적으로 영문 PascalCase를 사용하되, 고유명사나 약어는 대소문자 규격(예: iOS, API, UI, UX, HTML)을 정확히 지키세요.
-2. 복합 단어는 반드시 띄어쓰기를 포함하세요. (예: MobileWeb -> Mobile Web, TailwindCSS -> Tailwind CSS)
-3. UI, UX, 마크업, 프론트엔드 개발과 관련된 핵심 기술 태그만 3~5개 추출하세요. 서버/인프라 위주의 태그는 제외하세요.
+2. 복합 단어는 반드시 띄어쓰기를 포함하세요. (예: MobileWeb -> Mobile Web)
+3. UI, UX, 마크업, 프론트엔드 개발과 관련된 핵심 기술 태그만 3~5개 추출하세요.
 
-4. [중요] 다음은 자주 등장하는 태그들의 파편화를 막기 위한 <표준 태그 매핑 테이블>입니다. 좌측의 유사어나 오타가 등장하면 반드시 우측의 "표준 태그명"으로만 출력하세요:
+4. [중요] 아래 <표준 태그 매핑 테이블>을 사용하여 파편화된 용어를 반드시 "표준 태그"로 변환하여 출력하세요:
 
---- 웹 접근성 (Accessibility) ---
-- "A11y", "Web Accessibility", "WCAG", "ARIA", "a11y" -> "Accessibility"
+--- 1. AI & Machine Learning (대통합) ---
+- "ChatGPT", "LLM", "Generative AI", "GenAI", "Machine Learning", "ML", "Claude", "Gemini", "Copilot" -> "AI"
+- "AI Agent", "AI Tool", "AI Design", "AI Coding", "NotebookLM" -> "AI"
 
---- 스타일링 (CSS) ---
-- "Modern CSS", "ModernCSS", "Deep CSS", "CSS3", "css" -> "CSS"
-- "TailwindCSS", "tailwind" -> "Tailwind CSS"
-- "CSS in JS", "Css-in-js" -> "CSS in JS"
-- "SCSS", "Sass" -> "SASS"
+--- 2. 모바일 & 네이티브 (Native App 통합) ---
+- "Flutter", "React Native", "Expo", "Ionic", "Capacitor", "Cordova" -> "Native App"
+- "App Development", "Mobile App", "Cross Platform", "App Store" -> "Native App"
+- "iOS", "Swift", "SwiftUI", "Xcode", "Apple" -> "iOS"
+- "Android", "Kotlin", "Jetpack Compose", "Android Studio" -> "Android"
+- "MobileWeb", "PWA" -> "Mobile Web"
 
---- 마크업 (HTML) ---
-- "HTML5", "XHTML", "html" -> "HTML"
-- "Semantic HTML", "HTML Semantics", "SemanticHTML" -> "Semantics"
+--- 3. 백엔드 & 인프라 (Backend 통합) ---
+- "Server", "Database", "SQL", "NoSQL", "MySQL", "PostgreSQL", "MongoDB", "Redis" -> "Backend"
+- "AWS", "Docker", "Kubernetes", "Firebase", "Supabase", "Vercel", "Netlify" -> "Backend"
+- "API", "REST API", "GraphQL", "Auth", "OAuth", "JWT", "Security" -> "Backend"
+- "Python", "Java", "Go", "Node.js", "C#", ".NET", "Linux", "DevOps", "CI/CD" -> "Backend"
 
---- 자바스크립트 및 프레임워크 (JS/Frameworks) ---
-- "JS", "VanillaJS", "EcmaScript" -> "JavaScript"
-- "TS", "Typescript" -> "TypeScript"
-- "Nextjs", "NextJS", "Next" -> "Next.js"
-- "Nodejs", "NodeJS", "Node" -> "Node.js"
-- "React.js", "ReactJS", "React 18", "React 19" -> "React"
-- "Vuejs", "Vue.js" -> "Vue.js"
-- "Svelte.js", "Svelte 5", "Runes" -> "Svelte"
+--- 4. CSS & 스타일링 (속성 대통합) ---
+- "CSS3", "Modern CSS", "Vanilla CSS", "SCSS", "Sass", "Less" -> "CSS"
+- "Flexbox", "Grid", "Layout", "Box Model", "Positioning", "Z-index" -> "CSS"
+- "Animation", "Transition", "Transform", "Gradient", "Shadow", "Color" -> "CSS"
+- "Responsive", "Media Query", "Dark Mode", "Aspect Ratio" -> "CSS"
+- ":has()", "@layer", "@scope", "@property", "CSS Variables" -> "CSS"
+- "TailwindCSS", "Tailwind" -> "Tailwind CSS"
+- "CSS in JS", "Styled Components", "Emotion" -> "CSS-in-JS"
+- "Typography", "Fonts", "Web Fonts" -> "Typography"
 
---- 성능 및 브라우저 (Performance & Rendering) ---
-- "Web Performance", "Page Speed", "Lighthouse", "Web Vitals" -> "Performance"
-- "Browser Rendering", "Reflow", "Repaint", "CRP" -> "Rendering"
-- "Cross Browser", "Browser Compatibility" -> "Compatibility"
+--- 5. 기초 & 커리어 (Basic 통합) ---
+- "Beginner", "Junior", "Entry Level", "101", "Introduction", "Tutorial" -> "Basic"
+- "Guide", "Roadmap", "Learning", "Study", "Best Practice", "Tips" -> "Basic"
+- "Career", "Interview", "Resume", "Portfolio", "Soft Skills", "Productivity" -> "Career"
 
---- 모바일 및 플랫폼 (Mobile & Platforms) ---
-- "MobileWeb", "mobile-web" -> "Mobile Web"
-- "NativeApp", "native-app" -> "Native App"
-- "ios" -> "iOS"
-- "android" -> "Android"
+--- 6. 프레임워크 & 라이브러리 ---
+- "React.js", "ReactJS", "React 18", "React 19", "RSC", "Hooks" -> "React"
+- "Nextjs", "NextJS", "Next", "App Router" -> "Next.js"
+- "Vuejs", "Vue.js", "Nuxt" -> "Vue.js"
+- "Svelte.js", "Svelte 5", "Runes", "SvelteKit" -> "Svelte"
+- "Angular", "SolidJS", "Qwik", "Astro" -> (각각 고유명사 유지)
 
---- 디자인 및 UI/UX ---
-- "User Interface" -> "UI"
-- "User Experience" -> "UX"
-- "Design System", "Design Tokens" -> "Design System"
-- "Micro Interaction", "Transitions" -> "Animation"`,
+--- 7. 웹 표준 & 브라우저 ---
+- "HTML5", "XHTML", "Markup", "DOM", "Shadow DOM" -> "HTML"
+- "Semantic HTML", "Semantics" -> "Semantics"
+- "Accessibility", "A11y", "WCAG", "ARIA", "Screen Reader" -> "Accessibility"
+- "Browser", "Chrome", "Firefox", "Safari", "WebKit", "Edge" -> "Browser"
+- "Web Standards", "W3C", "WHATWG", "MDN", "Spec" -> "Web Standards"
+- "Web API", "Web Audio", "WebRTC", "WebSocket", "Fetch" -> "Web API"
+- "3D Web", "WebGL", "Three.js", "WebGPU", "WebXR", "Canvas" -> "3D Web"
+
+--- 8. 성능 & 렌더링 ---
+- "Web Performance", "Page Speed", "Lighthouse", "Core Web Vitals", "LCP/CLS/INP" -> "Performance"
+- "Optimization", "Lazy Loading", "Tree Shaking", "Bundling" -> "Performance"
+- "Rendering", "SSR", "CSR", "Hydration", "Reflow", "Repaint" -> "Rendering"
+
+--- 9. 테스팅 & 도구 ---
+- "Testing", "Unit Test", "E2E", "Jest", "Cypress", "Playwright" -> "Testing"
+- "Tooling", "DevTools", "Vite", "Webpack", "Git", "GitHub", "VSCode", "Linter" -> "Tooling"
+- "Design System", "Figma", "UI/UX", "User Interface", "User Experience" -> (각각 유지)`,
   },
 } as const;
