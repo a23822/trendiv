@@ -12,6 +12,11 @@ const FIGMA_TOKEN = process.env.FIGMA_ACCESS_TOKEN;
 const MODEL_NAME = process.env.GEMINI_MODEL_PRO || "gemini-3-pro-preview";
 const CHANGED_FILES = process.env.CHANGED_FILES || "";
 
+// 🔴 AI 규칙 폴더 경로
+const AI_RULES_DIR = process.env.AI_RULES_DIR
+  ? path.join(process.cwd(), process.env.AI_RULES_DIR)
+  : path.join(process.cwd(), ".github/ai-rules");
+
 // ==========================================
 // 💾 Figma 스펙 캐싱
 // ==========================================
@@ -77,43 +82,87 @@ function setOutput(name: string, value: string) {
 }
 
 // ==========================================
-// 🎨 스타일(CSS/SCSS) 컨텍스트 로더
+// 🔴 규칙 로드 로직
+// ==========================================
+const rulesCache = new Map<string, string>();
+
+function loadRuleFile(relativePath: string): string {
+  const fullPath = path.join(AI_RULES_DIR, relativePath);
+
+  if (rulesCache.has(fullPath)) {
+    return rulesCache.get(fullPath)!;
+  }
+
+  if (fs.existsSync(fullPath)) {
+    const content = fs.readFileSync(fullPath, "utf-8");
+    rulesCache.set(fullPath, content);
+    return content;
+  }
+
+  return "";
+}
+
+function loadGenerateRules(): string {
+  const rules: string[] = [];
+
+  // 프론트엔드 공통 규칙
+  const baseRule = loadRuleFile("frontend/_base.md");
+  if (baseRule) rules.push(baseRule);
+
+  // 생성 전용 규칙
+  const generateRule = loadRuleFile("frontend/generate.md");
+  if (generateRule) rules.push(generateRule);
+
+  // 컴포넌트 규칙
+  const componentsRule = loadRuleFile("frontend/components.md");
+  if (componentsRule) rules.push(componentsRule);
+
+  return rules.join("\n\n---\n\n");
+}
+
+// ==========================================
+// 🎨 스타일(CSS/SCSS) 컨텍스트 로더 (최적화)
 // ==========================================
 function readProjectStyles(): string {
   let context = "";
   const cwd = process.cwd();
 
   try {
-    // 1. SCSS 변수 읽기
-    const colorVarsPath = path.resolve(
-      cwd,
-      "trendiv-web/src/lib/constants/variables_color.scss"
-    );
-    if (fs.existsSync(colorVarsPath)) {
-      context += `\n/* --- variables_color.scss --- */\n${fs.readFileSync(
-        colorVarsPath,
-        "utf-8"
-      )}`;
-    }
+    // ❌ 제거: variables_color.scss (generate.md에 매핑 테이블 있음)
+    // ❌ 제거: @theme 블록 (generate.md에 매핑 테이블 있음)
 
-    // 2. App CSS 읽기
+    // ✅ 유지: @layer base (리셋 CSS, 기본 스타일)
     const appCssPath = path.resolve(cwd, "trendiv-web/src/app.css");
     if (fs.existsSync(appCssPath)) {
-      context += `\n/* --- app.css --- */\n${fs.readFileSync(
-        appCssPath,
-        "utf-8"
-      )}`;
+      const appCss = fs.readFileSync(appCssPath, "utf-8");
+
+      // @layer base 블록 추출 (중첩 {} 처리)
+      const layerBaseStart = appCss.indexOf("@layer base {");
+      if (layerBaseStart !== -1) {
+        let depth = 0;
+        let endIndex = layerBaseStart;
+        for (let i = layerBaseStart; i < appCss.length; i++) {
+          if (appCss[i] === "{") depth++;
+          if (appCss[i] === "}") depth--;
+          if (depth === 0 && appCss[i] === "}") {
+            endIndex = i + 1;
+            break;
+          }
+        }
+        const layerBase = appCss.slice(layerBaseStart, endIndex);
+        context += `\n/* --- 기본 스타일 (@layer base) --- */\n${layerBase}`;
+      }
     }
 
-    // 3. Shared Styles (styles.ts) 읽기
+    // ✅ 유지: styles.ts (CommonStyles 객체)
     const stylesTsPath = path.resolve(
       cwd,
-      "trendiv-web/src/lib/constants/styles.ts"
+      "trendiv-web/src/lib/constants/styles.ts",
     );
     if (fs.existsSync(stylesTsPath)) {
-      context += `\n/* --- styles.ts (Shared UI Constants) --- */\n${fs.readFileSync(
+      context += `\n/* --- 공통 스타일 객체 (styles.ts) --- */\n${fs.readFileSync(
         stylesTsPath,
-        "utf-8"
+        "utf-8",
       )}`;
     }
 
@@ -131,7 +180,7 @@ function readProjectStyles(): string {
 async function fetchWithRetry(
   url: string,
   options: RequestInit,
-  retries = 3
+  retries = 3,
 ): Promise<Response> {
   for (let i = 0; i < retries; i++) {
     const res = await fetch(url, options);
@@ -152,12 +201,12 @@ async function fetchWithRetry(
       console.warn(
         `      - 사유: ${rateLimitType || "알 수 없음"} (Plan: ${
           planTier || "알 수 없음"
-        })`
+        })`,
       );
       console.warn(
         `      - 대기: ${waitSeconds}초 후 재시도합니다... (${
           i + 1
-        }/${retries})`
+        }/${retries})`,
       );
 
       await new Promise((resolve) => setTimeout(resolve, waitTimeMs));
@@ -169,20 +218,20 @@ async function fetchWithRetry(
   }
 
   // 최대 재시도 횟수 초과 시 마지막 시도 수행
-  return fetch(url, options);
+  return await fetch(url, options);
 }
 
 // Scaffold 파일에서 Figma URL 추출
 function extractFigmaUrls(content: string): string[] {
   const matches = content.matchAll(
-    /https:\/\/(?:www\.)?figma\.com\/(?:file|design)\/[^\s<>"]+/gi
+    /https:\/\/(?:www\.)?figma\.com\/(?:file|design)\/[^\s<>"]+/gi,
   );
   return Array.from(matches, (m) => m[0]);
 }
 
 // URL 파싱
 function parseFigmaUrl(
-  url: string
+  url: string,
 ): { fileKey: string; nodeId: string } | null {
   try {
     const fileKeyMatch = url.match(/(?:file|design)\/([a-zA-Z0-9]+)/);
@@ -216,9 +265,9 @@ async function getFigmaSpec(fileKey: string, nodeId: string): Promise<string> {
   try {
     const res = await fetchWithRetry(
       `https://api.figma.com/v1/files/${fileKey}/nodes?ids=${encodeURIComponent(
-        nodeId
+        nodeId,
       )}`,
-      { headers: { "X-Figma-Token": FIGMA_TOKEN } }
+      { headers: { "X-Figma-Token": FIGMA_TOKEN } },
     );
 
     if (!res.ok) throw new Error(`Status ${res.status}`);
@@ -265,75 +314,52 @@ async function getFigmaSpec(fileKey: string, nodeId: string): Promise<string> {
         right: node.paddingRight,
       },
       itemSpacing: node.itemSpacing,
+      cornerRadius: node.cornerRadius,
+      children: node.children?.map((c: any) => ({
+        name: c.name,
+        type: c.type,
+        layoutAlign: c.layoutAlign,
+        layoutGrow: c.layoutGrow,
+      })),
     };
 
-    const spec = JSON.stringify(summary, null, 2);
+    const specJson = JSON.stringify(summary, null, 2);
 
-    // 3. 성공 시 캐시에 저장
-    writeCache(fileKey, nodeId, spec);
+    // 캐시 저장
+    writeCache(fileKey, nodeId, specJson);
 
-    console.log("   ✅ Figma Spec 로드 완료");
-    return spec;
+    return specJson;
   } catch (e) {
-    console.warn(`   ⚠️ Figma Spec 조회 실패: ${e}`);
+    console.warn(`   ⚠️ Figma API 실패: ${e}`);
     return "";
   }
 }
 
-// ==========================================
-// 📝 Import 자동 수정
-// ==========================================
-function updateImports(scaffoldPath: string, outputPath: string): string[] {
+// import 업데이트 헬퍼
+function updateImports(scaffoldPath: string, generatedPath: string): string[] {
   const updatedFiles: string[] = [];
-  const scaffoldImportPath = scaffoldPath
-    .replace("trendiv-web/src/", "$")
-    .replace(".svelte", "");
-  const outputImportPath = outputPath
-    .replace("trendiv-web/src/", "$")
-    .replace(".svelte", "");
-  const scaffoldName = path.basename(scaffoldPath, ".svelte");
-  const outputName = path.basename(outputPath, ".svelte");
+  const dir = path.dirname(scaffoldPath);
+  const componentName = path.basename(generatedPath, ".svelte");
 
-  const svelteFiles = glob.sync("trendiv-web/src/**/*.svelte", {
-    ignore: ["**/*.scaffold.svelte"],
-  });
+  // 같은 디렉토리 내 파일들에서 import 업데이트
+  const files = glob.sync(path.join(dir, "*.svelte"));
+  for (const file of files) {
+    if (file.endsWith(".scaffold.svelte")) continue;
 
-  for (const file of svelteFiles) {
-    const absolutePath = path.resolve(file);
-    let content = fs.readFileSync(absolutePath, "utf-8");
-    let modified = false;
-
-    const libImportRegex = new RegExp(
-      `(import\\s+\\w+\\s+from\\s+['"])${escapeRegex(
-        scaffoldImportPath
-      )}(\\.svelte)?(['"];?)`,
-      "g"
+    const content = fs.readFileSync(file, "utf-8");
+    const scaffoldImportRegex = new RegExp(
+      `from\\s+['"]\\.\\/${escapeRegex(componentName)}\\.scaffold\\.svelte['"]`,
+      "g",
     );
-    if (libImportRegex.test(content)) {
-      content = content.replace(
-        libImportRegex,
-        `$1${outputImportPath}.svelte$3`
-      );
-      modified = true;
-    }
 
-    const relativeImportRegex = new RegExp(
-      `(import\\s+\\w+\\s+from\\s+['"][./]+[^'"]*?)${escapeRegex(
-        scaffoldName
-      )}(\\.svelte)?(['"];?)`,
-      "g"
-    );
-    if (relativeImportRegex.test(content)) {
-      content = content.replace(
-        relativeImportRegex,
-        `$1${outputName}.svelte$3`
+    if (scaffoldImportRegex.test(content)) {
+      const updated = content.replace(
+        scaffoldImportRegex,
+        `from './${componentName}.svelte'`,
       );
-      modified = true;
-    }
-
-    if (modified) {
-      fs.writeFileSync(absolutePath, content, "utf-8");
-      updatedFiles.push(path.relative(process.cwd(), absolutePath));
+      fs.writeFileSync(file, updated);
+      updatedFiles.push(path.relative(process.cwd(), file));
+      console.log(`   📝 Import 수정: ${path.basename(file)}`);
     }
   }
   return updatedFiles;
@@ -352,11 +378,17 @@ async function generateCode(options: {
   componentName: string;
   cssContext: string;
   figmaSpec?: string;
+  rules: string;
 }): Promise<string> {
-  const { svgCode, scaffoldCode, componentName, cssContext, figmaSpec } =
+  const { svgCode, scaffoldCode, componentName, cssContext, figmaSpec, rules } =
     options;
 
   const prompt = `너는 Svelte 5 (Runes) & Tailwind CSS v4 전문가야.
+
+## 적용 규칙
+아래 규칙을 반드시 준수해:
+
+${rules}
 
 ## 목표
 제공된 **디자인 SVG 코드**와 **Figma 스펙(Data)**을 결합하여 완벽한 UI를 구현해.
@@ -388,8 +420,8 @@ ${figmaSpec || "스펙 데이터 없음 (SVG만 참고)"}
 
 ### 3. 프로젝트 스타일 (CSS/SCSS)
 - SVG/Figma의 색상(#Hex)이 아래 변수와 일치하면 반드시 **CSS 변수**를 사용하세요.
-  - 예: \`bg-[#1ba896]\` ❌ → \`bg-(--color-primary) 또는 bg-primary\` ✅
-  - 예: \`bg-[#1BA896]\` ❌ → \`bg-(--color-mint-500) 또는 bg-mint-500\` ✅
+  - 예: \`bg-[#1ba896]\` ❌ → \`bg-primary\` ✅
+  - 예: \`bg-[#1BA896]\` ❌ → \`bg-mint-500\` ✅
 - **styles.ts**에 정의된 공통 스타일 객체(CommonStyles 등)가 있다면, 해당 객체 내부의 Tailwind 클래스 조합을 참고하여 디자인 일관성을 유지하세요.
 
 \`\`\`css
@@ -404,24 +436,6 @@ ${cssContext}
 ${scaffoldCode}
 \`\`\`
 
-## 작성 규칙
-1. **Tailwind v4 문법**: \`bg-gray-700\`, \`text-neutral-600\` 형태
-figma 에서 전달받는 컬러변수는 25 25 25 형식이므로 --bg-main을 받으면 bg-(--bg-main) 이 아닌 bg-bg-main 으로 적용
---gray-800 을 받으면 text-(--gray-800) 이 아닌 text-gray-800 으로 적용
-2. **기본 클래스 우선**: \`text-[12px]\` → \`text-xs\`, \`p-[16px]\` → \`p-4\`
-3. **그라데이션**: SVG의 linearGradient를 \`bg-gradient-to-b from-[색상] to-[색상]\`으로
-4. **그림자**: SVG filter 또는 Figma effects를 \`shadow-sm\`, \`shadow-md\` 등으로 매핑
-5. **SVG + 스펙 결합**: SVG는 시각적 스타일을, 스펙은 정확한 수치를 참고할 것
-6. **출력**: 마크다운 코드 블록 안에 **완성된 Svelte 코드만** 출력
-7. 구현을 위해 과하게 css 를 많이 사용하지 말 것.
-8. z-index 는 오로지 개발자의 판단에 따라 주어질 것이므로 절대 사용하지 말 것
-  사용해야한다면 relative 단독으로만 사용
-9. 아이콘 크기는 절대 건드리지 말 것
-10. **min-width, max-width, min-height, max-height** 같은 변동성이 높은 요소들은 개발자가 직접 처리하니
-   해당 속성들은 넣지 말 것(max-w-[??px] min-w-[??px] 등의 클래스도 금지)
-11. divider 나 indicator 는 before 나 after 가상요소로 처리할 것
-
-
 완성된 ${componentName}.svelte:`;
 
   const genAI = new GoogleGenerativeAI(API_KEY!);
@@ -435,7 +449,7 @@ figma 에서 전달받는 컬러변수는 25 25 25 형식이므로 --bg-main을 
     throw new Error(
       `AI 응답 차단: ${
         result.response?.promptFeedback?.blockReason || "알 수 없음"
-      }`
+      }`,
     );
   }
 
@@ -453,6 +467,12 @@ async function main() {
   if (!API_KEY) throw new Error("GEMINI_API_KEY 없음");
   if (!CHANGED_FILES) throw new Error("변경된 파일 없음");
 
+  // 🔴 규칙 로드
+  const rules = loadGenerateRules();
+  if (rules) {
+    console.log(`📜 AI 규칙 로드됨 (${rules.split("---").length}개 섹션)`);
+  }
+
   const cssContext = readProjectStyles();
 
   // 변경된 파일에서 scaffold 파일 찾기
@@ -461,12 +481,12 @@ async function main() {
 
   // scaffold.svelte 파일 목록
   const scaffoldSvelteFiles = changedFiles.filter((f) =>
-    f.endsWith(".scaffold.svelte")
+    f.endsWith(".scaffold.svelte"),
   );
 
   // scaffold.svg 파일이 변경된 경우, 해당하는 svelte 파일도 처리 대상에 추가
   const scaffoldSvgFiles = changedFiles.filter((f) =>
-    f.endsWith(".scaffold.svg")
+    f.endsWith(".scaffold.svg"),
   );
 
   // SVG 변경으로 인해 추가될 svelte 파일들
@@ -504,7 +524,7 @@ async function main() {
     // 1. 같은 이름의 .scaffold.svg 파일 찾기
     const svgPath = absoluteScaffoldPath.replace(
       ".scaffold.svelte",
-      ".scaffold.svg"
+      ".scaffold.svg",
     );
     let svgCode = "";
 
@@ -513,7 +533,7 @@ async function main() {
       console.log(
         `   ✅ SVG 파일 로드: ${path.basename(svgPath)} (${
           svgCode.length
-        } chars)`
+        } chars)`,
       );
     } else {
       console.log(`   ⚠️ SVG 파일 없음: ${path.basename(svgPath)}`);
@@ -536,7 +556,7 @@ async function main() {
     if (!svgCode && !figmaSpec) {
       console.log(`   ❌ 정보 부족: SVG 파일 없고 Figma URL도 없음`);
       errors.push(
-        `${componentName}: 입력 데이터 없음 (${componentName}.scaffold.svg 파일 필요)`
+        `${componentName}: 입력 데이터 없음 (${componentName}.scaffold.svg 파일 필요)`,
       );
       continue;
     }
@@ -549,12 +569,20 @@ async function main() {
         componentName,
         cssContext,
         figmaSpec,
+        rules,
       });
       console.log(`   ✅ 생성 완료 (${code.length} chars)`);
 
       const targetPath = absoluteScaffoldPath.replace(".scaffold", "");
-      if (!targetPath.startsWith(process.cwd())) {
-        throw new Error("보안 경고: 프로젝트 외부 경로");
+
+      // 🔴 보안: Symlink 악용 방지
+      const realTargetPath = fs.existsSync(targetPath)
+        ? fs.realpathSync(targetPath)
+        : targetPath;
+      const realCwd = fs.realpathSync(process.cwd());
+
+      if (!realTargetPath.startsWith(realCwd)) {
+        throw new Error("보안 경고: 프로젝트 외부 경로 (Symlink 감지)");
       }
 
       fs.mkdirSync(path.dirname(targetPath), { recursive: true });
@@ -566,9 +594,10 @@ async function main() {
 
       const updated = updateImports(scaffoldPath, relativePath);
       updatedImportFiles.push(...updated);
-    } catch (e: any) {
-      console.error(`   ❌ 실패: ${e.message}`);
-      errors.push(`${componentName}: ${e.message}`);
+    } catch (e) {
+      const errorMessage = e instanceof Error ? e.message : String(e);
+      console.error(`   ❌ 실패: ${errorMessage}`);
+      errors.push(`${componentName}: ${errorMessage}`);
     }
   }
 

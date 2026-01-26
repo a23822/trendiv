@@ -8,6 +8,9 @@ class HiddenArticlesStore {
 	hiddenArticles = $state<HiddenArticle[]>([]);
 	isLoading = $state(false);
 
+	// 초기 로딩 완료 여부 (새로고침 시 타이밍 이슈 해결용)
+	isReady = $state(false);
+
 	// 중복 클릭 방지용 처리 중인 URL Set
 	private processingUrls = new Set<string>();
 
@@ -19,8 +22,11 @@ class HiddenArticlesStore {
 					this.fetchHiddenArticles(session.user.id);
 				} else {
 					this.hiddenArticles = [];
+					this.isReady = true;
 				}
 			});
+		} else if (browser) {
+			this.isReady = true;
 		}
 	}
 
@@ -32,11 +38,20 @@ class HiddenArticlesStore {
 	/** 관심없음 목록 불러오기 */
 	async fetchHiddenArticles(userId?: string) {
 		// supabase 가드
-		if (!supabase) return;
+		if (!supabase) {
+			this.isReady = true;
+			return;
+		}
 
 		const targetId = userId || auth.user?.id;
 
-		if (!targetId || this.isLoading) return;
+		if (!targetId || this.isLoading) {
+			// 유저 없으면 빈 배열로 ready 처리
+			if (!targetId) {
+				this.isReady = true;
+			}
+			return;
+		}
 
 		this.isLoading = true;
 		try {
@@ -51,6 +66,8 @@ class HiddenArticlesStore {
 			console.error('관심없음 로드 오류:', e);
 		} finally {
 			this.isLoading = false;
+			// 로딩 완료 후 ready 플래그 설정
+			this.isReady = true;
 		}
 	}
 
@@ -134,7 +151,6 @@ class HiddenArticlesStore {
 				}
 			}
 		} finally {
-			// ✅ 추가: 처리 완료 후 Set에서 제거
 			this.processingUrls.delete(article.link);
 		}
 	}
