@@ -323,7 +323,7 @@ async function checkSingleFile(
   const content = escapeCodeForPrompt(rawContent);
 
   const prompt = `
-당신은 코드 리뷰 에이전트입니다. 아래 규칙에 따라 코드를 검사하세요.
+당신은 코드 리뷰 AI입니다. 아래 규칙에 따라 코드를 검사하세요.
 
 ${rules ? `[적용 규칙]\n${rules}\n` : ""}
 
@@ -342,7 +342,7 @@ ${content}
 {"status": "pass"}
 
 문제 있으면:
-{"status": "issue", "issues": [{"severity": "error|warning", "line": 숫자, "message": "지적 내용"}]}
+{"status": "issue", "issues": [{"severity": "error|warning", "line": 숫자, "snippet": "문제가 되는 코드 1~2줄", "message": "지적 내용"}]}
 
 JSON 외 다른 텍스트 없이 응답하세요.
 `;
@@ -446,9 +446,9 @@ JSON 외 다른 텍스트 없이 응답하세요.
 interface ReviewIssue {
   severity: "error" | "warning";
   line?: number;
+  snippet?: string;
   message: string;
 }
-
 interface GeminiResponse {
   status: "pass" | "issue";
   issues?: ReviewIssue[];
@@ -520,10 +520,14 @@ async function callGemini(
         const formattedIssues = (parsed.issues || [])
           .map((issue) => {
             const severity = issue.severity === "error" ? "🔴" : "🟡";
-            const line = issue.line ? `(L${issue.line})` : "";
-            return `${severity} ${line} ${issue.message}`;
+            const line = issue.line ? `**(L${issue.line})**` : "";
+            const codeSnippet = issue.snippet
+              ? `\n   \`\`\`typescript\n   ${issue.snippet}\n   \`\`\``
+              : "";
+
+            return `${severity} ${line} ${issue.message}${codeSnippet}`;
           })
-          .join("\n");
+          .join("\n\n"); // 이슈 간 간격을 넓히기 위해 \n\n으로 변경
 
         console.log(formattedIssues);
         console.log("---------------------------------------------------");
