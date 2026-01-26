@@ -58,21 +58,23 @@
 		}, 150);
 	}
 
-	// data 변경 감지 (soft navigation 대응)
 	$effect(() => {
-		// 이 effect는 data.trends 또는 statusFilter가 바뀔 때만 실행됩니다.
 		const source = data.trends;
 		const currentFilter = statusFilter;
+		const isHiddenReady = hiddenArticles.isReady;
 
 		untrack(() => {
-			// hiddenArticles.isHidden을 untrack 내부에서 호출하여
-			// '숨김' 버튼 클릭 시 이 effect가 다시 실행되는 것을 방지합니다.
-			// (즉, 클릭 시에는 배열에서 삭제되지 않고 카드만 접힙니다.)
 			if (source) {
-				trends =
-					currentFilter === 'hidden'
-						? source
-						: source.filter((t) => !hiddenArticles.isHidden(t.link));
+				// isReady가 false면 필터링 없이 전체 표시 (깜빡임 방지)
+				// hidden 필터일 때는 isReady 상관없이 전체 표시
+				if (currentFilter === 'hidden') {
+					trends = source;
+				} else if (!isHiddenReady) {
+					trends = source;
+				} else {
+					// 스토어 준비됨 - 숨김 아티클 필터링
+					trends = source.filter((t) => !hiddenArticles.isHidden(t.link));
+				}
 			}
 		});
 	});

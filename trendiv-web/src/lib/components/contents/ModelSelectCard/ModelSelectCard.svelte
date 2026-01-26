@@ -32,7 +32,7 @@
 		class: className
 	}: AiModelPickerProps = $props();
 
-	// ✅ selectedIndex 범위 보정
+	// selectedIndex 범위 보정
 	const safeSelectedIndex = $derived(
 		items.length === 0
 			? 0
@@ -57,7 +57,7 @@
 				groups[seriesKey] = { models: [] };
 			}
 			groups[seriesKey].models.push({
-				id: `${seriesKey}-${index}`, // ✅ crypto.randomUUID() 대신 안정적인 키
+				id: `${seriesKey}-${index}`, // crypto.randomUUID() 대신 안정적인 키
 				displayName: aiModel,
 				originalIndex: index
 			});
@@ -91,8 +91,8 @@
 	// 사용 가능한 시리즈 목록
 	const availableSeries = $derived(Object.keys(groupedModels));
 
-	// ✅ 모델이 있는지 여부
-	const hasModels = $derived(items.length > 0);
+	// 모델이 있는지 여부
+	const canChangeModel = $derived(items.length > 1);
 
 	// --- Effects ---
 	$effect(() => {
@@ -101,7 +101,7 @@
 		}
 	});
 
-	// ✅ selectedIndex가 범위를 벗어나면 보정
+	// selectedIndex가 범위를 벗어나면 보정
 	$effect(() => {
 		if (items.length > 0 && selectedIndex !== safeSelectedIndex) {
 			selectedIndex = safeSelectedIndex;
@@ -131,8 +131,8 @@
 	function toggleDetails(e: Event) {
 		e.preventDefault();
 
-		// ✅ 모델이 없으면 열지 않음
-		if (!hasModels) return;
+		// 모델이 없으면 열지 않음
+		if (!canChangeModel) return;
 
 		if (isClosing) return;
 
@@ -156,7 +156,7 @@
 		class={cn(
 			'bg-bg-main',
 			'cursor-pointer list-none [&::-webkit-details-marker]:hidden',
-			!hasModels && 'cursor-not-allowed opacity-50'
+			!canChangeModel && 'pointer-events-none'
 		)}
 		onclick={toggleDetails}
 	>
@@ -189,7 +189,7 @@
 					'text-gray-500 group-hover:text-gray-700'
 				)}
 			>
-				{#if hasModels}
+				{#if canChangeModel}
 					<span class="text-sm">{isOpen ? '접기' : '변경'}</span>
 					<IconArrowVertical
 						size={16}
