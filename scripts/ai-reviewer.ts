@@ -19,15 +19,15 @@ const GITHUB_PR_NUMBER = process.env.GITHUB_PR_NUMBER;
 
 const MODEL_NAME = process.env.GEMINI_MODEL_LIGHT || "gemini-3-flash-preview";
 
-// 룰 파일 경로 (환경변수로 오버라이드 가능)
-const RULES_FILE_PATH = process.env.AI_REVIEW_RULES_PATH
-  ? path.join(process.cwd(), process.env.AI_REVIEW_RULES_PATH)
-  : path.join(process.cwd(), ".github/ai-review-rules.md");
+// 🔴 AI 규칙 폴더 경로
+const AI_RULES_DIR = process.env.AI_RULES_DIR
+  ? path.join(process.cwd(), process.env.AI_RULES_DIR)
+  : path.join(process.cwd(), ".github/ai-rules");
 
 // 🟡 동시 처리 개수 (CI 타임아웃 방지)
 const CONCURRENCY_LIMIT = parseInt(
   process.env.AI_REVIEW_CONCURRENCY || "3",
-  10
+  10,
 );
 
 // GitHub 코멘트 글자수 제한 (여유 있게 60000자로 설정)
@@ -59,6 +59,77 @@ const reviewResults: ReviewResult[] = [];
 // ⚡ 성능 개선: 파일 내용을 메모리에 캐싱 (중복 읽기 방지)
 const fileContentCache = new Map<string, string>();
 
+// 🔴 규칙 파일 캐싱
+const rulesCache = new Map<string, string>();
+
+// ==========================================
+// 🔴 규칙 로드 로직
+// ==========================================
+function loadRuleFile(relativePath: string): string {
+  const fullPath = path.join(AI_RULES_DIR, relativePath);
+
+  if (rulesCache.has(fullPath)) {
+    return rulesCache.get(fullPath)!;
+  }
+
+  if (fs.existsSync(fullPath)) {
+    const content = fs.readFileSync(fullPath, "utf-8");
+    rulesCache.set(fullPath, content);
+    return content;
+  }
+
+  return "";
+}
+
+function loadRulesForFile(targetFile: string): string {
+  const rules: string[] = [];
+  const ext = path.extname(targetFile).slice(1).toLowerCase(); // e.g., "svelte", "ts", "scss"
+
+  // 1. 공통 규칙 (항상 로드)
+  const tsRule = loadRuleFile("_shared/typescript.md");
+  const typesRule = loadRuleFile("_shared/types.md");
+
+  if (tsRule) rules.push(tsRule);
+  if (typesRule) rules.push(typesRule);
+
+  // 2. 프론트엔드 vs 백엔드 분기
+  if (targetFile.includes("trendiv-web/")) {
+    // 프론트엔드 공통
+    const frontendBase = loadRuleFile("frontend/_base.md");
+    if (frontendBase) rules.push(frontendBase);
+
+    // 폴더별 추가 규칙
+    if (targetFile.includes("/components/")) {
+      const componentsRule = loadRuleFile("frontend/components.md");
+      if (componentsRule) rules.push(componentsRule);
+    }
+
+    if (targetFile.includes("/icons/")) {
+      const iconsRule = loadRuleFile("frontend/icons.md");
+      if (iconsRule) rules.push(iconsRule);
+    }
+
+    if (targetFile.includes("/stores/")) {
+      const storesRule = loadRuleFile("frontend/stores.md");
+      if (storesRule) rules.push(storesRule);
+    }
+
+    // 확장자별 추가 규칙 (scss.md, css.md 등 있으면 로드)
+    const extRule = loadRuleFile(`frontend/${ext}.md`);
+    if (extRule) rules.push(extRule);
+  } else {
+    // 백엔드 (trendiv-web 제외 모든 모듈)
+    const backendBase = loadRuleFile("backend/_base.md");
+    if (backendBase) rules.push(backendBase);
+
+    // 확장자별 추가 규칙
+    const extRule = loadRuleFile(`backend/${ext}.md`);
+    if (extRule) rules.push(extRule);
+  }
+
+  return rules.join("\n\n---\n\n");
+}
+
 // ==========================================
 // 🚀 메인 로직
 // ==========================================
@@ -68,15 +139,11 @@ async function main() {
     process.exit(1);
   }
 
-  // 1. 규칙 파일 로드
-  let customRules = "";
-  if (fs.existsSync(RULES_FILE_PATH)) {
-    try {
-      customRules = fs.readFileSync(RULES_FILE_PATH, "utf-8");
-      console.log(`📜 커스텀 리뷰 규칙 적용됨: ${RULES_FILE_PATH}`);
-    } catch (e) {
-      console.warn("⚠️ 규칙 파일 읽기 실패:", e);
-    }
+  // 규칙 폴더 존재 확인
+  if (!fs.existsSync(AI_RULES_DIR)) {
+    console.warn(`⚠️ AI 규칙 폴더가 없습니다: ${AI_RULES_DIR}`);
+  } else {
+    console.log(`📜 AI 규칙 폴더: ${AI_RULES_DIR}`);
   }
 
   const genAI = new GoogleGenerativeAI(API_KEY);
@@ -103,7 +170,7 @@ async function main() {
       ".jsx",
     ];
     const isIgnored = IGNORE_PATTERNS.some((pattern) =>
-      minimatch(file, pattern)
+      minimatch(file, pattern),
     );
     return allowedExts.includes(ext) && !isIgnored;
   });
@@ -111,7 +178,7 @@ async function main() {
   if (filesToReview.length === 0) {
     console.log("✨ 리뷰 대상 코드 파일이 없습니다.");
     await postComment(
-      "✨ **AI 코드 리뷰 완료**\n\n리뷰 대상 코드 파일이 없습니다."
+      "✨ **AI 코드 리뷰 완료**\n\n리뷰 대상 코드 파일이 없습니다.",
     );
     return;
   }
@@ -142,7 +209,7 @@ async function main() {
   }
 
   console.log(
-    `📝 [${MODEL_NAME}] 리뷰 시작 (${filesToReview.length}개 파일, 동시성: ${CONCURRENCY_LIMIT})`
+    `📝 [${MODEL_NAME}] 리뷰 시작 (${filesToReview.length}개 파일, 동시성: ${CONCURRENCY_LIMIT})`,
   );
 
   // 4. 🟡 병렬 처리로 성능 개선 (p-limit 대신 직접 구현)
@@ -154,6 +221,13 @@ async function main() {
     tasks.push(async () => {
       console.log(`\n🔎 [Target: ${file}] 심층 분석 중...`);
 
+      // 🔴 파일별 규칙 로드
+      const rules = loadRulesForFile(file);
+      const rulesInfo = rules
+        ? `(규칙 ${rules.split("---").length}개 적용)`
+        : "(규칙 없음)";
+      console.log(`   📜 ${rulesInfo}`);
+
       let relatedFiles = findRelatedFiles(file, allFiles);
       if (relatedFiles.length > 3) {
         relatedFiles = relatedFiles.slice(0, 3);
@@ -161,14 +235,14 @@ async function main() {
 
       if (relatedFiles.length === 0) {
         console.log(`   - 연관 파일 없음. 단독 분석 수행.`);
-        await checkSingleFile(model, file, customRules);
+        await checkSingleFile(model, file, rules);
       } else {
         console.log(
-          `   - 연관 파일 ${relatedFiles.length}개 발견. 교차 검증 수행.`
+          `   - 연관 파일 ${relatedFiles.length}개 발견. 교차 검증 수행.`,
         );
-        await checkSingleFile(model, file, customRules);
+        await checkSingleFile(model, file, rules);
         for (const related of relatedFiles) {
-          await checkPairCompatibility(model, file, related, customRules);
+          await checkPairCompatibility(model, file, related, rules);
         }
       }
     });
@@ -240,7 +314,7 @@ function findRelatedFiles(targetFile: string, allFiles: string[]): string[] {
 async function checkSingleFile(
   model: GenerativeModel,
   targetFile: string,
-  rules: string = ""
+  rules: string = "",
 ) {
   const rawContent =
     fileContentCache.get(targetFile) || fs.readFileSync(targetFile, "utf-8");
@@ -249,32 +323,28 @@ async function checkSingleFile(
   const content = escapeCodeForPrompt(rawContent);
 
   const prompt = `
-당신은 시니어 개발자로서 코드 리뷰를 수행합니다.
+당신은 코드 리뷰 에이전트입니다. 아래 규칙에 따라 코드를 검사하세요.
 
-${rules ? `[🚨 프로젝트 필수 규칙]\n${rules}\n` : ""}
+${rules ? `[적용 규칙]\n${rules}\n` : ""}
 
 [분석 대상: ${targetFile}]
 \`\`\`
 ${content}
 \`\`\`
 
-[검사 항목]
-1. 런타임 에러 가능성 (null/undefined 접근, 타입 에러 등)
-2. 로직 오류 (잘못된 조건문, 무한 루프 가능성 등)
-3. 보안 취약점 (XSS, injection 등)
-4. 성능 이슈 (불필요한 리렌더링, 메모리 누수 등)
-5. 타입 안전성 문제 (TypeScript인 경우)
-6. 오탈자
+[검사 방식]
+- 규칙의 DETECT 패턴과 일치하는 코드를 찾으세요
+- 일치하면 해당 OUTPUT 메시지를 출력하세요
+- MUST_FLAG는 반드시 지적, SHOULD_FLAG는 권장 지적
 
-[응답 규칙]
-- 문제가 없으면 "PASS"라고만 답하세요.
-- 문제가 있으면 아래 형식으로 답하세요:
-  - 🔴 심각: (런타임 에러, 보안 취약점)
-  - 🟡 주의: (로직 오류, 성능 이슈)
-  - 💡 제안: (개선 사항)
-- 단순 스타일 지적은 하지 마세요.
-- 한국어로 핵심만 간결하게 마크다운 형식으로 작성하세요.
-- 인사말은 필요없습니다.
+[응답 형식 - 반드시 JSON으로만 응답]
+문제 없으면:
+{"status": "pass"}
+
+문제 있으면:
+{"status": "issue", "issues": [{"severity": "error|warning", "line": 숫자, "message": "지적 내용"}]}
+
+JSON 외 다른 텍스트 없이 응답하세요.
 `;
 
   const result = await callGemini(model, prompt, targetFile);
@@ -303,7 +373,7 @@ async function checkPairCompatibility(
   model: GenerativeModel,
   targetFile: string,
   relatedFile: string,
-  rules: string = ""
+  rules: string = "",
 ) {
   if (!fs.existsSync(relatedFile)) return;
 
@@ -317,43 +387,47 @@ async function checkPairCompatibility(
   const relatedContent = escapeCodeForPrompt(rawRelatedContent);
 
   const prompt = `
-당신은 코드 간의 호환성을 검증하는 시니어 개발자입니다.
+당신은 코드 호환성 검증 AI입니다.
 
-${rules ? `[🚨 프로젝트 필수 규칙]\n${rules}\n` : ""}
+${rules ? `[적용 규칙]\n${rules}\n` : ""}
 
 [상황]
-'${targetFile}'(수정됨)이 '${relatedFile}'에서 참조되고 있습니다.
+'${targetFile}'(수정됨)이 '${relatedFile}'에서 참조됨.
 
 [검사 항목]
-- 함수/컴포넌트 시그니처 변경으로 인한 호환성 문제
-- Props/인터페이스 변경으로 인한 타입 에러
-- 삭제된 export를 참조하는 문제
-- 리턴 타입 변경으로 인한 문제
+- 함수/컴포넌트 시그니처 변경 호환성
+- Props/인터페이스 변경 타입 에러
+- 삭제된 export 참조
+- 리턴 타입 변경
 
 --- [수정된 파일: ${targetFile}] ---
 \`\`\`
 ${targetContent}
 \`\`\`
 
---- [참조 중인 파일: ${relatedFile}] ---
+--- [참조 파일: ${relatedFile}] ---
 \`\`\`
 ${relatedContent}
 \`\`\`
 
-[응답 규칙]
-- 호환성 문제가 없으면 "PASS"라고만 출력하세요.
-- 문제가 있으면 "🚨 호환성 경고:"로 시작하여 구체적으로 설명하세요.
-- 한국어로 작성하세요.
+[응답 - 반드시 JSON으로만 응답]
+호환성 문제 없으면:
+{"status": "pass"}
+
+문제 있으면:
+{"status": "issue", "issues": [{"severity": "error", "message": "호환성 문제 설명"}]}
+
+JSON 외 다른 텍스트 없이 응답하세요.
 `;
 
   process.stdout.write(
-    `   👉 ${path.basename(relatedFile)} 호환성 검사 중... `
+    `   👉 ${path.basename(relatedFile)} 호환성 검사 중... `,
   );
 
   const result = await callGemini(
     model,
     prompt,
-    `${targetFile} ↔ ${relatedFile}`
+    `${targetFile} ↔ ${relatedFile}`,
   );
 
   if (result.status === "issue") {
@@ -369,15 +443,31 @@ ${relatedContent}
 // ==========================================
 // 📡 API 호출 (재시도 로직 포함)
 // ==========================================
+interface ReviewIssue {
+  severity: "error" | "warning";
+  line?: number;
+  message: string;
+}
+
+interface GeminiResponse {
+  status: "pass" | "issue";
+  issues?: ReviewIssue[];
+}
+
 async function callGemini(
   model: GenerativeModel,
   prompt: string,
   contextLabel: string,
-  retries = 3
+  retries = 3,
 ): Promise<{ status: "pass" | "issue" | "error"; message?: string }> {
   for (let i = 0; i < retries; i++) {
     try {
-      const result = await model.generateContent(prompt);
+      const result = await model.generateContent({
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: {
+          responseMimeType: "application/json",
+        },
+      });
 
       // 🔴 응답 객체 상태 체크 강화
       const response = result.response;
@@ -390,7 +480,7 @@ async function callGemini(
       if (!candidates || candidates.length === 0) {
         const blockReason = response.promptFeedback?.blockReason;
         throw new Error(
-          `AI 응답이 차단되었습니다. 사유: ${blockReason || "알 수 없음"}`
+          `AI 응답이 차단되었습니다. 사유: ${blockReason || "알 수 없음"}`,
         );
       }
 
@@ -399,20 +489,45 @@ async function callGemini(
         throw new Error("AI 응답 텍스트가 비어있습니다.");
       }
 
-      const trimmedResponse = responseText.trim();
+      // 🔴 JSON 파싱
+      let parsed: GeminiResponse;
+      try {
+        parsed = JSON.parse(responseText.trim());
+      } catch {
+        // JSON 파싱 실패 시 기존 텍스트 방식 폴백
+        const trimmed = responseText.trim();
+        if (
+          /^PASS\b/i.test(trimmed) ||
+          trimmed.includes('"status": "pass"') ||
+          trimmed.includes('"status":"pass"')
+        ) {
+          console.log("✅ PASS");
+          return { status: "pass" };
+        }
+        console.log("⚠️ 이슈 발견 (텍스트 모드)");
+        return { status: "issue", message: trimmed };
+      }
 
-      // 🟡 PASS 판정 로직 개선: 정규식 사용
-      // "PASS", "PASS ", "PASS\n", "PASS." 등 다양한 형태 허용
-      if (/^PASS\b/i.test(trimmedResponse)) {
+      if (parsed.status === "pass") {
         console.log("✅ PASS");
         return { status: "pass" };
       } else {
         console.log("⚠️ 이슈 발견");
         console.log("---------------------------------------------------");
         console.log(`[AI Review: ${contextLabel}]`);
-        console.log(trimmedResponse);
+
+        // 이슈 포맷팅
+        const formattedIssues = (parsed.issues || [])
+          .map((issue) => {
+            const severity = issue.severity === "error" ? "🔴" : "🟡";
+            const line = issue.line ? `(L${issue.line})` : "";
+            return `${severity} ${line} ${issue.message}`;
+          })
+          .join("\n");
+
+        console.log(formattedIssues);
         console.log("---------------------------------------------------");
-        return { status: "issue", message: trimmedResponse };
+        return { status: "issue", message: formattedIssues };
       }
     } catch (e) {
       if (i === retries - 1) {
@@ -441,7 +556,7 @@ async function postComment(body: string) {
   const repoParts = GITHUB_REPOSITORY.split("/");
   if (repoParts.length !== 2) {
     console.error(
-      "❌ GITHUB_REPOSITORY 형식이 올바르지 않습니다 (예: owner/repo)"
+      "❌ GITHUB_REPOSITORY 형식이 올바르지 않습니다 (예: owner/repo)",
     );
     return;
   }
@@ -530,7 +645,7 @@ function escapeCodeForPrompt(code: string): string {
 // 🟡 동시성 제한 병렬 실행 (p-limit 대체)
 async function runWithConcurrency(
   tasks: Array<() => Promise<void>>,
-  limit: number
+  limit: number,
 ): Promise<void> {
   const executing: Promise<void>[] = [];
 
