@@ -516,28 +516,30 @@ async function callGemini(
         console.log("---------------------------------------------------");
         console.log(`[AI Review: ${contextLabel}]`);
 
-        // 이슈 포맷팅
+        // 이슈 포매팅
         const formattedIssues = (parsed.issues || [])
           .map((issue) => {
-            const severity = issue.severity === "error" ? "🔴" : "🟡";
-            const line = issue.line ? `**(L${issue.line})**` : "";
+            const line = issue.line ? `**(L${issue.line})** ` : "";
+
+            // 코드를 안전한 마크다운 블록으로 처리
             const codeSnippet = issue.snippet
-              ? `\n   \`\`\`typescript\n   ${issue.snippet}\n   \`\`\``
+              ? `\n> \`\`\`typescript\n> ${issue.snippet.replace(/\n/g, "\n> ")}\n> \`\`\``
               : "";
 
-            return `${severity} ${line} ${issue.message}${codeSnippet}`;
+            return `${line}${issue.message}${codeSnippet}`;
           })
-          .join("\n\n"); // 이슈 간 간격을 넓히기 위해 \n\n으로 변경
+          .join("\n\n");
 
         console.log(formattedIssues);
         console.log("---------------------------------------------------");
         return { status: "issue", message: formattedIssues };
       }
     } catch (e) {
+      const errorMessage = e instanceof Error ? e.message : String(e);
       if (i === retries - 1) {
         console.log("❌ API Error (재시도 실패)");
-        console.error(`   (상세: ${e})`);
-        return { status: "error", message: String(e) };
+        console.error(`   (상세: ${errorMessage})`);
+        return { status: "error", message: errorMessage };
       } else {
         console.log(`   ⏳ 재시도 중... (${i + 1}/${retries})`);
         await sleep(2000 * (i + 1));

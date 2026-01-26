@@ -218,7 +218,7 @@ async function fetchWithRetry(
   }
 
   // 최대 재시도 횟수 초과 시 마지막 시도 수행
-  return fetch(url, options);
+  return await fetch(url, options);
 }
 
 // Scaffold 파일에서 Figma URL 추출
@@ -594,9 +594,10 @@ async function main() {
 
       const updated = updateImports(scaffoldPath, relativePath);
       updatedImportFiles.push(...updated);
-    } catch (e: any) {
-      console.error(`   ❌ 실패: ${e.message}`);
-      errors.push(`${componentName}: ${e.message}`);
+    } catch (e) {
+      const errorMessage = e instanceof Error ? e.message : String(e);
+      console.error(`   ❌ 실패: ${errorMessage}`);
+      errors.push(`${componentName}: ${errorMessage}`);
     }
   }
 
