@@ -19,9 +19,13 @@
 		variant?: 'collapsible' | 'flat';
 		defaultOpenSections?: string[];
 	}
+
+	// 필터 상태 캐싱
+	const STORAGE_KEY = 'trendiv_main_filter_open_sections';
 </script>
 
 <script lang="ts">
+	import { browser } from '$app/environment';
 	import SearchChip from '$lib/components/pure/Chip/SearchChip.svelte';
 	import { CommonStyles } from '$lib/constants/styles';
 	import IconArrowVertical from '$lib/icons/icon_arrow_vertical.svelte';
@@ -32,7 +36,7 @@
 	import IconTag from '$lib/icons/icon_tag.svelte';
 	import IconUser from '$lib/icons/icon_user.svelte';
 	import { cn } from '$lib/utils/ClassMerge';
-	import { tick, onDestroy } from 'svelte';
+	import { onMount, tick, onDestroy } from 'svelte';
 
 	let {
 		tags = [],
@@ -62,9 +66,7 @@
 
 	let animatedSelectedTags = $state<AnimatedTag[]>([]);
 	let animatedUnselectedTags = $state<AnimatedTag[]>([]);
-	let openSections = $state(
-		new Set<string>(defaultOpenSections?.length ? defaultOpenSections : ['tag'])
-	);
+
 	let containerState = $state<'hidden' | 'showing' | 'visible' | 'hiding'>(
 		'hidden'
 	);
@@ -137,11 +139,6 @@
 		activeTimers.forEach((id) => clearTimeout(id));
 		activeTimers.clear();
 	});
-
-	function toggleSection(id: string) {
-		openSections = new Set(openSections);
-		openSections.has(id) ? openSections.delete(id) : openSections.add(id);
-	}
 
 	// ─────────────────────────────────────────
 	// 태그 선택/해제 (즉시 부모에게 알림 + 애니메이션)
@@ -308,18 +305,60 @@
 	}
 
 	// ─────────────────────────────────────────
+	// 캐싱 및 상태 로직 통합
+	// ─────────────────────────────────────────
+
+	// 1. 초기 상태 설정 헬퍼
+	const initOpenState = (key: string) => {
+		const defaults = defaultOpenSections ?? [];
+		return defaults.includes(key);
+	};
+
+	// 2. 통합된 UI 상태 (초기값은 props 기준)
+	let uiState = $state({
+		tag: initOpenState('tag'),
+		source: initOpenState('source'),
+		personal: initOpenState('personal')
+	});
+
+	function toggleSection(section: keyof typeof uiState) {
+		uiState[section] = !uiState[section];
+	}
+
+	let isLoaded = $state(false);
+	// 마운트 시 로컬 스토리지 로드 및 애니메이션 제어
+	onMount(() => {
+		if (!browser) return;
+
+		const cached = localStorage.getItem(STORAGE_KEY);
+		if (cached) {
+			try {
+				// 저장된 설정 덮어씌우기
+				uiState = { ...uiState, ...JSON.parse(cached) };
+			} catch (e) {
+				console.error('Failed to parse filter state', e);
+			}
+		}
+		isLoaded = true; // 로딩 완료
+	});
+
+	$effect(() => {
+		if (browser && isLoaded) {
+			localStorage.setItem(STORAGE_KEY, JSON.stringify(uiState));
+		}
+	});
+
+	// ─────────────────────────────────────────
 	// 파생 상태
 	// ─────────────────────────────────────────
 
-	let isPersonalOpen = $derived(
-		variant === 'flat' || openSections.has('personal')
-	);
-	let isTagOpen = $derived(variant === 'flat' || openSections.has('tag'));
-	let isSourceOpen = $derived(variant === 'flat' || openSections.has('source'));
+	let isPersonalOpen = $derived(variant === 'flat' || uiState.personal);
+	let isTagOpen = $derived(variant === 'flat' || uiState.tag);
+	let isSourceOpen = $derived(variant === 'flat' || uiState.source);
 </script>
 
 {#snippet sectionHeader(
-	id: string,
+	id: keyof typeof uiState,
 	label: string,
 	icon: Component<{ size?: number; class?: string }>,
 	isOpen: boolean
@@ -432,7 +471,7 @@
 		)}
 	>
 		<div class="overflow-hidden">
-			<div class="border-default flex items-center border-b-2 py-4">
+			<div class="border-border-default flex items-center border-b-2 py-4">
 				<div class="-ml-2 flex flex-wrap gap-y-2">
 					{#each animatedSelectedTags as tag (tag.name)}
 						<div
@@ -541,7 +580,7 @@
 {#if tags.length > 0}
 	<div
 		class={cn(
-			variant === 'collapsible' && 'border-border-default mt-4 border-t-2'
+			variant === 'collapsible' && 'border-border-default mt-4 border-t'
 		)}
 	>
 		{@render sectionHeader('tag', '태그', IconTag, isTagOpen)}
@@ -553,7 +592,7 @@
 {#if categoryList.length > 0}
 	<div
 		class={cn(
-			'border-border-default mt-4 border-t-2',
+			'border-border-default mt-4 border-t',
 			variant === 'flat' && 'pt-4'
 		)}
 	>
@@ -565,7 +604,7 @@
 <!-- 개인화 섹션 -->
 <div
 	class={cn(
-		'border-border-default mt-4 border-t-2',
+		'border-border-default mt-4 border-t',
 		variant === 'flat' && 'pt-4'
 	)}
 >
