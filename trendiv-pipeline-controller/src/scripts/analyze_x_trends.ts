@@ -1,19 +1,21 @@
 import { createClient } from "@supabase/supabase-js";
 import dotenv from "dotenv";
 import path from "path";
-// trendiv-analysis-module의 소스 코드를 상대 경로로 직접 import 합니다.
-// (monorepo 설정에 따라 패키지명 import가 안될 경우를 대비한 안전한 방식)
-import { GrokService, AnalysisResult, Trend } from "trendiv-analysis-module";
 
-// 환경 변수 로드 (fix_sources.ts와 동일한 경로 참조)
-dotenv.config({ path: path.resolve(__dirname, "../../../.env") });
+// 1. 환경 변수 먼저 로드 (모듈 임포트보다 우선 실행)
+const envPath = path.resolve(__dirname, "../../../.env");
+dotenv.config({ path: envPath });
+console.log(`🔌 Loading .env from: ${envPath}`);
+
+// 타입만 정적 import (런타임에 영향 없음)
+import type { AnalysisResult, Trend } from "trendiv-analysis-module";
 
 const runGrokAnalysisForX = async () => {
   console.log("🚀 X(Twitter) 트렌드 Grok 분석 시작...");
 
   const supabaseUrl = process.env.SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_KEY;
-  const grokApiKey = process.env.GROK_API_KEY; // .env에 이 키가 정의되어 있어야 합니다.
+  const grokApiKey = process.env.GROK_API_KEY;
 
   if (!supabaseUrl || !supabaseKey) {
     throw new Error("❌ Supabase 환경 변수가 없습니다.");
@@ -22,11 +24,13 @@ const runGrokAnalysisForX = async () => {
     throw new Error("❌ GROK_API_KEY 환경 변수가 없습니다.");
   }
 
+  // 2. 동적 import 적용 (dotenv 로드 후 실행 보장)
+  const { GrokService } = await import("trendiv-analysis-module");
+
   const supabase = createClient(supabaseUrl, supabaseKey);
   const grokService = new GrokService(grokApiKey);
 
-  // 1. 분석 대상 데이터 가져오기 (category: 'x', status: 'RAW')
-  // 대소문자 구분이 필요할 수 있으니 실제 DB 값에 맞춰 'x' 또는 'X'로 조정하세요.
+  // 1. 분석 대상 데이터 가져오기 (category: 'X', status: 'RAW')
   const targetCategory = "X";
 
   const { data: trends, error } = await supabase
@@ -52,12 +56,9 @@ const runGrokAnalysisForX = async () => {
   // 2. 순차적으로 분석 실행
   for (const trend of trends) {
     try {
-      console.log(
-        `\nAnalyzing [${trend.id}] ${trend.title.substring(0, 30)}...`,
-      );
+      console.log(`\nAnalyzing [${trend.id}] ${trend.title}...`);
 
-      // X 데이터는 내용(content)이 빈약하므로 analyzeWithContent 대신
-      // 제목과 링크 위주로 분석하는 기본 analyze() 메서드 사용
+      // X 데이터는 제목과 링크 위주로 분석하는 기본 analyze() 메서드 사용
       const analysisResponse = await grokService.analyze(trend as Trend);
 
       // DB에 저장할 형태로 변환
@@ -91,7 +92,7 @@ const runGrokAnalysisForX = async () => {
         successCount++;
       }
 
-      // Rate Limit 방지를 위해 약간의 딜레이 (필요 시 조정)
+      // Rate Limit 방지를 위해 딜레이 적용
       await new Promise((resolve) => setTimeout(resolve, 500));
     } catch (e: any) {
       console.error(`  ❌ 분석 중 에러 발생: ${e.message}`);
@@ -103,5 +104,8 @@ const runGrokAnalysisForX = async () => {
   console.log(`🎉 작업 완료! 성공: ${successCount}, 실패: ${failCount}`);
 };
 
-// 실행
-runGrokAnalysisForX();
+// 실행 및 에러 핸들링
+runGrokAnalysisForX().catch((err) => {
+  console.error("❌ 스크립트 실행 중 치명적 에러:", err);
+  process.exit(1);
+});

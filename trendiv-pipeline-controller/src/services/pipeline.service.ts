@@ -515,6 +515,7 @@ export const runGrokAnalysis = async (): Promise<void> => {
       .from("trend")
       .select("*")
       .in("status", ["ANALYZED", "RAW"])
+      .neq("category", "YouTube")
       .order("date", { ascending: false })
       .range(from, to);
 

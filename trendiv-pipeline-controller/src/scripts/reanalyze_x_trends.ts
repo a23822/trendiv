@@ -1,7 +1,13 @@
 import { createClient } from "@supabase/supabase-js";
 import dotenv from "dotenv";
 import path from "path";
-import { GrokService } from "trendiv-analysis-module";
+
+// 1. 환경 변수 먼저 로드
+const envPath = path.resolve(__dirname, "../../../.env");
+dotenv.config({ path: envPath });
+console.log(`🔌 Loading .env from: ${envPath}`);
+
+// 타입만 정적 import (타입은 런타임에 영향 없음)
 import type { AnalysisResult, Trend } from "trendiv-analysis-module";
 
 // ============================================================
@@ -19,8 +25,27 @@ const LIMIT = (() => {
   return undefined;
 })();
 
-// 환경 변수 로드
-dotenv.config({ path: path.resolve(__dirname, "../../../.env") });
+// 사용법 출력
+if (args.includes("--help") || args.includes("-h")) {
+  console.log(`
+🦅 X(Twitter) 카테고리 'ANALYZED' 데이터 재심사 스크립트
+
+사용법:
+  npx tsx reevaluate_x_trends.ts [옵션]
+
+옵션:
+  --dry-run     실제 DB 업데이트 없이 시뮬레이션만 실행
+  --limit=N     처리할 최대 개수 지정 (테스트용)
+  --verbose     상세 로그 출력
+  --help, -h    이 도움말 출력
+
+예시:
+  npx tsx reevaluate_x_trends.ts --dry-run --limit=5   # 5개만 시뮬레이션
+  npx tsx reevaluate_x_trends.ts --limit=10            # 10개만 실제 실행
+  npx tsx reevaluate_x_trends.ts                       # 전체 실행
+`);
+  process.exit(0);
+}
 
 // ============================================================
 // 메인 함수
@@ -44,6 +69,9 @@ const reevaluateXTrends = async () => {
       "❌ 환경 변수(SUPABASE_URL, SUPABASE_KEY, GROK_API_KEY) 누락",
     );
   }
+
+  // 2. 동적 import (dotenv 로드 후 실행됨)
+  const { GrokService } = await import("trendiv-analysis-module");
 
   const supabase = createClient(supabaseUrl, supabaseKey);
   const grokService = new GrokService(grokApiKey);
