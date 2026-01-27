@@ -34,14 +34,7 @@
 	let abortController: AbortController | null = null;
 
 	const API_URL = PUBLIC_API_URL || 'http://127.0.0.1:3000';
-	const popularTags = [
-		'CSS',
-		'HTML',
-		'React',
-		'Accessibility',
-		'iOS',
-		'Performance'
-	];
+	let popularTags = $derived(data.popularTags ?? []);
 
 	// 구독 관련
 	let email = $state('');
