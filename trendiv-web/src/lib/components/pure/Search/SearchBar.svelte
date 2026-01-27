@@ -35,6 +35,12 @@
 		}
 	}
 
+	$effect(() => {
+		if (value === '') {
+			onclear?.();
+		}
+	});
+
 	function handleClear() {
 		value = '';
 		onclear?.();
