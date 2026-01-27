@@ -471,7 +471,7 @@
 		)}
 	>
 		<div class="overflow-hidden">
-			<div class="border-default flex items-center border-b-2 py-4">
+			<div class="border-border-default flex items-center border-b-2 py-4">
 				<div class="-ml-2 flex flex-wrap gap-y-2">
 					{#each animatedSelectedTags as tag (tag.name)}
 						<div
