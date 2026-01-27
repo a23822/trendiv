@@ -45,7 +45,7 @@
 		bind:value={searchKeyword}
 	/>
 
-	<div class="border-border-default mt-4 border-t-2">
+	<div class="border-border-default mt-4 border-t">
 		<div
 			class={cn(
 				'flex items-center gap-1',
