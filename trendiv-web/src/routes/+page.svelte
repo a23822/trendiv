@@ -34,14 +34,7 @@
 	let abortController: AbortController | null = null;
 
 	const API_URL = PUBLIC_API_URL || 'http://127.0.0.1:3000';
-	const popularTags = [
-		'CSS',
-		'HTML',
-		'React',
-		'Accessibility',
-		'iOS',
-		'Performance'
-	];
+	let popularTags = $derived(data.popularTags ?? []);
 
 	// 구독 관련
 	let email = $state('');
@@ -177,8 +170,8 @@
 				return;
 			}
 
-			const firstCachedId = cachedColumns[0]?.[0]?.id;
-			const firstTrendId = currentTrends[0]?.id;
+			const firstCachedId = cachedColumns.at(0)?.at(0)?.id;
+			const firstTrendId = currentTrends.at(0)?.id;
 
 			if (
 				currentTrends.length === 0 ||
@@ -267,7 +260,7 @@
 					} else {
 						const existingIds = new Set(trends.map((t) => t.id));
 						const newItems = incoming.filter(
-							(t: any) => !existingIds.has(t.id)
+							(t: Trend) => !existingIds.has(t.id)
 						);
 						trends = [...trends, ...newItems];
 					}
@@ -378,7 +371,7 @@
 	function infiniteScroll(node: HTMLElement) {
 		const observer = new IntersectionObserver((entries) => {
 			if (
-				entries[0].isIntersecting &&
+				entries.at(0)?.isIntersecting &&
 				hasMore &&
 				!isSearching &&
 				!isLoadingMore
