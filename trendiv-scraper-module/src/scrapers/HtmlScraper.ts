@@ -31,29 +31,72 @@ export class HtmlScraper implements Scraper {
       page = await context.newPage();
 
       try {
-        await page.route('**/*', (route) => {
-          const resourceType = route.request().resourceType();
-          if (['image', 'stylesheet', 'font', 'media'].includes(resourceType)) {
-            return route.abort();
+        // 리소스 차단 정책 완화 (JS/XHR 허용)
+        await page.route('**/*', async (route) => {
+          const request = route.request();
+          const resourceType = request.resourceType();
+          const url = request.url().toLowerCase();
+
+          // 1. 불필요한 리소스 차단 (이미지, 폰트, 미디어, 스타일)
+          if (
+            ['image', 'font', 'media', 'stylesheet', 'imageset'].includes(
+              resourceType,
+            )
+          ) {
+            return await route.abort();
           }
-          return route.continue();
+
+          // 2. 네트워크를 붙잡고 있는 광고/채팅/분석 도구 키워드 차단
+          const blockList = [
+            'googleadservices',
+            'googlesyndication',
+            'doubleclick', // 구글 광고
+            'google-analytics',
+            'googletagmanager', // 분석 도구 (계속 통신함)
+            'facebook',
+            'twitter',
+            'linkedin', // 소셜 추적기
+            'intercom',
+            'zendesk',
+            'crisp',
+            'channel.io', // 채팅 위젯 (주범!)
+            'hotjar',
+            'sentry',
+            'datadog', // 모니터링 툴
+            'adsystem',
+            'adserver', // 일반 광고
+          ];
+
+          // URL에 차단 키워드가 포함되어 있으면 즉시 연결 끊기
+          if (blockList.some((keyword) => url.includes(keyword))) {
+            return await route.abort();
+          }
+
+          // 나머지는 통과
+          return await route.continue();
         });
 
         // 1. 페이지 접속
-        await page.goto(config.url, {
-          waitUntil: 'domcontentloaded',
-          timeout: 30000,
-        });
-
+        // 데이터가 완전히 다 뜰 때까지 기다립니다.
+        try {
+          await page.goto(config.url, {
+            waitUntil: 'networkidle',
+            timeout: 20000,
+          });
+        } catch (e) {
+          console.warn(
+            `⚠️ [HTML] ${config.name} 완전 로딩 타임아웃 (수집은 시도함)`,
+          );
+        }
         // 요소 대기
         try {
           await page.waitForSelector(config.selector, {
-            timeout: 10000,
-            state: 'visible',
+            timeout: 15000,
+            state: 'attached',
           });
-        } catch (e) {
-          console.log(
-            `⚠️ ${config.name}: 요소를 찾는 데 시간이 너무 걸립니다.`,
+        } catch {
+          console.warn(
+            `⚠️ [HTML] ${config.name}: Selector 타임아웃. (빈 결과 가능성)`,
           );
         }
 
@@ -89,8 +132,9 @@ export class HtmlScraper implements Scraper {
         }));
 
         return finalTrends;
-      } catch (error) {
-        console.error(`❌ [HTML] ${config.name} 에러:`, error);
+      } catch (error: unknown) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        console.error(`❌ [HTML] ${config.name} 처리 중 에러:`, errorMsg);
         return [];
       }
     } finally {

@@ -49,15 +49,31 @@ export async function scrapeAll(days: number = 7): Promise<TrendItem[]> {
   let allResults: TrendItem[] = [];
 
   let browser: Browser | null = null;
-  try {
-    console.log('🌍 브라우저 인스턴스 시작 (Playwright Launch)...');
-    browser = await chromium.launch({ headless: true });
-  } catch (e) {
-    console.error('❌ 브라우저 실행 실패 (HTML/RSS 일부 기능 제한됨):', e);
-  }
+  const BATCH_SIZE = 5;
+
+  const launchBrowser = async () => {
+    try {
+      if (browser) await browser.close().catch(() => {});
+      console.log('🌍 브라우저 인스턴스 시작 (Memory Clean)...');
+      return await chromium.launch({ headless: true });
+    } catch (e: unknown) {
+      console.error('❌ 브라우저 실행 실패:', e);
+      return null;
+    }
+  };
+
+  browser = await launchBrowser();
 
   // 직렬 실행으로 VM 메모리 부하 방지
-  for (const target of TARGETS) {
+  for (let i = 0; i < TARGETS.length; i++) {
+    const target = TARGETS[i];
+
+    // 주기적 재시작 로직
+    if (i > 0 && i % BATCH_SIZE === 0) {
+      console.log(`♻️ [System] ${BATCH_SIZE}개 처리 완료. 브라우저 재시작...`);
+      browser = await launchBrowser();
+    }
+
     console.log(`\n▶️ [Processing] ${target.name} (${target.type})...`);
 
     try {
@@ -96,12 +112,11 @@ export async function scrapeAll(days: number = 7): Promise<TrendItem[]> {
       } else {
         console.log(`   ℹ️ 수집된 결과가 없습니다. (정상 혹은 파싱 실패)`);
       }
-    } catch (e: any) {
-      console.error(`❌ [Error] ${target.name} (${target.type}) 수집 실패:`, {
-        message: e.message,
-        stack: e.stack,
-        url: target.url,
-        cause: e.cause,
+    } catch (e: unknown) {
+      const err = e instanceof Error ? e : new Error(String(e));
+      console.error(`⚠️ [Skip] ${target.name} 수집 실패:`, {
+        message: err.message,
+        type: target.type,
       });
     }
 
