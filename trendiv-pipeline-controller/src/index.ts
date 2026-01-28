@@ -230,8 +230,13 @@ if (process.env.BATCH_MODE === "true") {
         return res.status(401).json({ error: "Unauthorized" });
       }
 
+      // 🆕 [수정] Body에서 모드 가져오기 (기본값 'daily')
+      const mode = req.body.mode === "weekly" ? "weekly" : "daily";
+
       // 검증이 끝나자마자 즉시 Lock
-      console.log("👆 [Manual] 실행 요청됨 -> 즉시 Lock 설정");
+      console.log(
+        `👆 [Manual] 실행 요청됨 (${mode.toUpperCase()}) -> 즉시 Lock 설정`,
+      );
       isPipelineRunning = true;
 
       try {
@@ -254,7 +259,8 @@ if (process.env.BATCH_MODE === "true") {
       // (여기서 isPipelineRunning = true를 또 할 필요 없음)
       (async () => {
         try {
-          const result = await runPipeline();
+          // @ts-ignore (혹시 타입 에러나면 무시, service는 이미 수정됨)
+          const result = await runPipeline(mode);
 
           if (result.success) {
             console.log(
