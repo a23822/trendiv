@@ -42,6 +42,7 @@ export class StackOverflowScraper implements Scraper {
             fromdate: oneWeekAgo,
             pagesize: 15,
             filter: 'withbody',
+            key: process.env.STACKOVERFLOW_KEY,
           },
           timeout: 10000,
           headers: {
