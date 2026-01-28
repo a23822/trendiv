@@ -10,6 +10,7 @@ interface RedditPost {
     subreddit: string;
     author: string;
     id: string;
+    url?: string;
   };
 }
 
@@ -42,7 +43,7 @@ export class RedditScraper implements Scraper {
           headers: {
             Authorization: `Basic ${auth}`,
             'Content-Type': 'application/x-www-form-urlencoded',
-            'User-Agent': 'Trendiv/0.1 by TrendivBot',
+            'User-Agent': 'NodeJS:TrendivScraper:v1.0 (by /u/trendiv_dev)',
           },
         },
       );

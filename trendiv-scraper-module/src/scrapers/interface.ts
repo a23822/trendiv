@@ -21,6 +21,7 @@ export interface ScraperConfig {
   url: string;
   selector?: string;
   useProxy?: boolean;
+  includeKeywords?: string[];
 }
 
 export interface Scraper {

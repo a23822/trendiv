@@ -1,6 +1,6 @@
 import Parser from 'rss-parser';
 import axios from 'axios';
-import { chromium } from 'playwright';
+import { chromium, Browser } from 'playwright';
 import { Scraper, ScraperConfig, TrendItem } from './interface';
 
 // rss2json 응답 타입
@@ -21,6 +21,8 @@ export class RssScraper implements Scraper {
   private parser = new Parser();
   private readonly RSS2JSON_API = 'https://api.rss2json.com/v1/api.json';
 
+  constructor(private browser?: Browser) {}
+
   async scrape(config: ScraperConfig): Promise<TrendItem[]> {
     console.log(`📡 [RSS] ${config.name} 수집 시작...`);
 
@@ -32,16 +34,21 @@ export class RssScraper implements Scraper {
     // 기존 로직
     let xmlData = '';
 
+    console.log(`📡 [RSS] ${config.name} 수집 시작...`);
+
     try {
       // 1차 시도: 가벼운 Axios로 요청
       const response = await axios.get(config.url, {
         headers: {
           'User-Agent':
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
           Accept:
-            'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+            'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.9',
+          'Cache-Control': 'no-cache',
+          Pragma: 'no-cache',
         },
-        timeout: 5000,
+        timeout: 10000,
         responseType: 'text',
       });
       xmlData = response.data;
@@ -54,9 +61,6 @@ export class RssScraper implements Scraper {
           `⚠️ [RSS] ${config.name} 보안 감지! 브라우저 모드로 우회합니다...`,
         );
         xmlData = await this.fetchWithBrowser(config.url);
-      } else {
-        console.error(`❌ [RSS] ${config.name} 실패: ${error.message}`);
-        return [];
       }
     }
 
@@ -68,10 +72,10 @@ export class RssScraper implements Scraper {
         .trim()
         .replace(/^\uFEFF/, '')
         .replace(/<(?=\s|[0-9])/g, '&lt;');
-
       const feed = await this.parser.parseString(cleanXml);
 
-      return feed.items.map((item) => {
+      // 1. 데이터 매핑
+      const items = feed.items.map((item) => {
         const content =
           item.contentSnippet || item.content || item.summary || '';
         const date = item.isoDate || item.pubDate || new Date().toISOString();
@@ -85,6 +89,27 @@ export class RssScraper implements Scraper {
           content: content,
         };
       });
+
+      // 2. 필터링
+      if (config.includeKeywords && config.includeKeywords.length > 0) {
+        const filtered = items.filter((item) => {
+          const textToCheck = (item.title + ' ' + item.content).toLowerCase();
+
+          // 하나라도 포함되어 있으면 통과 (OR 조건)
+          const isMatched = config.includeKeywords?.some((keyword) =>
+            textToCheck.includes(keyword.toLowerCase()),
+          );
+
+          return isMatched;
+        });
+
+        console.log(
+          `   ✨ Keyword Filter: ${items.length} -> ${filtered.length} items`,
+        );
+        return filtered;
+      }
+
+      return items;
     } catch (parseError) {
       console.error(`❌ [RSS] ${config.name} 파싱 에러:`, parseError);
       return [];
@@ -127,26 +152,43 @@ export class RssScraper implements Scraper {
   }
 
   private async fetchWithBrowser(url: string): Promise<string> {
-    const browser = await chromium.launch({ headless: true });
-    const context = await browser.newContext({
-      userAgent:
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-    });
+    let localBrowser: Browser | null = null;
+    let browserToUse = this.browser;
+
+    if (!browserToUse) {
+      localBrowser = await chromium.launch({ headless: true });
+      browserToUse = localBrowser;
+    }
+
+    let context;
+    let page;
 
     try {
-      const page = await context.newPage();
+      context = await browserToUse.newContext({
+        userAgent:
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+      });
+      page = await context.newPage();
+
       const response = await page.goto(url, {
         waitUntil: 'domcontentloaded',
         timeout: 30000,
       });
 
-      if (!response) throw new Error('No response');
-      return await response.text();
+      const text = (await response?.text()) || '';
+
+      if (!text) throw new Error('No response');
+      return text;
     } catch (e) {
       console.error(`❌ 브라우저 모드 실패:`, e);
       return '';
     } finally {
-      await browser.close();
+      if (page) await page.close().catch(() => {});
+      if (context) await context.close().catch(() => {});
+
+      if (localBrowser) {
+        await localBrowser.close();
+      }
     }
   }
 }
