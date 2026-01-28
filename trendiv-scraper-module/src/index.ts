@@ -55,7 +55,21 @@ export async function scrapeAll(days: number = 7): Promise<TrendItem[]> {
     try {
       if (browser) await browser.close().catch(() => {});
       console.log('🌍 브라우저 인스턴스 시작 (Memory Clean)...');
-      return await chromium.launch({ headless: true });
+      return await chromium.launch({
+        headless: true,
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-gpu',
+          '--no-zygote',
+          '--single-process',
+        ],
+        env: {
+          ...process.env,
+          DBUS_SESSION_BUS_ADDRESS: '/dev/null',
+        },
+      });
     } catch (e: unknown) {
       console.error('❌ 브라우저 실행 실패:', e);
       return null;

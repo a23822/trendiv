@@ -16,7 +16,19 @@ export class HtmlScraper implements Scraper {
     let browserToUse = this.browser;
 
     if (!browserToUse) {
-      localBrowser = await chromium.launch({ headless: true });
+      localBrowser = await chromium.launch({
+        headless: true,
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-gpu',
+        ],
+        env: {
+          ...process.env,
+          DBUS_SESSION_BUS_ADDRESS: '/dev/null',
+        },
+      });
       browserToUse = localBrowser;
     }
 
