@@ -7,25 +7,13 @@ import { StackOverflowScraper } from './scrapers/StackOverflowScraper';
 import { YoutubeSearchScraper } from './scrapers/YoutubeSearchScraper';
 import { RedditScraper } from './scrapers/RedditScraper';
 import { TrendItem, Scraper } from './scrapers/interface';
+import { chromium, Browser } from 'playwright';
 
 import dotenv from 'dotenv';
 import path from 'path';
 
 const envPath = path.resolve(__dirname, '../../.env');
 dotenv.config({ path: envPath });
-
-/**
- * 🏭 [인스턴스 캐싱] 루프 내부에서 매번 생성하지 않도록 미리 싱글톤으로 관리
- */
-const scrapers: Record<string, Scraper> = {
-  rss: new RssScraper(),
-  html: new HtmlScraper(),
-  youtube: new YoutubeScraper(),
-  youtube_search: new YoutubeSearchScraper(),
-  google_search: new GoogleSearchScraper(),
-  stackoverflow: new StackOverflowScraper(),
-  reddit: new RedditScraper(),
-};
 
 /**
  * 📅 날짜 필터링 함수
@@ -60,39 +48,86 @@ export async function scrapeAll(days: number = 7): Promise<TrendItem[]> {
 
   let allResults: TrendItem[] = [];
 
+  let browser: Browser | null = null;
+  const BATCH_SIZE = 5;
+
+  const launchBrowser = async () => {
+    try {
+      if (browser) await browser.close().catch(() => {});
+      console.log('🌍 브라우저 인스턴스 시작 (Memory Clean)...');
+      return await chromium.launch({ headless: true });
+    } catch (e: unknown) {
+      console.error('❌ 브라우저 실행 실패:', e);
+      return null;
+    }
+  };
+
+  browser = await launchBrowser();
+
   // 직렬 실행으로 VM 메모리 부하 방지
-  for (const target of TARGETS) {
+  for (let i = 0; i < TARGETS.length; i++) {
+    const target = TARGETS[i];
+
+    // 주기적 재시작 로직
+    if (i > 0 && i % BATCH_SIZE === 0) {
+      console.log(`♻️ [System] ${BATCH_SIZE}개 처리 완료. 브라우저 재시작...`);
+      browser = await launchBrowser();
+    }
+
     console.log(`\n▶️ [Processing] ${target.name} (${target.type})...`);
 
     try {
-      const scraper = scrapers[target.type];
+      let results: TrendItem[] = [];
 
-      if (!scraper) {
-        console.warn(`⚠️ 알 수 없는 타입 건너뜀: ${target.type}`);
-        continue;
+      switch (target.type) {
+        case 'rss':
+          results = await new RssScraper(browser || undefined).scrape(target);
+          break;
+        case 'html':
+          results = await new HtmlScraper(browser || undefined).scrape(target);
+          break;
+        case 'youtube':
+          results = await new YoutubeScraper().scrape(target);
+          break;
+        case 'youtube_search':
+          results = await new YoutubeSearchScraper().scrape(target);
+          break;
+        case 'google_search':
+          results = await new GoogleSearchScraper().scrape(target);
+          break;
+        case 'stackoverflow':
+          results = await new StackOverflowScraper().scrape(target);
+          break;
+        case 'reddit':
+          results = await new RedditScraper().scrape(target);
+          break;
+        default:
+          console.warn(`⚠️ 알 수 없는 타입: ${target.type}`);
+          results = [];
       }
 
-      const results = await scraper.scrape(target);
-
-      // results가 null/undefined일 경우 대비 및 대량 데이터 안전 병합
-      if (results && Array.isArray(results) && results.length > 0) {
-        // push(...spread) 대신 concat을 사용하여 Stack Overflow 방지
-        allResults = allResults.concat(results);
+      if (results.length > 0) {
+        allResults.push(...results);
         console.log(`   ✅ ${results.length}건 수집 완료`);
       } else {
         console.log(`   ℹ️ 수집된 결과가 없습니다. (정상 혹은 파싱 실패)`);
       }
-    } catch (e: any) {
-      console.error(`❌ [Error] ${target.name} (${target.type}) 수집 실패:`, {
-        message: e.message,
-        stack: e.stack,
-        url: target.url,
-        cause: e.cause,
+    } catch (e: unknown) {
+      const err = e instanceof Error ? e : new Error(String(e));
+      console.error(`⚠️ [Skip] ${target.name} 수집 실패:`, {
+        message: err.message,
+        type: target.type,
       });
     }
 
     // 💡 CPU/RAM 숨 고르기 (1초 휴식)
     await delay(1000);
+  }
+
+  // 모든 작업이 끝나면 브라우저 종료
+  if (browser) {
+    console.log('🌍 브라우저 인스턴스 종료...');
+    await browser.close();
   }
 
   console.log(`\n📦 전체 수집 데이터: ${allResults.length}개`);

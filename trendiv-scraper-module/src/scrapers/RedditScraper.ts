@@ -10,10 +10,13 @@ interface RedditPost {
     subreddit: string;
     author: string;
     id: string;
+    url?: string;
   };
 }
 
 export class RedditScraper implements Scraper {
+  private readonly AUTH_URL = 'https://www.reddit.com/api/v1/access_token';
+  private readonly API_BASE = 'https://oauth.reddit.com';
   private accessToken: string | null = null;
   private tokenExpiry: number = 0;
 
@@ -36,25 +39,30 @@ export class RedditScraper implements Scraper {
         'base64',
       );
       const response = await axios.post(
-        'https://www.reddit.com/api/v1/access_token',
+        this.AUTH_URL,
         'grant_type=client_credentials',
         {
           headers: {
             Authorization: `Basic ${auth}`,
             'Content-Type': 'application/x-www-form-urlencoded',
-            'User-Agent': 'Trendiv/0.1 by TrendivBot',
+            'User-Agent': 'NodeJS:TrendivScraper:v1.0 (by /u/trendiv_dev)',
           },
+          timeout: 10000,
         },
       );
 
       this.accessToken = response.data.access_token;
       this.tokenExpiry = now + response.data.expires_in * 1000 - 60000;
       return this.accessToken;
-    } catch (error: any) {
-      console.error(
-        '❌ Reddit OAuth Token Error:',
-        error.response?.data || error.message,
-      );
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        console.error(
+          '❌ Reddit Token Error:',
+          error.response?.data || error.message,
+        );
+      } else {
+        console.error('❌ Reddit Token Unknown Error:', error);
+      }
       return null;
     }
   }
@@ -78,7 +86,7 @@ export class RedditScraper implements Scraper {
           : 'hot';
 
       const response = await axios.get(
-        `https://oauth.reddit.com/r/${subreddit}/${sort}`,
+        `${this.API_BASE}/r/${subreddit}/${sort}`,
         {
           params: {
             limit: 15,
@@ -94,19 +102,34 @@ export class RedditScraper implements Scraper {
 
       const posts = response.data?.data?.children || [];
 
-      return posts.map((post: any) => ({
-        title: post.data.title,
-        link: `https://www.reddit.com${post.data.permalink}`,
-        date: new Date(post.data.created_utc * 1000).toISOString(),
-        source: config.name,
-        category: config.category,
-        content: post.data.selftext || '',
-      }));
-    } catch (error: any) {
-      console.error(
-        `❌ [Reddit API] ${config.name} Fetch Error:`,
-        error.message,
-      );
+      return posts.map((post: any) => {
+        const p = post?.data || {};
+        const isSelf = p.url && p.url.includes('reddit.com');
+        const finalLink = isSelf
+          ? `https://www.reddit.com${p.permalink}`
+          : p.url;
+
+        return {
+          title: p.title || '제목 없음',
+          link: finalLink || '',
+          date: p.created_utc
+            ? new Date(p.created_utc * 1000).toISOString()
+            : new Date().toISOString(),
+          source: `${config.name}/${p.subreddit ?? p.subreddit}`,
+          category: config.category,
+          content: post.data.selftext || '',
+        };
+      });
+    } catch (error: unknown) {
+      let msg = 'Unknown Error';
+      if (axios.isAxiosError(error)) {
+        msg = error.message;
+        if (error.response?.status === 403)
+          msg += ' (403 Forbidden - Bot blocked)';
+      } else if (error instanceof Error) {
+        msg = error.message;
+      }
+      console.error(`❌ [Reddit API] ${config.name} 실패: ${msg}`);
       return [];
     }
   }

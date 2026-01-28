@@ -17,10 +17,9 @@ export class YoutubeScraper implements Scraper {
       // 최신 3개만 빠르게 확인
       const items = feed.items.slice(0, 3).map((item: any) => {
         const videoId = item.id.replace('yt:video:', '');
-        const link = `https://www.youtube.com/watch?v=${videoId}`;
-
+        const link = item.link || `https://www.youtube.com/watch?v=${videoId}`;
         const media = item['media'];
-        const description = media?.['media:description']?.[0] || '';
+        // const description = media?.['media:description']?.[0] || '';
 
         return {
           title: item.title || '제목 없음',
