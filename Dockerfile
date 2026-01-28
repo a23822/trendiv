@@ -1,6 +1,13 @@
 # 1. 베이스 이미지 선택 (이미 브라우저가 다 설치된 요리 도구 세트)
 FROM mcr.microsoft.com/playwright:v1.56.1-jammy
 
+# dbus 설치 및 권한 설정
+RUN apt-get update && apt-get install -y \
+    dbus \
+    && rm -rf /var/lib/apt/lists/* \
+    && mkdir -p /run/dbus \
+    && chmod 777 /run/dbus
+
 # 2. 작업 폴더 생성 (주방 도마 깔기)
 WORKDIR /app
 

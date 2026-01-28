@@ -91,8 +91,9 @@ export async function runAnalysis(
       '--disable-setuid-sandbox',
       '--disable-dev-shm-usage',
       '--disable-gpu',
-      '--disable-extensions',
+      '--no-zygote',
       '--disable-images',
+      '--disable-extensions',
     ],
     env: {
       ...process.env,
