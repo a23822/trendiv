@@ -40,8 +40,9 @@ export const initScheduler = () => {
             `✅ Bi-Weekly Pipeline completed (${result.count} items)`,
           );
         else console.error("❌ Bi-Weekly Pipeline failed:", result.error);
-      } catch (error) {
-        console.error("❌ Bi-Weekly Pipeline error:", error);
+      } catch (e: unknown) {
+        const error = e instanceof Error ? e : new Error(String(e));
+        console.error("❌ Bi-Weekly Pipeline error:", error.message);
       } finally {
         isPipelineRunning = false;
         console.log("   ✔️  Bi-Weekly Pipeline scheduled (Mon, Thu 04:00 KST)");
@@ -67,8 +68,9 @@ export const initScheduler = () => {
         if (result.success)
           console.log(`✅ Daily Pipeline completed (${result.count} items)`);
         else console.error("❌ Daily Pipeline failed:", result.error);
-      } catch (error) {
-        console.error("❌ Daily Pipeline error:", error);
+      } catch (e: unknown) {
+        const error = e instanceof Error ? e : new Error(String(e));
+        console.error("❌ Daily Pipeline error:", error.message);
       } finally {
         isPipelineRunning = false;
         console.log("   ✔️  Daily Pipeline scheduled (Daily 09:00 KST)");
@@ -88,7 +90,8 @@ export const initScheduler = () => {
       isGeminiProRunning = true;
       try {
         await runGeminiProAnalysis();
-      } catch (error) {
+      } catch (e: unknown) {
+        const error = e instanceof Error ? e : new Error(String(e));
         console.error("❌ Gemini Pro Scheduler Error:", error);
       } finally {
         isGeminiProRunning = false;
@@ -106,7 +109,8 @@ export const initScheduler = () => {
       isGrokRunning = true;
       try {
         await runGrokAnalysis();
-      } catch (error) {
+      } catch (e: unknown) {
+        const error = e instanceof Error ? e : new Error(String(e));
         console.error("❌ Grok Analysis Error:", error);
       } finally {
         isGrokRunning = false;

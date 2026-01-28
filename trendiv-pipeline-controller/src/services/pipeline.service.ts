@@ -57,6 +57,15 @@ interface PipelineResult {
   error?: unknown;
 }
 
+interface UpsertItem {
+  id: number;
+  title?: string;
+  analysis_results: AnalysisEntry[];
+  status: string;
+  represent_result: AnalysisEntry | null;
+  content?: string;
+}
+
 // 🆕 상수
 const MAX_LOOP_COUNT = 20; // ✅ [수정] 100 → 20 (안전장치 강화)
 const BATCH_DELAY_MS = 2000;
@@ -184,9 +193,12 @@ export const runPipeline = async (
             (r) => r && typeof r.id === "number",
           );
         }
-      } catch (e) {
-        console.error(`      ⚠️ Batch ${loopCount} Analysis Failed:`, e);
-        // ✅ continue 없음 - 아래 failedIds 로직에서 전부 REJECTED 처리됨
+      } catch (e: unknown) {
+        const err = e instanceof Error ? e : new Error(String(e));
+        console.error(
+          `      ⚠️ Batch ${loopCount} Analysis Failed:`,
+          err.message,
+        );
       }
 
       // E. DB 업데이트 (벌크 처리)
@@ -259,8 +271,8 @@ export const runPipeline = async (
         continue;
       }
 
-      const analyzedUpdates: any[] = [];
-      const rejectedUpdates: any[] = [];
+      const analyzedUpdates: UpsertItem[] = [];
+      const rejectedUpdates: UpsertItem[] = [];
 
       for (const result of analysisResults) {
         const current = currentItems.find(
@@ -395,8 +407,9 @@ export const runPipeline = async (
       `🎉 [Pipeline] All Done! processed total ${totalSuccessCount} items in ${duration}s`,
     );
     return { success: true, count: totalSuccessCount };
-  } catch (error) {
-    console.error("❌ [Pipeline] Critical Error:", error);
+  } catch (e: unknown) {
+    const error = e instanceof Error ? e : new Error(String(e));
+    console.error("❌ [Pipeline] Critical Error:", error.message);
     return { success: false, error };
   }
 };
@@ -601,7 +614,8 @@ async function saveAnalysisResults(
 
   console.log(`      💾 Saving results for ${results.length} items (Bulk)...`);
 
-  const updates: any[] = [];
+  const updates: UpsertItem[] = [];
+
   const validIds = new Set<number>();
 
   // 2. 메모리에서 데이터 가공
@@ -617,8 +631,10 @@ async function saveAnalysisResults(
       continue;
     }
 
-    const history: AnalysisEntry[] = current?.analysis_results || [];
+    // 2-1. 기존 기록 가져오기
+    const existingHistory: AnalysisEntry[] = current.analysis_results || [];
 
+    // 2-2. 새 분석 결과 객체 생성
     const newEntry: AnalysisEntry = {
       aiModel: result.aiModel,
       score: result.score,
@@ -630,35 +646,36 @@ async function saveAnalysisResults(
       analyzedAt: new Date().toISOString(),
     };
 
-    // 히스토리 병합
-    const idx = history.findIndex((h) => h.aiModel === result.aiModel);
-    if (idx >= 0) history[idx] = newEntry;
-    else history.push(newEntry);
+    // 2-3. 기록 복사 및 병합 (updatedHistory 생성)
+    const updatedHistory = [...existingHistory];
+    const idx = existingHistory.findIndex((h) => h.aiModel === result.aiModel);
 
-    // 상태 및 대표 결과 결정
-    const isHighQuality = history.every((h) => h.score > 0);
-    const newStatus = isHighQuality ? "ANALYZED" : "REJECTED";
+    if (idx >= 0) updatedHistory[idx] = newEntry;
+    else updatedHistory.push(newEntry);
 
+    // 2-4. 품질 체크 (로깅용)
+    const isHighQuality = updatedHistory.every((h) => h.score > 0);
     if (!isHighQuality) {
-      const zeroModel = history.find((h) => h.score === 0)?.aiModel;
+      const zeroModel = updatedHistory.find((h) => h.score === 0)?.aiModel;
       console.log(
         `      🗑️ [Quality Control] 0점 발생 (ID: ${result.id}, Model: ${zeroModel})`,
       );
     }
 
-    const sortedHistory = [...history].sort((a, b) => {
+    // 2-5. 정렬 (대표 결과 선정용)
+    const sortedHistory = [...updatedHistory].sort((a, b) => {
       if (b.score !== a.score) return b.score - a.score;
       return (
         new Date(b.analyzedAt).getTime() - new Date(a.analyzedAt).getTime()
       );
     });
 
-    const updateData: any = {
-      ...current,
+    // 2-6. 업데이트 데이터 생성 (UpsertItem 타입 준수)
+    const updateData: UpsertItem = {
       id: result.id,
       title: result.title_ko || "제목 없음",
-      analysis_results: history,
-      status: newStatus,
+      analysis_results: updatedHistory,
+      status: result.score > 0 ? "ANALYZED" : "REJECTED",
       represent_result: sortedHistory[0] || null,
     };
 
@@ -667,7 +684,6 @@ async function saveAnalysisResults(
     }
 
     updates.push(updateData);
-    validIds.add(result.id);
   }
 
   // 3. 한 번에 DB 업데이트 (Bulk Upsert)

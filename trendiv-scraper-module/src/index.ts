@@ -122,8 +122,9 @@ export async function scrapeAll(
       }
       await delay(500);
     }
-  } catch (err) {
-    console.error('❌ Scraper Critical Error:', err);
+  } catch (e: unknown) {
+    const err = e instanceof Error ? e : new Error(String(e));
+    console.error('❌ Scraper Critical Error:', err.message);
   } finally {
     if (browser) {
       await (browser as Browser).close();
