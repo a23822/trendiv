@@ -1,4 +1,4 @@
-import { Browser } from 'playwright';
+import { Browser, BrowserContext } from 'playwright';
 import { AnalysisResult, Trend } from '../types';
 import { ContentService } from './content.service';
 import { GeminiService } from './gemini.service';
@@ -13,15 +13,19 @@ export class AnalyzerService {
   private geminiService: GeminiService;
   private grokService: GrokService | null;
   private youtubeService: YouTubeService;
+  private sharedContext: BrowserContext;
 
   private forceProvider: 'gemini' | 'grok' | null = null;
 
   constructor(
     browser: Browser,
     geminiService: GeminiService,
+    sharedContext: BrowserContext,
     grokService?: GrokService,
   ) {
-    this.contentService = new ContentService(browser);
+    this.sharedContext = sharedContext;
+    this.contentService = new ContentService(browser, sharedContext);
+
     this.geminiService = geminiService;
     this.grokService = grokService || null;
     this.youtubeService = new YouTubeService();

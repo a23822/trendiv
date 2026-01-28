@@ -45,7 +45,7 @@ export class RedditScraper implements Scraper {
           headers: {
             Authorization: `Basic ${auth}`,
             'Content-Type': 'application/x-www-form-urlencoded',
-            'User-Agent': 'NodeJS:TrendivScraper:v1.0 (by /u/trendiv_dev)',
+            'User-Agent': 'NodeJS:Trendiv:v1.0 (by /u/BNcQxa97uk45gMa8vYAVcw)',
           },
           timeout: 10000,
         },
@@ -117,7 +117,8 @@ export class RedditScraper implements Scraper {
             : new Date().toISOString(),
           source: `${config.name}/${p.subreddit ?? p.subreddit}`,
           category: config.category,
-          content: post.data.selftext || '',
+          content:
+            p.selftext && p.selftext.trim() !== '' ? p.selftext : p.title,
         };
       });
     } catch (error: unknown) {

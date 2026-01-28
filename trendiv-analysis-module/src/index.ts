@@ -89,10 +89,10 @@ export async function runAnalysis(
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage', // 👈 핵심: 메모리 부족(Crash) 방지
+      '--disable-dev-shm-usage',
       '--disable-gpu',
       '--disable-extensions',
-      '--disable-images', // 렌더링 부하 감소
+      '--disable-images',
     ],
     env: {
       ...process.env,
@@ -100,10 +100,19 @@ export async function runAnalysis(
     },
   });
 
+  const sharedContext = await browser.newContext({
+    userAgent: CONFIG.browser.userAgent,
+    viewport: CONFIG.browser.viewport,
+    locale: CONFIG.browser.locale,
+    timezoneId: CONFIG.browser.timezoneId,
+    // 필요하면 bypassCSP: true, 등 추가
+  });
+
   // 3. AnalyzerService 생성 및 Provider 강제 설정
   const analyzerService = new AnalyzerService(
     browser,
     geminiService,
+    sharedContext,
     grokService,
   );
 
@@ -143,10 +152,19 @@ export async function runAnalysis(
         continue;
       }
 
+      const used = process.memoryUsage();
+      console.log(
+        `메모리 사용량: RSS ${Math.round(used.rss / 1024 / 1024)}MB, Heap ${Math.round(used.heapUsed / 1024 / 1024)}MB`,
+      );
+
       // Rate limiting delay
       await delay(CONFIG.content.delayBetweenRequests);
     }
   } finally {
+    console.log('Closing shared context and browser...');
+    await sharedContext
+      ?.close()
+      .catch((e) => console.warn('Context close failed:', e));
     await browser.close();
   }
 

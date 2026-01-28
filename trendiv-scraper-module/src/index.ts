@@ -85,24 +85,31 @@ export async function scrapeAll(
 
         switch (target.type) {
           case 'rss':
+            console.log(`   🛠️ [Scraper Init] RssScraper 실행 중...`); // 👈 추가
             results = await new RssScraper().scrape(target);
             break;
           case 'html':
+            console.log(`   🛠️ [Scraper Init] HtmlScraper 실행 중...`); // 👈 추가
             results = await new HtmlScraper().scrape(target);
             break;
           case 'youtube':
+            console.log(`   🛠️ [Scraper Init] YoutubeScraper 실행 중...`); // 👈 추가
             results = await new YoutubeScraper().scrape(target);
             break;
           case 'youtube_search':
+            console.log(`   🛠️ [Scraper Init] YoutubeSearchScraper 실행 중...`); // 👈 추가
             results = await new YoutubeSearchScraper().scrape(target);
             break;
           case 'google_search':
+            console.log(`   🛠️ [Scraper Init] GoogleSearchScraper 실행 중...`); // 👈 추가
             results = await new GoogleSearchScraper().scrape(target);
             break;
           case 'stackoverflow':
+            console.log(`   🛠️ [Scraper Init] StackOverflowScraper 실행 중...`); // 👈 추가
             results = await new StackOverflowScraper().scrape(target);
             break;
           case 'reddit':
+            console.log(`   🛠️ [Scraper Init] RedditScraper 실행 중...`);
             results = await new RedditScraper().scrape(target);
             break;
           default:

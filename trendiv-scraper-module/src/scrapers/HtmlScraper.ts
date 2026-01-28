@@ -23,6 +23,8 @@ export class HtmlScraper implements Scraper {
           '--disable-setuid-sandbox',
           '--disable-dev-shm-usage',
           '--disable-gpu',
+          '--disable-extensions',
+          '--disable-images',
         ],
         env: {
           ...process.env,
@@ -50,11 +52,7 @@ export class HtmlScraper implements Scraper {
           const url = request.url().toLowerCase();
 
           // 1. 불필요한 리소스 차단 (이미지, 폰트, 미디어, 스타일)
-          if (
-            ['image', 'font', 'media', 'stylesheet', 'imageset'].includes(
-              resourceType,
-            )
-          ) {
+          if (['image', 'font', 'media', 'imageset'].includes(resourceType)) {
             return await route.abort();
           }
 

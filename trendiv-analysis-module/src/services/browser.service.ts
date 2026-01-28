@@ -11,15 +11,6 @@ import { ContentFetchResult } from '../types';
 
 chromium.use(stealth());
 
-// 🆕 공통 브라우저 설정
-const BROWSER_CONFIG = {
-  userAgent:
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-  viewport: { width: 1920, height: 1080 },
-  locale: 'en-US',
-  timezoneId: 'America/New_York',
-};
-
 const AD_KEYWORDS = [
   'doubleclick',
   'googlesyndication',
@@ -38,98 +29,63 @@ const AD_KEYWORDS = [
 
 export class BrowserService {
   private browser: Browser;
+  private sharedContext: BrowserContext;
 
-  constructor(browser: Browser) {
+  constructor(browser: Browser, sharedContext: BrowserContext) {
     this.browser = browser;
+    this.sharedContext = sharedContext;
   }
 
-  /**
-   * 🆕 공통 페이지 설정 (중복 제거)
-   */
-  private async createConfiguredPage(): Promise<{
-    context: BrowserContext;
-    page: Page;
-  }> {
-    const context = await this.browser.newContext({
-      userAgent: BROWSER_CONFIG.userAgent,
-      viewport: BROWSER_CONFIG.viewport,
-      locale: BROWSER_CONFIG.locale,
-      timezoneId: BROWSER_CONFIG.timezoneId,
-    });
+  private async getPage(): Promise<Page> {
+    // 이미 있는 sharedContext에서 탭(Page)만 새로 엽니다.
+    const page = await this.sharedContext.newPage();
 
-    const page = await context.newPage();
-
-    // 광고/불필요한 리소스 차단
+    // 리소스 차단 설정 (메모리 절약)
     await page.route('**/*', (route) => {
-      const request = route.request();
-      const resourceType = request.resourceType();
-      const reqUrl = request.url();
+      const type = route.request().resourceType();
+      const url = route.request().url();
 
-      // 1. 리소스 타입으로 차단 (이미지, 폰트, 미디어)
-      const blockedTypes = ['image', 'media', 'font'];
-      if (blockedTypes.includes(resourceType)) {
+      // 1. 메모리 많이 먹는 리소스 차단
+      const blockedTypes = ['image', 'media', 'font', 'other'];
+      if (blockedTypes.includes(type)) {
         return route.abort();
       }
 
-      // 2. 광고 도메인 키워드로 차단
-      const isAd = AD_KEYWORDS.some((keyword) => reqUrl.includes(keyword));
-      if (isAd) {
+      if (AD_KEYWORDS.some((k) => url.includes(k))) {
         return route.abort();
       }
 
       route.continue();
     });
 
-    return { context, page };
+    return page;
   }
 
-  /**
-   * 🆕 공통 페이지 네비게이션 + 팝업 닫기
-   */
-  private async navigateAndPrepare(page: Page, url: string): Promise<void> {
-    await page.goto(url, {
-      waitUntil: 'domcontentloaded',
-      timeout: 20000,
-    });
+  async fetchPageContent(
+    url: string,
+    isYoutube: boolean = false,
+  ): Promise<string | null> {
+    let page: Page | null = null;
+    try {
+      page = await this.getPage();
 
-    await page.waitForTimeout(3000);
+      await this.navigateAndPrepare(page, url);
 
-    // 팝업/쿠키 배너 닫기
-    await page
-      .click('[aria-label*="close"], .js-consent-banner button', {
-        timeout: 2000,
-      })
-      .catch(() => {});
+      const content = await this.extractTextContent(page, isYoutube);
 
-    await page.waitForTimeout(1000);
+      if (!content || content.length < CONFIG.content.minLength) {
+        return null;
+      }
+      return sanitizeText(content, CONFIG.content.maxLength);
+    } catch (error: any) {
+      console.error(`      Fetch error for ${url}:`, error.message);
+      return null;
+    } finally {
+      // 페이지는 닫고, 컨텍스트는 유지
+      if (page) await page.close().catch(() => {});
+    }
   }
 
-  /**
-   * 🆕 공통 텍스트 추출
-   */
-  private async extractTextContent(page: Page): Promise<string | null> {
-    const textContent = await page.evaluate(() => {
-      const trash = document.querySelectorAll(
-        'script, style, nav, footer, header, aside, .ads, .comments, #comments, iframe',
-      );
-      trash.forEach((el) => el.remove());
-
-      const article = document.querySelector(
-        'article, main, .post-content, .entry-content',
-      ) as HTMLElement | null;
-
-      return (article || document.body).innerText;
-    });
-
-    return textContent
-      ? sanitizeText(textContent, CONFIG.content.maxLength)
-      : null;
-  }
-
-  /**
-   * 한 번 방문으로 텍스트 + 스크린샷 둘 다 가져오기
-   * 🆕 주입받은 browser 인스턴스 재사용
-   */
   async fetchPageContentWithScreenshot(
     url: string,
     title: string,
@@ -137,24 +93,28 @@ export class BrowserService {
     content: ContentFetchResult | null;
     screenshot: string | null;
   }> {
-    let context: BrowserContext | null = null;
     let page: Page | null = null;
-
     try {
-      const configured = await this.createConfiguredPage();
-      context = configured.context;
-      page = configured.page;
-
-      console.log(
-        `      🌐 Fetching (single visit): ${(title || '').substring(0, 30)}...`,
-      );
+      page = await this.getPage();
+      console.log(`      🌐 Fetching: ${title.substring(0, 30)}...`);
 
       await this.navigateAndPrepare(page, url);
 
-      // 1️⃣ 텍스트 추출
-      const sanitizedContent = await this.extractTextContent(page);
+      // 1. 텍스트 추출
+      const rawText = await this.extractTextContent(page, false);
+      const sanitized = rawText
+        ? sanitizeText(rawText, CONFIG.content.maxLength)
+        : null;
 
-      // 2️⃣ 스크린샷 캡처
+      const contentResult: ContentFetchResult | null = sanitized
+        ? {
+            content: sanitized,
+            type: 'webpage',
+            source: 'webpage',
+          }
+        : null;
+
+      // 2. 스크린샷 캡처
       const buffer = await page.screenshot({
         fullPage: false,
         type: 'jpeg',
@@ -162,133 +122,38 @@ export class BrowserService {
       });
       const screenshot = buffer.toString('base64');
 
-      // 결과 반환
-      const content: ContentFetchResult | null = sanitizedContent
-        ? {
-            content: sanitizedContent,
-            type: 'webpage',
-            source: 'webpage',
-          }
-        : null;
-
-      if (content) {
-        console.log(
-          `      ✅ Content + Screenshot fetched: ${(title || '').substring(0, 30)}...`,
-        );
-      }
-
-      return { content, screenshot };
+      return { content: contentResult, screenshot };
     } catch (error: any) {
-      console.error(`      ❌ Fetch failed for ${url}:`, error.message);
+      console.error(`      ❌ Fetch error: ${error.message}`);
       return { content: null, screenshot: null };
     } finally {
       if (page) await page.close().catch(() => {});
-      if (context) await context.close().catch(() => {});
     }
   }
 
-  /**
-   * 📸 스크린샷만 촬영
-   * 🆕 주입받은 browser 인스턴스 재사용
-   */
-  async captureScreenshot(url: string): Promise<string | null> {
-    let context: BrowserContext | null = null;
-    let page: Page | null = null;
-
-    try {
-      const configured = await this.createConfiguredPage();
-      context = configured.context;
-      page = configured.page;
-
-      console.log(`      📸 Navigating to: ${url}`);
-
-      await this.navigateAndPrepare(page, url);
-
-      const buffer = await page.screenshot({
-        fullPage: false,
-        type: 'jpeg',
-        quality: 80,
-      });
-
-      return buffer.toString('base64');
-    } catch (error: any) {
-      console.error(`      📸 Screenshot failed for ${url}:`, error.message);
-      return null;
-    } finally {
-      if (page) await page.close().catch(() => {});
-      if (context) await context.close().catch(() => {});
-    }
+  private async navigateAndPrepare(page: Page, url: string) {
+    await page.goto(url, {
+      waitUntil: 'domcontentloaded',
+      timeout: CONFIG.browser.timeout,
+    });
   }
 
-  /**
-   * 텍스트만 가져오기
-   */
-  async fetchPageContent(
-    url: string,
-    isYoutube: boolean,
-  ): Promise<string | null> {
-    let context: BrowserContext | null = null;
-    let page: Page | null = null;
-
-    try {
-      context = await this.browser.newContext({
-        userAgent: CONFIG.browser.userAgent,
-      });
-
-      page = await context.newPage();
-
-      await page.route('**/*', (route) => {
-        const type = route.request().resourceType();
-        const url = route.request().url();
-
-        if (['image', 'media', 'font', 'stylesheet'].includes(type)) {
-          return route.abort();
-        }
-
-        if (AD_KEYWORDS.some((k) => url.includes(k))) {
-          return route.abort();
-        }
-
-        route.continue();
-      });
-
-      await page.goto(url, {
-        waitUntil: 'domcontentloaded',
-        timeout: CONFIG.browser.timeout,
-      });
-
-      const content = await page.evaluate((isYoutubePage: boolean) => {
-        if (isYoutubePage) {
-          const metaDesc = document.querySelector('meta[name="description"]');
-          if (metaDesc) {
-            return (metaDesc as HTMLMetaElement).content;
-          }
-          return document.body.innerText;
-        }
-
-        const trash = document.querySelectorAll(
-          'script, style, nav, footer, header, aside, .ads, .comments, #comments, iframe',
-        );
-        trash.forEach((el) => el.remove());
-
-        const article = document.querySelector(
-          'article, main, .post-content, .entry-content',
-        ) as HTMLElement | null;
-
-        return (article || document.body).innerText;
-      }, isYoutube);
-
-      if (!content || content.length < CONFIG.content.minLength) {
-        return null;
+  private async extractTextContent(page: Page, isYoutube: boolean = false) {
+    return await page.evaluate((isYoutubePage) => {
+      if (isYoutubePage) {
+        const metaDesc = document.querySelector('meta[name="description"]');
+        return metaDesc
+          ? (metaDesc as HTMLMetaElement).content
+          : document.body.innerText;
       }
-
-      return sanitizeText(content, CONFIG.content.maxLength);
-    } catch (error) {
-      console.error(`      Fetch error for ${url}:`, error);
-      return null;
-    } finally {
-      if (page) await page.close().catch(() => {});
-      if (context) await context.close().catch(() => {});
-    }
+      const trash = document.querySelectorAll(
+        'script, style, nav, footer, header, aside, .ads, .comments, iframe',
+      );
+      trash.forEach((el) => el.remove());
+      const article = document.querySelector(
+        'article, main, .post-content, .entry-content',
+      ) as HTMLElement;
+      return (article || document.body).innerText;
+    }, isYoutube);
   }
 }

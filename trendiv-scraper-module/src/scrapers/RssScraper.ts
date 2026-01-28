@@ -37,7 +37,7 @@ export class RssScraper implements Scraper {
     console.log(`📡 [RSS] ${config.name} 수집 시작...`);
 
     try {
-      // 1차 시도: 가벼운 Axios로 요청
+      console.log(`   try: 1차 Axios 요청 시도 (${config.url})...`);
       const response = await axios.get(config.url, {
         headers: {
           'User-Agent':
@@ -52,7 +52,11 @@ export class RssScraper implements Scraper {
         responseType: 'text',
       });
       xmlData = response.data;
+      console.log(`   ✅ 1차 Axios 성공`);
     } catch (error: any) {
+      console.log(
+        `   ⚠️ 1차 요청 실패: ${error.response?.status || error.message}`,
+      );
       if (
         error.response &&
         (error.response.status === 406 || error.response.status === 403)
@@ -152,11 +156,28 @@ export class RssScraper implements Scraper {
   }
 
   private async fetchWithBrowser(url: string): Promise<string> {
+    console.log(`   🚀 [Browser] 브라우저 실행 준비...`);
+
     let localBrowser: Browser | null = null;
     let browserToUse = this.browser;
 
     if (!browserToUse) {
-      localBrowser = await chromium.launch({ headless: true });
+      console.log(`   🆕 [Browser] 새 인스턴스 런치 시작...`);
+      localBrowser = await chromium.launch({
+        headless: true,
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-gpu',
+          '--disable-extensions',
+          '--disable-images',
+        ],
+        env: {
+          ...process.env,
+          DBUS_SESSION_BUS_ADDRESS: '/dev/null',
+        },
+      });
       browserToUse = localBrowser;
     }
 
@@ -169,6 +190,46 @@ export class RssScraper implements Scraper {
           'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
       });
       page = await context.newPage();
+
+      await page.route('**/*', async (route) => {
+        const request = route.request();
+        const resourceType = request.resourceType();
+        const reqUrl = request.url().toLowerCase();
+
+        // 1. 불필요한 리소스 차단 (이미지, 폰트, 미디어, 스타일)
+        if (['image', 'font', 'media', 'imageset'].includes(resourceType)) {
+          return await route.abort();
+        }
+
+        // 2. 네트워크를 붙잡고 있는 광고/채팅/분석 도구 키워드 차단
+        const blockList = [
+          'googleadservices',
+          'googlesyndication',
+          'doubleclick', // 구글 광고
+          'google-analytics',
+          'googletagmanager', // 분석 도구
+          'facebook',
+          'twitter',
+          'linkedin', // 소셜 추적기
+          'intercom',
+          'zendesk',
+          'crisp',
+          'channel.io', // 채팅 위젯
+          'hotjar',
+          'sentry',
+          'datadog', // 모니터링 툴
+          'adsystem',
+          'adserver', // 일반 광고
+        ];
+
+        // URL에 차단 키워드가 포함되어 있으면 즉시 연결 끊기
+        if (blockList.some((keyword) => reqUrl.includes(keyword))) {
+          return await route.abort();
+        }
+
+        // 나머지는 통과
+        return await route.continue();
+      });
 
       const response = await page.goto(url, {
         waitUntil: 'domcontentloaded',

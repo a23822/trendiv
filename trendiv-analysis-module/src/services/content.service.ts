@@ -3,7 +3,7 @@
  * Decides how to fetch content based on URL type
  */
 
-import { Browser } from 'playwright';
+import { Browser, BrowserContext } from 'playwright';
 import { ContentFetchResult } from '../types';
 import { BrowserService } from './browser.service';
 import { YouTubeService } from './youtube.service';
@@ -11,8 +11,8 @@ import { YouTubeService } from './youtube.service';
 export class ContentService {
   private browserService: BrowserService;
 
-  constructor(browser: Browser) {
-    this.browserService = new BrowserService(browser);
+  constructor(browser: Browser, sharedContext: BrowserContext) {
+    this.browserService = new BrowserService(browser, sharedContext);
   }
 
   /**
