@@ -38,118 +38,101 @@ function filterRecentTrends(trends: TrendItem[], days = 7): TrendItem[] {
  */
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+// 🆕 모드 타입 정의
+export type ScrapeMode = 'daily' | 'weekly';
+
 /**
- * 🚀 전체 스크래핑 실행 함수
+ * 메인 스크래핑 함수
+ * @param mode 'daily' | 'weekly' (기본값 'daily')
+ * @param manualDays (선택) 강제로 수집할 기간. 지정하지 않으면 모드에 따라 자동 설정됨 (Daily=3일, Weekly=4일)
  */
-export async function scrapeAll(days: number = 7): Promise<TrendItem[]> {
+export async function scrapeAll(
+  mode: ScrapeMode = 'daily',
+  manualDays?: number,
+): Promise<TrendItem[]> {
+  // 1. 기간 자동 설정 로직
+  // manualDays가 있으면(예: 365) 그걸 쓰고, 없으면 모드별 기본값 사용
+  const days = manualDays ?? (mode === 'weekly' ? 4 : 3);
+
   console.log(
-    `🚀 Trendiv Scraper 가동... (최근 ${days > 0 ? days + '일' : '전체'} 수집)`,
+    `🚀 Trendiv Scraper 가동... (Mode: ${mode.toUpperCase()}, 기간: 최근 ${days}일)`,
   );
 
-  let allResults: TrendItem[] = [];
-
+  const allResults: TrendItem[] = [];
   let browser: Browser | null = null;
-  const BATCH_SIZE = 5;
 
-  const launchBrowser = async () => {
-    try {
-      if (browser) await browser.close().catch(() => {});
-      console.log('🌍 브라우저 인스턴스 시작 (Memory Clean)...');
-      return await chromium.launch({
-        headless: true,
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-gpu',
-          '--no-zygote',
-          '--single-process',
-        ],
-        env: {
-          ...process.env,
-          DBUS_SESSION_BUS_ADDRESS: '/dev/null',
-        },
-      });
-    } catch (e: unknown) {
-      console.error('❌ 브라우저 실행 실패:', e);
-      return null;
-    }
-  };
+  // 🆕 모드에 따른 타겟 필터링
+  // Daily: X, Reddit (빠른 트렌드 반영이 필요한 소스)
+  // Weekly: 그 외 나머지 (주간 단위로 확인해도 되는 소스)
+  const targetsToRun = TARGETS.filter((t) => {
+    const isDailyTarget = t.category === 'X' || t.category === 'YouTube';
 
-  browser = await launchBrowser();
+    if (mode === 'daily') return isDailyTarget;
+    if (mode === 'weekly') return !isDailyTarget;
+    return true;
+  });
 
-  // 직렬 실행으로 VM 메모리 부하 방지
-  for (let i = 0; i < TARGETS.length; i++) {
-    const target = TARGETS[i];
+  console.log(
+    `📋 [Plan] 총 ${TARGETS.length}개 중 ${targetsToRun.length}개 타겟 실행`,
+  );
 
-    // 주기적 재시작 로직
-    if (i > 0 && i % BATCH_SIZE === 0) {
-      console.log(`♻️ [System] ${BATCH_SIZE}개 처리 완료. 브라우저 재시작...`);
-      browser = await launchBrowser();
-    }
+  try {
+    for (const target of targetsToRun) {
+      console.log(`\n▶️ [Processing] ${target.name} (${target.type})...`);
 
-    console.log(`\n▶️ [Processing] ${target.name} (${target.type})...`);
+      try {
+        let results: TrendItem[] = [];
 
-    try {
-      let results: TrendItem[] = [];
+        switch (target.type) {
+          case 'rss':
+            results = await new RssScraper().scrape(target);
+            break;
+          case 'html':
+            results = await new HtmlScraper().scrape(target);
+            break;
+          case 'youtube':
+            results = await new YoutubeScraper().scrape(target);
+            break;
+          case 'youtube_search':
+            results = await new YoutubeSearchScraper().scrape(target);
+            break;
+          case 'google_search':
+            results = await new GoogleSearchScraper().scrape(target);
+            break;
+          case 'stackoverflow':
+            results = await new StackOverflowScraper().scrape(target);
+            break;
+          case 'reddit':
+            results = await new RedditScraper().scrape(target);
+            break;
+          default:
+            console.warn(`⚠️ 알 수 없는 타입: ${target.type}`);
+            results = [];
+        }
 
-      switch (target.type) {
-        case 'rss':
-          results = await new RssScraper(browser || undefined).scrape(target);
-          break;
-        case 'html':
-          results = await new HtmlScraper(browser || undefined).scrape(target);
-          break;
-        case 'youtube':
-          results = await new YoutubeScraper().scrape(target);
-          break;
-        case 'youtube_search':
-          results = await new YoutubeSearchScraper().scrape(target);
-          break;
-        case 'google_search':
-          results = await new GoogleSearchScraper().scrape(target);
-          break;
-        case 'stackoverflow':
-          results = await new StackOverflowScraper().scrape(target);
-          break;
-        case 'reddit':
-          results = await new RedditScraper().scrape(target);
-          break;
-        default:
-          console.warn(`⚠️ 알 수 없는 타입: ${target.type}`);
-          results = [];
+        if (results.length > 0) {
+          allResults.push(...results);
+          console.log(`   ✅ ${results.length}건 수집 완료`);
+        } else {
+          console.log(`   ℹ️ 수집된 결과가 없습니다.`);
+        }
+      } catch (e: unknown) {
+        const err = e instanceof Error ? e : new Error(String(e));
+        console.error(`⚠️ [Skip] ${target.name} 수집 실패:`, err.message);
       }
-
-      if (results.length > 0) {
-        allResults.push(...results);
-        console.log(`   ✅ ${results.length}건 수집 완료`);
-      } else {
-        console.log(`   ℹ️ 수집된 결과가 없습니다. (정상 혹은 파싱 실패)`);
-      }
-    } catch (e: unknown) {
-      const err = e instanceof Error ? e : new Error(String(e));
-      console.error(`⚠️ [Skip] ${target.name} 수집 실패:`, {
-        message: err.message,
-        type: target.type,
-      });
+      await delay(500);
     }
-
-    // 💡 CPU/RAM 숨 고르기 (1초 휴식)
-    await delay(1000);
+  } catch (err) {
+    console.error('❌ Scraper Critical Error:', err);
+  } finally {
+    if (browser) {
+      await (browser as Browser).close();
+    }
   }
 
-  // 모든 작업이 끝나면 브라우저 종료
-  if (browser) {
-    console.log('🌍 브라우저 인스턴스 종료...');
-    await browser.close();
-  }
-
-  console.log(`\n📦 전체 수집 데이터: ${allResults.length}개`);
-
-  // 최종 필터링
+  console.log(`\n📦 전체 수집량: ${allResults.length}개`);
   const finalResults = filterRecentTrends(allResults, days);
-
-  console.log(`✨ 날짜 필터링 적용 후 최종: ${finalResults.length}개`);
+  console.log(`✨ 필터링 적용 후: ${finalResults.length}개`);
 
   return finalResults;
 }

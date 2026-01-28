@@ -63,7 +63,9 @@ const BATCH_DELAY_MS = 2000;
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-export const runPipeline = async (): Promise<PipelineResult> => {
+export const runPipeline = async (
+  mode: "daily" | "weekly" = "daily",
+): Promise<PipelineResult> => {
   const startTime = Date.now();
   console.log("🔥 [Pipeline] Start processing ALL items...");
 
@@ -88,9 +90,14 @@ export const runPipeline = async (): Promise<PipelineResult> => {
     const { count } = await supabase
       .from("trend")
       .select("*", { count: "exact", head: true });
-    const fetchDays = count === 0 ? 365 : 7;
 
-    const rawData = await runScraper(fetchDays);
+    let customDays: number | undefined = undefined;
+    if (count === 0) {
+      customDays = 365;
+      console.log("      ✨ Initial Sync detected: Fetching 365 days.");
+    }
+
+    const rawData = await runScraper(mode, customDays);
 
     if (rawData.length > 0) {
       const dbRawData = rawData.map((item) => ({
@@ -374,7 +381,7 @@ export const runPipeline = async (): Promise<PipelineResult> => {
         await resend.emails.send({
           from: "Trendiv <chanwoochae@trendiv.org>",
           to: ["a238220@gmail.com"],
-          subject: `🔥 Trendiv 통합 분석 알림 (${allValidTrends.length}건)`,
+          subject: `🔥 Trendiv 통합 분석 알림 (${mode.toUpperCase()} - ${allValidTrends.length}건)`,
           html: newsletterHtml,
         });
         console.log("      ✅ Email Sent!");
