@@ -28,6 +28,12 @@ const AD_KEYWORDS = [
   'facebook',
   'adnxs',
   'criteo',
+  'amazon-adsystem',
+  'moatads',
+  'pubmatic',
+  'rubiconproject',
+  'taboola',
+  'outbrain',
 ];
 
 export class BrowserService {
@@ -59,15 +65,19 @@ export class BrowserService {
       const resourceType = request.resourceType();
       const reqUrl = request.url();
 
-      const blockedTypes = ['media', 'font'];
-      const isBlockedType = blockedTypes.includes(resourceType);
-      const isAd = AD_KEYWORDS.some((keyword) => reqUrl.includes(keyword));
-
-      if (isBlockedType || isAd) {
-        route.abort();
-      } else {
-        route.continue();
+      // 1. 리소스 타입으로 차단 (이미지, 폰트, 미디어)
+      const blockedTypes = ['image', 'media', 'font'];
+      if (blockedTypes.includes(resourceType)) {
+        return route.abort();
       }
+
+      // 2. 광고 도메인 키워드로 차단
+      const isAd = AD_KEYWORDS.some((keyword) => reqUrl.includes(keyword));
+      if (isAd) {
+        return route.abort();
+      }
+
+      route.continue();
     });
 
     return { context, page };
@@ -79,7 +89,7 @@ export class BrowserService {
   private async navigateAndPrepare(page: Page, url: string): Promise<void> {
     await page.goto(url, {
       waitUntil: 'domcontentloaded',
-      timeout: 60000,
+      timeout: 20000,
     });
 
     await page.waitForTimeout(3000);
@@ -227,9 +237,20 @@ export class BrowserService {
 
       page = await context.newPage();
 
-      await page.route('**/*.{png,jpg,jpeg,svg,woff,woff2,mp4,webm}', (route) =>
-        route.abort(),
-      );
+      await page.route('**/*', (route) => {
+        const type = route.request().resourceType();
+        const url = route.request().url();
+
+        if (['image', 'media', 'font', 'stylesheet'].includes(type)) {
+          return route.abort();
+        }
+
+        if (AD_KEYWORDS.some((k) => url.includes(k))) {
+          return route.abort();
+        }
+
+        route.continue();
+      });
 
       await page.goto(url, {
         waitUntil: 'domcontentloaded',

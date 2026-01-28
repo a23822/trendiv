@@ -91,19 +91,6 @@
 {#snippet headerComponent()}
 	<div class="flex items-center justify-between gap-3">
 		<h2 class="text-xl font-bold text-gray-800">필터</h2>
-		<button
-			type="button"
-			onclick={handleReset}
-			class={cn(
-				'flex items-center gap-1',
-				'text-sm text-gray-700',
-				'sm:text-gray-500 sm:hover:text-gray-700',
-				CommonStyles.DEFAULT_TRANSITION
-			)}
-		>
-			<IconRefresh size={16} />
-			초기화
-		</button>
 	</div>
 {/snippet}
 
@@ -142,6 +129,19 @@
 				<span class="ml-2">선택됨</span>
 			{/if}
 		</div>
+		<button
+			type="button"
+			onclick={handleReset}
+			class={cn(
+				'ml-auto flex items-center gap-1 px-2',
+				'text-sm text-gray-700',
+				'sm:text-gray-500 sm:hover:text-gray-700',
+				CommonStyles.DEFAULT_TRANSITION
+			)}
+		>
+			<IconRefresh size={16} />
+			초기화
+		</button>
 		<button
 			type="button"
 			onclick={handleApply}

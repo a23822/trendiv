@@ -92,13 +92,20 @@ export class HtmlScraper implements Scraper {
         // 데이터가 완전히 다 뜰 때까지 기다립니다.
         try {
           await page.goto(config.url, {
-            waitUntil: 'networkidle',
-            timeout: 20000,
+            waitUntil: 'domcontentloaded',
+            timeout: 30000,
           });
+
+          await page
+            .waitForLoadState('networkidle', { timeout: 15000 })
+            .catch(() =>
+              console.warn(
+                `⚠️ [HTML] ${config.name}: 일부 리소스 로딩 지연 (수집은 계속 진행)`,
+              ),
+            );
         } catch (e) {
-          console.warn(
-            `⚠️ [HTML] ${config.name} 완전 로딩 타임아웃 (수집은 시도함)`,
-          );
+          console.error(`❌ [HTML] ${config.name} 페이지 접속 실패:`, e);
+          return [];
         }
         // 요소 대기
         try {

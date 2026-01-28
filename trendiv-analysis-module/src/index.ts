@@ -30,9 +30,6 @@ if (!apiKey) {
   process.exit(1);
 }
 
-const DEFAULT_GEMINI_MODEL =
-  process.env.GEMINI_MODEL || CONFIG.gemini.defaultModel;
-
 if (grokKey) {
   console.log(`⚙️ Grok Service Activated (For X.com)`);
 } else {
@@ -87,7 +84,21 @@ export async function runAnalysis(
     grokService = new GrokService(grokKey, grokModel);
   }
 
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({
+    headless: true,
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage', // 👈 핵심: 메모리 부족(Crash) 방지
+      '--disable-gpu',
+      '--disable-extensions',
+      '--disable-images', // 렌더링 부하 감소
+    ],
+    env: {
+      ...process.env,
+      DBUS_SESSION_BUS_ADDRESS: '/dev/null',
+    },
+  });
 
   // 3. AnalyzerService 생성 및 Provider 강제 설정
   const analyzerService = new AnalyzerService(
@@ -120,7 +131,7 @@ export async function runAnalysis(
           });
           console.log(`      ✅ Completed (Score: ${analysis.score}/10)`);
         } else {
-          // X 카테고리를 Gemini로 돌려서 스킵된 경우
+          // X => 그록 만, YouTube => 제미나이만
           console.log(`      ⏭️ Skipped (Provider mismatch or Logic)`);
         }
       } catch (error) {

@@ -52,21 +52,20 @@
 	}
 
 	$effect(() => {
+		// 반응형 의존성: 데이터나 스토어 준비 상태가 바뀌면 실행
 		const source = data.trends;
-		const currentFilter = statusFilter;
-		const isHiddenReady = hiddenArticles.isReady;
+		const ready = hiddenArticles.isReady;
 
 		untrack(() => {
-			if (source) {
-				// isReady가 false면 필터링 없이 전체 표시 (깜빡임 방지)
-				// hidden 필터일 때는 isReady 상관없이 전체 표시
-				if (currentFilter === 'hidden') {
-					trends = source;
-				} else if (!isHiddenReady) {
-					trends = source;
-				} else {
-					// 스토어 준비됨 - 숨김 아티클 필터링
+			// 페이지 첫 진입이고 아직 로딩 중이 아닐 때만 실행
+			if (source && page === 1 && !isLoadingMore) {
+				// 1. 숨김 보관함('hidden')이 아닐 때는 숨겨진 글을 리스트에서 제거
+				if (ready && statusFilter !== 'hidden') {
 					trends = source.filter((t) => !hiddenArticles.isHidden(t.link));
+				}
+				// 2. 아직 스토어가 준비 안 됐거나, 숨김 보관함이면 그대로 표시
+				else {
+					trends = source;
 				}
 			}
 		});
@@ -123,10 +122,6 @@
 	// =============================================
 	// Masonry 증분 처리 관련
 	// =============================================
-	let cachedColumns = $state<Trend[][]>([[], []]);
-	let cachedHeights = $state<number[]>([0, 0]);
-	let lastProcessedCount = $state(0);
-	let lastColumnCount = $state(2);
 
 	const columnCount = $derived(innerWidth < 640 ? 1 : 2);
 
@@ -142,55 +137,23 @@
 		);
 	}
 
-	function resetMasonryCache() {
-		cachedColumns = [[], []];
-		cachedHeights = [0, 0];
-		lastProcessedCount = 0;
-	}
-
-	$effect(() => {
-		const currentTrends = trends;
+	let masonryColumns = $derived.by(() => {
 		const cols = columnCount;
+		const items = trends; // ✅ 전체 리스트 사용
 
-		untrack(() => {
-			if (cols !== lastColumnCount) {
-				lastColumnCount = cols;
-				resetMasonryCache();
+		if (cols === 1) return [items];
+		if (items.length === 0) return [[], []];
 
-				if (cols === 1) {
-					cachedColumns = [currentTrends];
-					lastProcessedCount = currentTrends.length;
-					return;
-				}
-			}
+		const columns: Trend[][] = [[], []];
+		const heights = [0, 0];
 
-			if (cols === 1) {
-				cachedColumns = [currentTrends];
-				lastProcessedCount = currentTrends.length;
-				return;
-			}
+		for (const trend of items) {
+			const shorter = heights[0] <= heights[1] ? 0 : 1;
+			columns[shorter].push(trend);
+			heights[shorter] += estimateHeight(trend);
+		}
 
-			const firstCachedId = cachedColumns.at(0)?.at(0)?.id;
-			const firstTrendId = currentTrends.at(0)?.id;
-
-			if (
-				currentTrends.length === 0 ||
-				currentTrends.length < lastProcessedCount ||
-				(firstCachedId && firstTrendId && firstCachedId !== firstTrendId)
-			) {
-				resetMasonryCache();
-			}
-
-			for (let i = lastProcessedCount; i < currentTrends.length; i++) {
-				const trend = currentTrends[i];
-				const shorter = cachedHeights[0] <= cachedHeights[1] ? 0 : 1;
-
-				cachedColumns[shorter].push(trend);
-				cachedHeights[shorter] += estimateHeight(trend);
-			}
-
-			lastProcessedCount = currentTrends.length;
-		});
+		return columns;
 	});
 
 	// =============================================
@@ -211,7 +174,6 @@
 			page = 1;
 			hasMore = true;
 			trends = [];
-			resetMasonryCache();
 		} else {
 			isLoadingMore = true;
 			page += 1;
@@ -295,6 +257,8 @@
 	}
 
 	function handleClear() {
+		if (searchKeyword === '') return;
+
 		searchKeyword = '';
 		fetchTrends(true);
 	}
@@ -428,7 +392,7 @@
 				</div>
 			{:else}
 				<div class="grid grid-cols-1 items-start gap-6 sm:grid-cols-2">
-					{#each cachedColumns as column, colIndex (colIndex)}
+					{#each masonryColumns as column, colIndex (colIndex)}
 						<div class="flex flex-col gap-6">
 							{#each column as trend (trend.id)}
 								<ArticleCard
