@@ -45,27 +45,6 @@ export interface AnalysisOptions {
   provider?: 'gemini' | 'grok';
 }
 
-const getRandomUserAgent = () => {
-  const versions = [
-    '120.0.0.0',
-    '121.0.0.0',
-    '122.0.0.0',
-    '123.0.0.0',
-    '124.0.0.0',
-  ];
-  const randomVersion = versions[Math.floor(Math.random() * versions.length)];
-  return `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${randomVersion} Safari/537.36`;
-};
-
-const getRandomViewport = () => {
-  const viewports = [
-    { width: 1920, height: 1080 },
-    { width: 1366, height: 768 },
-    { width: 1536, height: 864 },
-  ];
-  return viewports[Math.floor(Math.random() * viewports.length)];
-};
-
 // ---------------------------------------------------------
 // 🚀 Main Analysis Function
 // ---------------------------------------------------------
@@ -185,10 +164,12 @@ export async function runAnalysis(
           // X => 그록 만, YouTube => 제미나이만
           console.log(`      ⏭️ Skipped (Provider mismatch or Logic)`);
         }
-      } catch (error) {
+      } catch (error: unknown) {
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
+
         console.error(
-          `      ❌ Failed to analyze trend #${trend.id}:`,
-          error instanceof Error ? error.message : String(error),
+          `❌ Failed to analyze trend #${trend.id}: ${errorMessage}`,
         );
         // Continue with next item
         continue;

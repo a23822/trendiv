@@ -140,13 +140,13 @@ ${CONFIG.prompt.tagGuide}
 
   /**
    * 📸 이미지 분석
-   * @param base64Image - Base64 인코딩된 이미지
+   * @param images - Base64 인코딩된 이미지 (단일 string 또는 string[])
    * @param title - 제목
    * @param category - 카테고리
    * @param modelOverride - 사용할 모델명 (선택)
    */
   async analyzeImage(
-    base64Image: string,
+    images: string | string[],
     title: string,
     category: string,
     modelOverride?: string,
@@ -158,18 +158,21 @@ ${CONFIG.prompt.tagGuide}
       '(아래 첨부된 스크린샷 이미지를 분석하여 내용을 파악하세요)',
     );
 
+    const imageList = Array.isArray(images) ? images : [images];
+
     // 새 SDK: contents 배열 형식
     const contents: Content[] = [
       {
         role: 'user',
         parts: [
-          {
+          { text: promptText },
+          // 모든 스크린샷 조각을 inlineData 파트로 추가
+          ...imageList.map((img) => ({
             inlineData: {
-              data: base64Image,
+              data: img,
               mimeType: 'image/jpeg',
             },
-          },
-          { text: promptText },
+          })),
         ],
       },
     ];

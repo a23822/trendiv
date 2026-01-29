@@ -20,7 +20,7 @@ export class GrokService {
    */
   private async callGrokAPI(
     systemPrompt: string,
-    userContent: string,
+    userContent: string | any[],
   ): Promise<GeminiAnalysisResponse> {
     const { maxRetries, initialRetryDelay, timeout } = CONFIG.grok;
     let lastError: unknown;
@@ -191,6 +191,55 @@ ${CONFIG.prompt.tagGuide}
 - 내용:
 ${(content || '').substring(0, CONFIG.grok.maxContentLength)}
     `.trim();
+
+    return this.callGrokAPI(systemPrompt, userContent);
+  }
+
+  /**
+   * [신규] 이미지와 함께 분석하는 메서드
+   * @param trend 트렌드 정보
+   * @param content 텍스트 본문
+   * @param images base64 이미지 문자열 배열 (data:image/jpeg;base64,... 형태)
+   */
+  async analyzeWithVision(
+    trend: Trend,
+    content: string,
+    images: string[] = [],
+  ): Promise<GeminiAnalysisResponse> {
+    const systemPrompt = `
+${CONFIG.prompt.role}
+[주의] 전달된 이미지(스크린샷)가 있다면, 텍스트 내용보다 이미지에 나타난 UI/UX 요소, 코드 스니펫, 기술적 데모를 우선적으로 분석하여 점수를 부여하세요.
+${CONFIG.prompt.scoringCriteria}
+${CONFIG.prompt.jsonFormat}
+${CONFIG.prompt.tagGuide}
+`.trim();
+
+    // 1. 텍스트 파트 구성
+    const userContent: any[] = [
+      {
+        type: 'text',
+        text: `
+[분석 대상]
+- 제목: ${trend.title}
+- 링크: ${trend.link}
+- 출처: ${trend.source} (${trend.category})
+- 내용:
+${(content || '').substring(0, CONFIG.grok.maxContentLength)}
+`.trim(),
+      },
+    ];
+
+    images.forEach((base64Image) => {
+      userContent.push({
+        type: 'image_url',
+        image_url: {
+          url: base64Image.startsWith('data:')
+            ? base64Image
+            : `data:image/jpeg;base64,${base64Image}`,
+          detail: 'high', // 상세 분석을 위해 high 설정
+        },
+      });
+    });
 
     return this.callGrokAPI(systemPrompt, userContent);
   }

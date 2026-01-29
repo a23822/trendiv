@@ -34,8 +34,6 @@ OUTPUT: "🔴 자동 구독 금지. store.subscribe() 또는 $derived() 사용"
 
 ### CORRECT_PATTERNS
 
-Props 정의:
-
 ```svelte
 <script lang="ts">
   import type { Snippet } from 'svelte';
@@ -50,8 +48,6 @@ Props 정의:
 </script>
 ```
 
-상태 관리:
-
 ```svelte
 let count = $state(0);
 let doubled = $derived(count * 2);
@@ -61,14 +57,10 @@ $effect(() => {
 });
 ```
 
-이벤트:
-
 ```svelte
 <button onclick={handleClick}>Click</button>
 <input oninput={handleInput} />
 ```
-
-Snippet 렌더링:
 
 ```svelte
 {#if children}
@@ -97,13 +89,13 @@ OUTPUT: "🔴 v3 문법. bg-bg-main, text-primary 형식 사용"
 ```
 PATTERN: 컴포넌트 내 z-index
 DETECT: `z-[`, `z-10`, `z-20`, `z-30`, `z-40`, `z-50`
-OUTPUT: "🔴 z-index는 컴포넌트 내부 정의 금지. 개발자가 필요 시 직접 부여. 최대한 불필요하게 마크업"
+OUTPUT: "🔴 z-index는 컴포넌트 내부 정의 금지. 개발자가 필요 시 직접 부여"
 ```
 
 ```
 PATTERN: 컴포넌트 내 min/max 크기
 DETECT: `min-w-`, `max-w-`, `min-h-`, `max-h-`
-OUTPUT: "🔴 min/max 크기는 컴포넌트 내부 정의 금지. 개발자가 필요 시 직접 부여. 최대한 불필요하게 마크업"
+OUTPUT: "🔴 min/max 크기는 컴포넌트 내부 정의 금지. 개발자가 필요 시 직접 부여"
 ```
 
 ---
@@ -111,7 +103,6 @@ OUTPUT: "🔴 min/max 크기는 컴포넌트 내부 정의 금지. 개발자가 
 ## COLOR_SYSTEM
 
 모든 컬러는 `variables_color.scss` + `app.css @theme`에 정의됨.
-Tailwind v4는 @theme 블록의 --color-\* 변수를 자동 인식.
 
 ### HEX → TAILWIND 매핑 (필수 참조)
 
@@ -147,170 +138,32 @@ GRAY (다크모드 자동 반전)
 #f5f5f5 → bg-gray-200
 #e5e5e5 → bg-gray-300
 #d4d4d4 → bg-gray-400
-#a3a3a3 → bg-gray-500, text-gray-500
-#737373 → bg-gray-600, text-gray-600
-#525252 → bg-gray-700, text-gray-700
-#404040 → bg-gray-800, text-gray-800
-#262626 → bg-gray-900, text-gray-900
-#000000 → bg-gray-1000, text-gray-1000
-
-MINT SCALE
-#e0f7f4 → bg-mint-50
-#b2ebe3 → bg-mint-100
-#80ded1 → bg-mint-200
-#4dd0bd → bg-mint-300
-#26c6a8 → bg-mint-400
-#1ba896 → bg-mint-500 (= primary)
-#148a7d → bg-mint-600
-#0d6b63 → bg-mint-700
-#09504b → bg-mint-800
-#053330 → bg-mint-900
-
-FOREST SCALE
-#e5f5ef → bg-forest-50
-#c2e8da → bg-forest-100
-#96d9c2 → bg-forest-200
-#68c7a8 → bg-forest-300
-#42b391 → bg-forest-400
-#2d9a7a → bg-forest-500
-#237d63 → bg-forest-600
-#19604c → bg-forest-700
-#104538 → bg-forest-800
-#082b23 → bg-forest-900
-
-FIXED (다크모드 무시)
--fixed 접미사 사용: bg-mint-500-fixed, text-gray-800-fixed
+#a3a3a3 → bg-gray-500
+#737373 → bg-gray-600
+#525252 → bg-gray-700
+#404040 → bg-gray-800
+#262626 → bg-gray-900
+#171717 → bg-gray-950
+#000000 → bg-gray-1000
 ```
 
 ### 사용 규칙
 
-```
-RULE: 시맨틱 컬러 우선
-용도에 맞는 시맨틱 변수 사용:
-- 배경 → bg-bg-*, bg-primary-*
-- 테두리 → border-border-*
-- 상태 → bg-confirm, bg-caution, bg-alert, bg-info
-- 스케일 필요시 → gray-*, mint-*, forest-*
-
-RULE: 다크모드 고려
-- 일반 변수: 다크모드에서 자동 반전 (gray-100 → 어두운색)
-- -fixed 변수: 다크모드 무시 (gray-100-fixed → 항상 밝은색)
-```
-
----
-
-## COLOR_SYSTEM
-
-모든 컬러는 `variables_color.scss` + `app.css @theme`에 정의됨.
-Tailwind v4는 @theme 블록의 --color-\* 변수를 자동 인식.
-
-### HEX → TAILWIND 매핑 (필수 참조)
-
-```
-PRIMARY (민트 계열)
-#1ba896 → bg-primary, text-primary, border-primary
-#148a7d → bg-primary-hover
-#0d6b63 → bg-primary-active
-#e0f7f4 → bg-primary-subtle
-
-BACKGROUND
-#f8fafc → bg-bg-body
-#ffffff → bg-bg-main, bg-bg-elevated
-#f1f5f9 → bg-bg-surface, bg-bg-hover
-#e2e8f0 → bg-bg-active
-#e0f7f4 → bg-bg-selected
-
-BORDER
-#e2e8f0 → border-border-default
-#f1f5f9 → border-border-subtle
-#cbd5e1 → border-border-strong
-#1ba896 → border-border-focus
-
-STATUS
-#10b981 → bg-confirm, text-confirm
-#f59e0b → bg-caution, text-caution
-#ef4444 → bg-alert, text-alert
-#0ea5e9 → bg-info, text-info
-
-GRAY (다크모드 자동 반전)
-#ffffff → bg-gray-0, text-gray-0
-#fafafa → bg-gray-100
-#f5f5f5 → bg-gray-200
-#e5e5e5 → bg-gray-300
-#d4d4d4 → bg-gray-400
-#a3a3a3 → bg-gray-500, text-gray-500
-#737373 → bg-gray-600, text-gray-600
-#525252 → bg-gray-700, text-gray-700
-#404040 → bg-gray-800, text-gray-800
-#262626 → bg-gray-900, text-gray-900
-#000000 → bg-gray-1000, text-gray-1000
-
-MINT SCALE
-#e0f7f4 → bg-mint-50
-#b2ebe3 → bg-mint-100
-#80ded1 → bg-mint-200
-#4dd0bd → bg-mint-300
-#26c6a8 → bg-mint-400
-#1ba896 → bg-mint-500 (= primary)
-#148a7d → bg-mint-600
-#0d6b63 → bg-mint-700
-#09504b → bg-mint-800
-#053330 → bg-mint-900
-
-FOREST SCALE
-#e5f5ef → bg-forest-50
-#c2e8da → bg-forest-100
-#96d9c2 → bg-forest-200
-#68c7a8 → bg-forest-300
-#42b391 → bg-forest-400
-#2d9a7a → bg-forest-500
-#237d63 → bg-forest-600
-#19604c → bg-forest-700
-#104538 → bg-forest-800
-#082b23 → bg-forest-900
-
-FIXED (다크모드 무시)
--fixed 접미사 사용: bg-mint-500-fixed, text-gray-800-fixed
-```
-
-### 사용 규칙
-
-```
-RULE: 시맨틱 컬러 우선
-용도에 맞는 시맨틱 변수 사용:
-- 배경 → bg-bg-*, bg-primary-*
-- 테두리 → border-border-*
-- 상태 → bg-confirm, bg-caution, bg-alert, bg-info
-- 스케일 필요시 → gray-*, mint-*, forest-*
-
-RULE: 다크모드 고려
-- 일반 변수: 다크모드에서 자동 반전 (gray-100 → 어두운색)
-- -fixed 변수: 다크모드 무시 (gray-100-fixed → 항상 밝은색)
-```
+- 시맨틱 컬러 우선 (bg-bg-_, border-border-_, bg-confirm 등)
+- 다크모드: 일반 변수 자동 반전, -fixed는 고정
 
 ### SHOULD_FLAG
 
 ```
 PATTERN: 임의값 사용
 DETECT: `p-[`, `m-[`, `w-[`, `h-[`, `text-[`, `gap-[`
-OUTPUT: "🟡 임의값보다 표준 클래스 권장. p-4, text-sm 등"
+OUTPUT: "🟡 임의값보다 표준 클래스 권장 (p-4, text-sm 등)"
 ```
 
 ```
 PATTERN: @apply 사용
 DETECT: `@apply`
 OUTPUT: "🟡 @apply 지양. 인라인 Tailwind 클래스 사용"
-```
-
-### SIZE_MAPPING (참고)
-
-```
-p-[4px] → p-1      text-[12px] → text-xs
-p-[8px] → p-2      text-[14px] → text-sm
-p-[12px] → p-3     text-[16px] → text-base
-p-[16px] → p-4     text-[18px] → text-lg
-p-[20px] → p-5     text-[20px] → text-xl
-p-[24px] → p-6     text-[24px] → text-2xl
 ```
 
 ### MUST_FLAG

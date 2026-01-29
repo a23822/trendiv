@@ -34,8 +34,6 @@ OUTPUT: "🔴 무한 루프 위험. 명시적 종료 조건 또는 최대 반복
 
 ### CORRECT_PATTERNS
 
-병렬 처리:
-
 ```typescript
 // ❌ 순차 (느림)
 const users = await fetchUsers();
@@ -44,8 +42,6 @@ const posts = await fetchPosts();
 // ✅ 병렬 (빠름)
 const [users, posts] = await Promise.all([fetchUsers(), fetchPosts()]);
 ```
-
-안전한 반복:
 
 ```typescript
 const MAX_ITERATIONS = 1000;
@@ -171,7 +167,6 @@ OUTPUT: "🟡 프로덕션에서는 구조화된 로깅 권장"
 ### CORRECT_PATTERNS
 
 ```typescript
-// 모듈별 prefix
 console.log("[Scraper] Starting fetch:", url);
 console.error("[Analysis] Failed:", error);
 console.warn("[Pipeline] Rate limit approaching");

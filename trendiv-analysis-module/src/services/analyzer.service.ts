@@ -108,7 +108,7 @@ export class AnalyzerService {
     // ---------------------------------------------------------
 
     let fetchedContent = '';
-    let fetchedScreenshot: string | null = null;
+    let fetchedScreenshots: string[] | null = null;
     let isUsedStoredContent = false;
 
     // Reddit은 fetch 스킵
@@ -128,7 +128,7 @@ export class AnalyzerService {
         console.log(`      📍 URL: ${trend.link}`);
         console.log(`      📍 Category: ${trend.category}`);
 
-        const { content, screenshot } =
+        const { content, screenshots } =
           await this.contentService.fetchContentWithScreenshot(
             trend.link,
             trend.title,
@@ -136,7 +136,7 @@ export class AnalyzerService {
 
         // content 객체에서 실제 텍스트(.content)만 추출
         fetchedContent = content?.content || '';
-        fetchedScreenshot = screenshot || null;
+        fetchedScreenshots = screenshots || null;
 
         console.log(`      ✅ Fetch success: ${fetchedContent.length} chars`);
       } catch (e: unknown) {
@@ -177,6 +177,25 @@ export class AnalyzerService {
         return null;
       }
       try {
+        // 💡 [수정 포인트] 스크린샷이 있으면 비전 모드 우선 실행
+        if (fetchedScreenshots && fetchedScreenshots.length > 0) {
+          console.log(`      📸 Using Grok (Vision Mode)...`);
+          const analysis = await this.grokService.analyzeWithVision(
+            trend,
+            fetchedContent || '',
+            fetchedScreenshots, // 스크린샷 전달
+          );
+
+          if (!analysis) return null;
+
+          return {
+            ...analysis,
+            id: trend.id,
+            aiModel: this.grokService.getModelName(),
+            analyzedAt: new Date().toISOString(),
+          };
+        }
+
         if (!isXCategory) {
           console.log(`      🦅 Using Grok API (with content)...`);
 
@@ -242,10 +261,10 @@ export class AnalyzerService {
       }
 
       // 2️⃣ 스크린샷 모드
-      if (fetchedScreenshot) {
+      if (fetchedScreenshots) {
         console.log(`      📸 Using Gemini (Vision Mode)...`);
         const analysis = await this.geminiService.analyzeImage(
-          fetchedScreenshot,
+          fetchedScreenshots,
           trend.title,
           trend.category,
         );
