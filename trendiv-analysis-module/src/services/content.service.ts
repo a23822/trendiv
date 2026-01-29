@@ -38,7 +38,7 @@ export class ContentService {
     title: string,
   ): Promise<{
     content: ContentFetchResult | null;
-    screenshot: string | null;
+    screenshots: string[] | null;
   }> {
     try {
       // 웹페이지: 한 번에 텍스트 + 스크린샷
@@ -51,7 +51,7 @@ export class ContentService {
         `      ❌ fetchContentWithScreenshot failed for ${url}:`,
         error.message,
       );
-      return { content: null, screenshot: null };
+      return { content: null, screenshots: null };
     }
   }
 

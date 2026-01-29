@@ -3,7 +3,7 @@
  */
 
 import { Browser, BrowserContext, Page } from 'playwright';
-import { CONFIG } from '../config';
+import { CONFIG, POOLS } from '../config';
 import { sanitizeText } from '../utils/helpers';
 import { ContentFetchResult } from '../types';
 
@@ -54,9 +54,16 @@ export class BrowserService {
     }
   }
 
-  private async getPage(): Promise<Page> {
+  private async getPage(allowImages: boolean = false): Promise<Page> {
+    const viewport =
+      POOLS.viewports[Math.floor(Math.random() * POOLS.viewports.length)];
     // 이미 있는 sharedContext에서 탭(Page)만 새로 엽니다.
     const page = await this.sharedContext.newPage();
+
+    await page.setViewportSize({
+      width: viewport.width,
+      height: viewport.height,
+    });
 
     // 리소스 차단 설정 (메모리 절약)
     await page.route('**/*', (route) => {
@@ -64,7 +71,9 @@ export class BrowserService {
       const url = route.request().url();
 
       // 1. 메모리 많이 먹는 리소스 차단
-      const blockedTypes = ['image', 'media', 'font', 'other'];
+      const blockedTypes = allowImages
+        ? ['media', 'font', 'other']
+        : ['image', 'media', 'font', 'other'];
       if (blockedTypes.includes(type)) {
         return route.abort();
       }
@@ -109,57 +118,74 @@ export class BrowserService {
     title: string,
   ): Promise<{
     content: ContentFetchResult | null;
-    screenshot: string | null;
+    screenshots: string[] | null;
   }> {
     let page: Page | null = null;
     try {
-      page = await this.getPage();
+      page = await this.getPage(true);
       console.log(`      🌐 Fetching: ${title.substring(0, 30)}...`);
+      console.log('fetchPageContentWithScreenshot');
 
-      await this.navigateAndPrepare(page, url);
+      await this.navigateAndPrepare(page, url, true);
 
-      // 1. 텍스트 추출
+      // 3. 다시 설정할 필요 없이, 이미 설정된 높이값을 가져와서 사용함
+      const viewportSize = page.viewportSize();
+      const vh = viewportSize ? viewportSize.height : 800;
+
+      const screenshots: string[] = [];
+
+      // 최대 3번 분할 캡처
+      for (let i = 0; i < 3; i++) {
+        const buffer = await page.screenshot({
+          fullPage: false, // 뷰포트 크기만큼만 촬영
+          type: 'jpeg',
+          quality: 90,
+        });
+        screenshots.push(buffer.toString('base64'));
+
+        if (i < 2) {
+          // 이미 설정된 뷰포트 높이만큼 정확히 스크롤
+          await page.evaluate((height) => window.scrollBy(0, height), vh);
+          await page.waitForTimeout(700);
+        }
+      }
+
+      // 4. 최대 3회 분할 캡처 로직 추가
       const rawText = await this.extractTextContent(page, false);
-      const sanitized = rawText
-        ? sanitizeText(rawText, CONFIG.content.maxLength)
-        : null;
-
-      const contentResult: ContentFetchResult | null = sanitized
+      const contentResult: ContentFetchResult | null = rawText
         ? {
-            content: sanitized,
-            type: 'webpage',
+            content: sanitizeText(rawText, CONFIG.content.maxLength),
+            type: 'webpage' as const,
             source: 'webpage',
           }
         : null;
 
-      // 2. 스크린샷 캡처
-      const buffer = await page.screenshot({
-        fullPage: false,
-        type: 'jpeg',
-        quality: 80,
-      });
-      const screenshot = buffer.toString('base64');
-
-      return { content: contentResult, screenshot };
+      return { content: contentResult, screenshots };
     } catch (error: any) {
       console.error(`      ❌ Fetch error: ${error.message}`);
-      return { content: null, screenshot: null };
+      return { content: null, screenshots: null };
     } finally {
       if (page) await page.close().catch(() => {});
     }
   }
 
-  private async navigateAndPrepare(page: Page, url: string) {
+  private async navigateAndPrepare(
+    page: Page,
+    url: string,
+    allowImages: boolean = false,
+  ) {
     await page.goto(url, {
-      waitUntil: 'domcontentloaded',
+      waitUntil: allowImages ? 'networkidle' : 'domcontentloaded',
       timeout: CONFIG.browser.timeout,
     });
 
     await this.simulateHumanBehavior(page);
 
-    await page
-      .waitForLoadState('networkidle', { timeout: 3000 })
-      .catch(() => {});
+    if (!allowImages) {
+      await page
+        .waitForLoadState('networkidle', { timeout: 20000 })
+        .catch(() => {});
+    }
   }
 
   private async extractTextContent(page: Page, isYoutube: boolean = false) {

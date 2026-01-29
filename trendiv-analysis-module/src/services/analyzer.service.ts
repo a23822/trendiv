@@ -108,7 +108,7 @@ export class AnalyzerService {
     // ---------------------------------------------------------
 
     let fetchedContent = '';
-    let fetchedScreenshot: string | null = null;
+    let fetchedScreenshots: string[] | null = null;
     let isUsedStoredContent = false;
 
     // Reddit은 fetch 스킵
@@ -128,7 +128,7 @@ export class AnalyzerService {
         console.log(`      📍 URL: ${trend.link}`);
         console.log(`      📍 Category: ${trend.category}`);
 
-        const { content, screenshot } =
+        const { content, screenshots } =
           await this.contentService.fetchContentWithScreenshot(
             trend.link,
             trend.title,
@@ -136,7 +136,7 @@ export class AnalyzerService {
 
         // content 객체에서 실제 텍스트(.content)만 추출
         fetchedContent = content?.content || '';
-        fetchedScreenshot = screenshot || null;
+        fetchedScreenshots = screenshots || null;
 
         console.log(`      ✅ Fetch success: ${fetchedContent.length} chars`);
       } catch (e: unknown) {
@@ -242,10 +242,10 @@ export class AnalyzerService {
       }
 
       // 2️⃣ 스크린샷 모드
-      if (fetchedScreenshot) {
+      if (fetchedScreenshots) {
         console.log(`      📸 Using Gemini (Vision Mode)...`);
         const analysis = await this.geminiService.analyzeImage(
-          fetchedScreenshot,
+          fetchedScreenshots,
           trend.title,
           trend.category,
         );
