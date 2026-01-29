@@ -15,6 +15,8 @@ import path from 'path';
 const envPath = path.resolve(__dirname, '../../.env');
 dotenv.config({ path: envPath });
 
+const CONCURRENCY_LIMIT = 3;
+
 /**
  * 📅 날짜 필터링 함수
  */
@@ -42,16 +44,60 @@ const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 export type ScrapeMode = 'daily' | 'weekly';
 
 /**
+ * 개별 타겟 처리 함수 (병렬 실행용)
+ */
+async function processTarget(target: any): Promise<TrendItem[]> {
+  try {
+    let results: TrendItem[] = [];
+    // console.log(`   ▶️ [Start] ${target.name} (${target.type})...`);
+
+    switch (target.type) {
+      case 'rss':
+        results = await new RssScraper().scrape(target);
+        break;
+      case 'html':
+        results = await new HtmlScraper().scrape(target);
+        break;
+      case 'youtube':
+        results = await new YoutubeScraper().scrape(target);
+        break;
+      case 'youtube_search':
+        results = await new YoutubeSearchScraper().scrape(target);
+        break;
+      case 'google_search':
+        results = await new GoogleSearchScraper().scrape(target);
+        break;
+      case 'stackoverflow':
+        results = await new StackOverflowScraper().scrape(target);
+        break;
+      case 'reddit':
+        results = await new RedditScraper().scrape(target);
+        break;
+      default:
+        console.warn(`⚠️ 알 수 없는 타입: ${target.type}`);
+        results = [];
+    }
+
+    if (results.length > 0) {
+      console.log(`      ✅ [Done] ${target.name}: ${results.length}건`);
+    } else {
+      console.log(`      ℹ️ [Empty] ${target.name}`);
+    }
+    return results;
+  } catch (e: unknown) {
+    const err = e instanceof Error ? e : new Error(String(e));
+    console.error(`      ❌ [Fail] ${target.name}: ${err.message}`);
+    return [];
+  }
+}
+
+/**
  * 메인 스크래핑 함수
- * @param mode 'daily' | 'weekly' (기본값 'daily')
- * @param manualDays (선택) 강제로 수집할 기간. 지정하지 않으면 모드에 따라 자동 설정됨 (Daily=3일, Weekly=4일)
  */
 export async function scrapeAll(
   mode: ScrapeMode = 'daily',
   manualDays?: number,
 ): Promise<TrendItem[]> {
-  // 1. 기간 자동 설정 로직
-  // manualDays가 있으면(예: 365) 그걸 쓰고, 없으면 모드별 기본값 사용
   const days = manualDays ?? (mode === 'weekly' ? 4 : 3);
 
   console.log(
@@ -59,75 +105,41 @@ export async function scrapeAll(
   );
 
   const allResults: TrendItem[] = [];
-  let browser: Browser | null = null;
+  const browser: Browser | null = null; // Browser 인스턴스 관리가 필요하다면 여기서 처리
 
-  // 🆕 모드에 따른 타겟 필터링
-  // Daily: X, Reddit (빠른 트렌드 반영이 필요한 소스)
-  // Weekly: 그 외 나머지 (주간 단위로 확인해도 되는 소스)
+  // 타겟 필터링
   const targetsToRun = TARGETS.filter((t) => {
     const isDailyTarget = t.category === 'X' || t.category === 'YouTube';
-
     if (mode === 'daily') return isDailyTarget;
     if (mode === 'weekly') return !isDailyTarget;
     return true;
   });
 
   console.log(
-    `📋 [Plan] 총 ${TARGETS.length}개 중 ${targetsToRun.length}개 타겟 실행`,
+    `📋 [Plan] 총 ${TARGETS.length}개 중 ${targetsToRun.length}개 타겟 실행 (병렬 처리)`,
   );
 
   try {
-    for (const target of targetsToRun) {
-      console.log(`\n▶️ [Processing] ${target.name} (${target.type})...`);
+    // ⚡️ 배치 처리 (Batch Processing)
+    // 한 번에 CONCURRENCY_LIMIT 개수만큼 병렬로 실행하여 시간 단축
+    for (let i = 0; i < targetsToRun.length; i += CONCURRENCY_LIMIT) {
+      const batch = targetsToRun.slice(i, i + CONCURRENCY_LIMIT);
+      console.log(
+        `\n🔄 [Batch ${Math.floor(i / CONCURRENCY_LIMIT) + 1}] Processing ${batch.length} targets...`,
+      );
 
-      try {
-        let results: TrendItem[] = [];
+      // 병렬 실행
+      const batchResults = await Promise.all(
+        batch.map((target) => processTarget(target)),
+      );
 
-        switch (target.type) {
-          case 'rss':
-            console.log(`   🛠️ [Scraper Init] RssScraper 실행 중...`); // 👈 추가
-            results = await new RssScraper().scrape(target);
-            break;
-          case 'html':
-            console.log(`   🛠️ [Scraper Init] HtmlScraper 실행 중...`); // 👈 추가
-            results = await new HtmlScraper().scrape(target);
-            break;
-          case 'youtube':
-            console.log(`   🛠️ [Scraper Init] YoutubeScraper 실행 중...`); // 👈 추가
-            results = await new YoutubeScraper().scrape(target);
-            break;
-          case 'youtube_search':
-            console.log(`   🛠️ [Scraper Init] YoutubeSearchScraper 실행 중...`); // 👈 추가
-            results = await new YoutubeSearchScraper().scrape(target);
-            break;
-          case 'google_search':
-            console.log(`   🛠️ [Scraper Init] GoogleSearchScraper 실행 중...`); // 👈 추가
-            results = await new GoogleSearchScraper().scrape(target);
-            break;
-          case 'stackoverflow':
-            console.log(`   🛠️ [Scraper Init] StackOverflowScraper 실행 중...`); // 👈 추가
-            results = await new StackOverflowScraper().scrape(target);
-            break;
-          case 'reddit':
-            console.log(`   🛠️ [Scraper Init] RedditScraper 실행 중...`);
-            results = await new RedditScraper().scrape(target);
-            break;
-          default:
-            console.warn(`⚠️ 알 수 없는 타입: ${target.type}`);
-            results = [];
-        }
+      // 결과 수집
+      batchResults.forEach((res) => allResults.push(...res));
 
-        if (results.length > 0) {
-          allResults.push(...results);
-          console.log(`   ✅ ${results.length}건 수집 완료`);
-        } else {
-          console.log(`   ℹ️ 수집된 결과가 없습니다.`);
-        }
-      } catch (e: unknown) {
-        const err = e instanceof Error ? e : new Error(String(e));
-        console.error(`⚠️ [Skip] ${target.name} 수집 실패:`, err.message);
+      // 배치 사이 약간 대기 (CPU 부하 조절)
+      if (i + CONCURRENCY_LIMIT < targetsToRun.length) {
+        await delay(1000);
       }
-      await delay(500);
     }
   } catch (e: unknown) {
     const err = e instanceof Error ? e : new Error(String(e));
