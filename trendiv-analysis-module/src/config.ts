@@ -24,7 +24,7 @@ export const CONFIG = {
 
   // Browser/Playwright
   browser: {
-    timeout: 60000,
+    timeout: 80000,
     locale: 'ko-KR',
     timezoneId: 'Asia/Seoul',
     bypassCSP: true,

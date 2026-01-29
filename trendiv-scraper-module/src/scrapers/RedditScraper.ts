@@ -47,7 +47,7 @@ export class RedditScraper implements Scraper {
             'Content-Type': 'application/x-www-form-urlencoded',
             'User-Agent': 'NodeJS:Trendiv:v1.0 (by /u/BNcQxa97uk45gMa8vYAVcw)',
           },
-          timeout: 10000,
+          timeout: 30000,
         },
       );
 
@@ -96,7 +96,7 @@ export class RedditScraper implements Scraper {
             Authorization: `Bearer ${token}`,
             'User-Agent': 'Trendiv/0.1 by TrendivBot',
           },
-          timeout: 10000,
+          timeout: 30000,
         },
       );
 

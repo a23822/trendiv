@@ -44,7 +44,7 @@ export class StackOverflowScraper implements Scraper {
             filter: 'withbody',
             key: process.env.STACKOVERFLOW_KEY,
           },
-          timeout: 10000,
+          timeout: 30000,
           headers: {
             'Accept-Encoding': 'gzip',
           },

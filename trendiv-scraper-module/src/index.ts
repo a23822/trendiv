@@ -128,17 +128,23 @@ export async function scrapeAll(
         `\n🔄 [Batch ${Math.floor(i / CONCURRENCY_LIMIT) + 1}] Processing ${batch.length} targets...`,
       );
 
-      // 병렬 실행
-      const batchResults = await Promise.all(
+      // 병렬
+
+      const batchResults = await Promise.allSettled(
         batch.map((target) => processTarget(target)),
       );
 
-      // 결과 수집
-      batchResults.forEach((res) => allResults.push(...res));
+      batchResults.forEach((result) => {
+        if (result.status === 'fulfilled') {
+          allResults.push(...result.value);
+        } else {
+          console.error('Batch item rejected:', result.reason);
+        }
+      });
 
       // 배치 사이 약간 대기 (CPU 부하 조절)
       if (i + CONCURRENCY_LIMIT < targetsToRun.length) {
-        await delay(1000);
+        await delay(3000);
       }
     }
   } catch (e: unknown) {

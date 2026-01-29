@@ -53,7 +53,7 @@ export class RssScraper implements Scraper {
           'Cache-Control': 'no-cache',
           Pragma: 'no-cache',
         },
-        timeout: 10000,
+        timeout: 30000,
         responseType: 'text',
       });
       xmlData = response.data;
@@ -133,7 +133,7 @@ export class RssScraper implements Scraper {
         params: {
           rss_url: config.url,
         },
-        timeout: 10000,
+        timeout: 30000,
       });
 
       if (response.data.status !== 'ok') {

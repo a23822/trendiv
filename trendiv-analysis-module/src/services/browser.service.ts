@@ -54,7 +54,7 @@ export class BrowserService {
     }
   }
 
-  private async getPage(allowImages: boolean = false): Promise<Page> {
+  private async getPage(): Promise<Page> {
     const viewport =
       POOLS.viewports[Math.floor(Math.random() * POOLS.viewports.length)];
     // 이미 있는 sharedContext에서 탭(Page)만 새로 엽니다.
@@ -71,9 +71,7 @@ export class BrowserService {
       const url = route.request().url();
 
       // 1. 메모리 많이 먹는 리소스 차단
-      const blockedTypes = allowImages
-        ? ['media', 'font', 'other']
-        : ['image', 'media', 'font', 'other'];
+      const blockedTypes = ['media', 'font', 'other'];
       if (blockedTypes.includes(type)) {
         return route.abort();
       }
@@ -122,11 +120,11 @@ export class BrowserService {
   }> {
     let page: Page | null = null;
     try {
-      page = await this.getPage(true);
+      page = await this.getPage();
       console.log(`      🌐 Fetching: ${title.substring(0, 30)}...`);
       console.log('fetchPageContentWithScreenshot');
 
-      await this.navigateAndPrepare(page, url, true);
+      await this.navigateAndPrepare(page, url);
 
       // 3. 다시 설정할 필요 없이, 이미 설정된 높이값을 가져와서 사용함
       const viewportSize = page.viewportSize();
@@ -169,23 +167,13 @@ export class BrowserService {
     }
   }
 
-  private async navigateAndPrepare(
-    page: Page,
-    url: string,
-    allowImages: boolean = false,
-  ) {
+  private async navigateAndPrepare(page: Page, url: string) {
     await page.goto(url, {
-      waitUntil: allowImages ? 'networkidle' : 'domcontentloaded',
+      waitUntil: 'domcontentloaded',
       timeout: CONFIG.browser.timeout,
     });
 
     await this.simulateHumanBehavior(page);
-
-    if (!allowImages) {
-      await page
-        .waitForLoadState('networkidle', { timeout: 20000 })
-        .catch(() => {});
-    }
   }
 
   private async extractTextContent(page: Page, isYoutube: boolean = false) {
