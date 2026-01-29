@@ -177,6 +177,25 @@ export class AnalyzerService {
         return null;
       }
       try {
+        // 💡 [수정 포인트] 스크린샷이 있으면 비전 모드 우선 실행
+        if (fetchedScreenshots && fetchedScreenshots.length > 0) {
+          console.log(`      📸 Using Grok (Vision Mode)...`);
+          const analysis = await this.grokService.analyzeWithVision(
+            trend,
+            fetchedContent || '',
+            fetchedScreenshots, // 스크린샷 전달
+          );
+
+          if (!analysis) return null;
+
+          return {
+            ...analysis,
+            id: trend.id,
+            aiModel: this.grokService.getModelName(),
+            analyzedAt: new Date().toISOString(),
+          };
+        }
+
         if (!isXCategory) {
           console.log(`      🦅 Using Grok API (with content)...`);
 

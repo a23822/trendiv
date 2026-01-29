@@ -139,7 +139,7 @@ export class BrowserService {
         const buffer = await page.screenshot({
           fullPage: false, // 뷰포트 크기만큼만 촬영
           type: 'jpeg',
-          quality: 90,
+          quality: 70,
         });
         screenshots.push(buffer.toString('base64'));
 
