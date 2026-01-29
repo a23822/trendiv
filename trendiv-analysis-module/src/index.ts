@@ -164,10 +164,12 @@ export async function runAnalysis(
           // X => 그록 만, YouTube => 제미나이만
           console.log(`      ⏭️ Skipped (Provider mismatch or Logic)`);
         }
-      } catch (error) {
+      } catch (error: unknown) {
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
+
         console.error(
-          `      ❌ Failed to analyze trend #${trend.id}:`,
-          error instanceof Error ? error.message : String(error),
+          `❌ Failed to analyze trend #${trend.id}: ${errorMessage}`,
         );
         // Continue with next item
         continue;
