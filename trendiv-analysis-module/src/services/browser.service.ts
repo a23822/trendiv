@@ -5,11 +5,7 @@
 import { Browser, BrowserContext, Page } from 'playwright';
 import { CONFIG } from '../config';
 import { sanitizeText } from '../utils/helpers';
-import { chromium } from 'playwright-extra';
-import stealth from 'puppeteer-extra-plugin-stealth';
 import { ContentFetchResult } from '../types';
-
-chromium.use(stealth());
 
 const AD_KEYWORDS = [
   'doubleclick',
@@ -34,6 +30,28 @@ export class BrowserService {
   constructor(browser: Browser, sharedContext: BrowserContext) {
     this.browser = browser;
     this.sharedContext = sharedContext;
+  }
+
+  private async simulateHumanBehavior(page: Page) {
+    try {
+      // 1. 마우스 커서를 랜덤하게 움직임 (직선이 아닌 곡선처럼 보이게 steps 설정)
+      const x = Math.floor(Math.random() * 500) + 100;
+      const y = Math.floor(Math.random() * 500) + 100;
+      await page.mouse.move(x, y, { steps: 15 });
+
+      // 2. 잠깐 멈칫 (0.5 ~ 1초)
+      await page.waitForTimeout(Math.random() * 500 + 500);
+
+      // 3. 스크롤을 부드럽게 내림 (Lazy Loading 데이터 유도)
+      await page.evaluate(() => {
+        window.scrollBy({ top: 300 + Math.random() * 200, behavior: 'smooth' });
+      });
+
+      // 4. 로딩 대기
+      await page.waitForTimeout(Math.random() * 500 + 500);
+    } catch (e) {
+      // 행동 시뮬레이션 중 에러는 무시 (메인 로직 방해 금지)
+    }
   }
 
   private async getPage(): Promise<Page> {
@@ -136,6 +154,12 @@ export class BrowserService {
       waitUntil: 'domcontentloaded',
       timeout: CONFIG.browser.timeout,
     });
+
+    await this.simulateHumanBehavior(page);
+
+    await page
+      .waitForLoadState('networkidle', { timeout: 3000 })
+      .catch(() => {});
   }
 
   private async extractTextContent(page: Page, isYoutube: boolean = false) {

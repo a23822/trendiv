@@ -5,8 +5,10 @@
 
 import path from 'path';
 import dotenv from 'dotenv';
-import { chromium } from 'playwright';
-import { CONFIG } from './config';
+import { Page } from 'playwright';
+import { chromium } from 'playwright-extra';
+import stealth from 'puppeteer-extra-plugin-stealth';
+import { CONFIG, getRandomContextOptions } from './config';
 import { Trend, PipelineResult } from './types';
 import { GeminiService } from './services/gemini.service';
 import { GrokService } from './services/grok.service';
@@ -16,6 +18,8 @@ import { delay } from './utils/helpers';
 // Re-export types for backward compatibility
 export type { AnalysisResult, Trend, PipelineResult } from './types';
 export { GrokService } from './services/grok.service';
+
+chromium.use(stealth());
 
 // ---------------------------------------------------------
 // 🔧 Environment Setup
@@ -40,6 +44,27 @@ export interface AnalysisOptions {
   modelName?: string;
   provider?: 'gemini' | 'grok';
 }
+
+const getRandomUserAgent = () => {
+  const versions = [
+    '120.0.0.0',
+    '121.0.0.0',
+    '122.0.0.0',
+    '123.0.0.0',
+    '124.0.0.0',
+  ];
+  const randomVersion = versions[Math.floor(Math.random() * versions.length)];
+  return `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${randomVersion} Safari/537.36`;
+};
+
+const getRandomViewport = () => {
+  const viewports = [
+    { width: 1920, height: 1080 },
+    { width: 1366, height: 768 },
+    { width: 1536, height: 864 },
+  ];
+  return viewports[Math.floor(Math.random() * viewports.length)];
+};
 
 // ---------------------------------------------------------
 // 🚀 Main Analysis Function
@@ -94,6 +119,7 @@ export async function runAnalysis(
       '--no-zygote',
       '--disable-images',
       '--disable-extensions',
+      '--disable-blink-features=AutomationControlled',
     ],
     env: {
       ...process.env,
@@ -101,12 +127,27 @@ export async function runAnalysis(
     },
   });
 
-  const sharedContext = await browser.newContext({
-    userAgent: CONFIG.browser.userAgent,
-    viewport: CONFIG.browser.viewport,
-    locale: CONFIG.browser.locale,
-    timezoneId: CONFIG.browser.timezoneId,
-    // 필요하면 bypassCSP: true, 등 추가
+  const sharedContext = await browser.newContext(getRandomContextOptions());
+
+  await sharedContext.addInitScript(() => {
+    // WebRTC 비활성화 (IP 유출 방지)
+    Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+    // @ts-ignore
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      // @ts-ignore
+      navigator.mediaDevices.getUserMedia = () =>
+        Promise.reject(new Error('Permission denied'));
+    }
+
+    // WebGL Fingerprint Spoofing (Intel 그래픽카드 위장)
+    const getParameter = WebGLRenderingContext.prototype.getParameter;
+    WebGLRenderingContext.prototype.getParameter = function (parameter) {
+      // UNMASKED_VENDOR_WEBGL
+      if (parameter === 37445) return 'Intel Inc.';
+      // UNMASKED_RENDERER_WEBGL
+      if (parameter === 37446) return 'Intel Iris OpenGL Engine';
+      return getParameter.apply(this, [parameter]);
+    };
   });
 
   // 3. AnalyzerService 생성 및 Provider 강제 설정

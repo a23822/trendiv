@@ -1,8 +1,36 @@
-import { chromium, Browser } from 'playwright';
+import { Browser, Page } from 'playwright';
+import { CONFIG, getRandomContextOptions } from '../config/config';
+import { chromium } from 'playwright-extra';
+import stealth from 'puppeteer-extra-plugin-stealth';
 import { Scraper, ScraperConfig, TrendItem } from './interface';
+
+chromium.use(stealth());
 
 export class HtmlScraper implements Scraper {
   constructor(private browser?: Browser) {}
+
+  // 🤖 인간 흉내 내기 함수 (마우스 무브 + 스크롤)
+  private async simulateHumanBehavior(page: Page) {
+    try {
+      // 1. 랜덤한 위치로 마우스 이동 (너무 빠르지 않게)
+      const x = Math.floor(Math.random() * 500) + 100;
+      const y = Math.floor(Math.random() * 500) + 100;
+      await page.mouse.move(x, y, { steps: 10 });
+
+      // 2. 약간의 딜레이 (사람이 화면을 보는 시간)
+      await page.waitForTimeout(Math.random() * 500 + 500);
+
+      // 3. 부드럽게 스크롤 조금 내리기
+      await page.evaluate(() => {
+        window.scrollBy({ top: 300 + Math.random() * 200, behavior: 'smooth' });
+      });
+
+      // 4. 스크롤 후 로딩 대기
+      await page.waitForTimeout(Math.random() * 500 + 500);
+    } catch (e) {
+      // 행동 시뮬레이션 실패는 크리티컬하지 않으므로 무시
+    }
+  }
 
   async scrape(config: ScraperConfig): Promise<TrendItem[]> {
     console.log(`🕷️ [HTML] ${config.name} 수집 시작...`);
@@ -26,6 +54,7 @@ export class HtmlScraper implements Scraper {
           '--no-zygote',
           '--disable-images',
           '--disable-extensions',
+          '--disable-blink-features=AutomationControlled',
         ],
         env: {
           ...process.env,
@@ -39,10 +68,18 @@ export class HtmlScraper implements Scraper {
     let page;
 
     try {
-      context = await browserToUse.newContext({
-        userAgent:
-          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      context = await browserToUse.newContext(getRandomContextOptions());
+      await context.addInitScript(() => {
+        // WebRTC 비활성화 (IP 유출 방지)
+        Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+        // @ts-ignore
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+          // @ts-ignore
+          navigator.mediaDevices.getUserMedia = () =>
+            Promise.reject(new Error('Permission denied'));
+        }
       });
+
       page = await context.newPage();
 
       try {
@@ -92,8 +129,10 @@ export class HtmlScraper implements Scraper {
         try {
           await page.goto(config.url, {
             waitUntil: 'domcontentloaded',
-            timeout: 30000,
+            timeout: CONFIG.browser.timeout,
           });
+
+          await this.simulateHumanBehavior(page);
 
           await page
             .waitForLoadState('networkidle', { timeout: 15000 })

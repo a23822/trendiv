@@ -1,6 +1,9 @@
 import Parser from 'rss-parser';
 import axios from 'axios';
-import { chromium, Browser } from 'playwright';
+import { Browser } from 'playwright';
+import { CONFIG, getRandomContextOptions } from '../config/config';
+import { chromium } from 'playwright-extra';
+import stealth from 'puppeteer-extra-plugin-stealth';
 import { Scraper, ScraperConfig, TrendItem } from './interface';
 
 // rss2json 응답 타입
@@ -16,6 +19,8 @@ interface Rss2JsonResponse {
   status: string;
   items: Rss2JsonItem[];
 }
+
+chromium.use(stealth());
 
 export class RssScraper implements Scraper {
   private parser = new Parser();
@@ -173,6 +178,7 @@ export class RssScraper implements Scraper {
           '--no-zygote',
           '--disable-images',
           '--disable-extensions',
+          '--disable-blink-features=AutomationControlled',
         ],
         env: {
           ...process.env,
@@ -186,10 +192,12 @@ export class RssScraper implements Scraper {
     let page;
 
     try {
-      context = await browserToUse.newContext({
-        userAgent:
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+      context = await browserToUse.newContext(getRandomContextOptions());
+
+      await context.addInitScript(() => {
+        Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
       });
+
       page = await context.newPage();
 
       await page.route('**/*', async (route) => {
@@ -234,7 +242,7 @@ export class RssScraper implements Scraper {
 
       const response = await page.goto(url, {
         waitUntil: 'domcontentloaded',
-        timeout: 30000,
+        timeout: CONFIG.browser.timeout,
       });
 
       const text = (await response?.text()) || '';
