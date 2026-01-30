@@ -1,31 +1,41 @@
-import { Browser, BrowserContext } from 'playwright';
-import { AnalysisResult, Trend } from '../types';
-import { ContentService } from './content.service';
-import { GeminiService } from './gemini.service';
+/**
+ * Analyzer Service v2.0
+ *
+ * 🆕 전략 변경:
+ * - 기존: Playwright로 콘텐츠 수집 → AI 분석
+ * - 변경: AI API가 직접 URL 분석 (1차) → 실패 시 FAIL 상태 반환
+ *
+ * Playwright는 별도 RetryService에서 FAIL 항목 재시도 시에만 사용
+ */
+
+import { AnalysisResult, Trend, FailedAnalysisResult } from '../types';
+import { GeminiService, UrlAnalysisError } from './gemini.service';
 import { GrokService } from './grok.service';
 import { YouTubeService } from './youtube.service';
 
-// 콘텐츠 길이 상수 (통일된 기준)
-const MIN_CONTENT_LENGTH = 200;
+// 분석 결과 또는 실패 결과
+export type AnalyzerResult = AnalysisResult | FailedAnalysisResult;
+
+// 실패 결과인지 체크하는 타입 가드
+export function isFailedResult(
+  result: AnalyzerResult,
+): result is FailedAnalysisResult {
+  return 'status' in result && result.status === 'FAIL';
+}
+
+// URL 분석 에러인지 체크
+function isUrlAnalysisError(result: any): result is UrlAnalysisError {
+  return result && 'type' in result && 'message' in result;
+}
 
 export class AnalyzerService {
-  private contentService: ContentService;
   private geminiService: GeminiService;
   private grokService: GrokService | null;
   private youtubeService: YouTubeService;
-  private sharedContext: BrowserContext;
 
   private forceProvider: 'gemini' | 'grok' | null = null;
 
-  constructor(
-    browser: Browser,
-    geminiService: GeminiService,
-    sharedContext: BrowserContext,
-    grokService?: GrokService,
-  ) {
-    this.sharedContext = sharedContext;
-    this.contentService = new ContentService(browser, sharedContext);
-
+  constructor(geminiService: GeminiService, grokService?: GrokService) {
     this.geminiService = geminiService;
     this.grokService = grokService || null;
     this.youtubeService = new YouTubeService();
@@ -35,9 +45,9 @@ export class AnalyzerService {
     this.forceProvider = provider;
   }
 
-  /**
-   * 카테고리/소스 판별 유틸리티
-   */
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // 카테고리/소스 판별 유틸리티
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   private isYoutubeContent(trend: Trend): boolean {
     const category = trend.category?.toLowerCase() || '';
     const source = trend.source?.toLowerCase() || '';
@@ -55,138 +65,84 @@ export class AnalyzerService {
     return trend.category === 'X';
   }
 
-  private isRedditContent(trend: Trend): boolean {
-    return trend.category === 'Reddit';
-  }
-
-  /**
-   * Analyze a single trend item
-   */
-  async analyzeTrend(trend: Trend): Promise<AnalysisResult | null> {
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // 🎯 메인 분석 메서드 (Playwright 제거, AI API URL 직접 분석)
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  async analyzeTrend(trend: Trend): Promise<AnalyzerResult | null> {
     // 필수 필드 검증
     if (!trend.id) {
       console.error('      ❌ Trend ID is missing. Skipping analysis.');
       return null;
     }
 
+    const safeTitle = trend.title?.substring(0, 50) ?? 'No Title';
     console.log(
-      `[DEBUG] Category: "${trend.category}", Source: "${trend.source}", Link: "${trend.link}"`,
+      `[Analyzer] Category: "${trend.category}", Link: "${trend.link.substring(0, 60)}..."`,
     );
 
     const isYoutube = this.isYoutubeContent(trend);
-    console.log(`[DEBUG] isYoutube: ${isYoutube}`);
     const isXCategory = this.isXContent(trend);
-    const isReddit = this.isRedditContent(trend);
 
+    // Provider 결정
     const shouldUseGrok =
       this.forceProvider === 'grok' || (!this.forceProvider && isXCategory);
 
-    // 안전한 제목 추출
-    const safeTitle = trend.title?.substring(0, 20) ?? 'No Title';
-
-    // ---------------------------------------------------------
-    // 1️⃣ YouTube
-    // ---------------------------------------------------------
+    // ─────────────────────────────────────────────────────────
+    // 1️⃣ YouTube 콘텐츠
+    // ─────────────────────────────────────────────────────────
     if (isYoutube) {
-      const result = await this.youtubeService.getAnalysis(
-        trend,
-        this.geminiService,
-      );
+      console.log(`      📺 [YouTube] Analyzing: ${safeTitle}...`);
 
-      // YouTube 결과에도 id 보장
-      if (result) {
-        return {
-          ...result,
-          id: trend.id,
-        } as AnalysisResult;
-      }
-      return null;
-    }
-
-    // ---------------------------------------------------------
-    // 콘텐츠 확보 전략 (Fallback to DB)
-    // ---------------------------------------------------------
-
-    let fetchedContent = '';
-    let fetchedScreenshots: string[] | null = null;
-    let isUsedStoredContent = false;
-
-    // Reddit은 fetch 스킵
-    if (isReddit) {
-      if (trend.content && trend.content.length > 0) {
-        console.log(
-          `      ⭐️ Reddit detected - using stored content (${trend.content.length} chars)`,
-        );
-        fetchedContent = trend.content;
-        isUsedStoredContent = true;
-      } else {
-        console.log(`      ⚠️ Reddit detected but no stored content available`);
-      }
-    } else if (!isXCategory) {
       try {
-        console.log(`      Trying live fetch for: ${safeTitle}...`);
-        console.log(`      📍 URL: ${trend.link}`);
-        console.log(`      📍 Category: ${trend.category}`);
-
-        const { content, screenshots } =
-          await this.contentService.fetchContentWithScreenshot(
-            trend.link,
-            trend.title,
-          );
-
-        // content 객체에서 실제 텍스트(.content)만 추출
-        fetchedContent = content?.content || '';
-        fetchedScreenshots = screenshots || null;
-
-        console.log(`      ✅ Fetch success: ${fetchedContent.length} chars`);
-      } catch (e: unknown) {
-        const error = e as Error;
-        console.error(`      ❌ Live fetch FAILED`);
-        console.error(`      📍 URL: ${trend.link}`);
-        console.error(`      📍 Category: ${trend.category}`);
-        console.error(`      📍 Error name: ${error?.name}`);
-        console.error(`      📍 Error message: ${error?.message}`);
-        console.error(
-          `      📍 Error stack: ${error?.stack?.substring(0, 500)}`,
+        const result = await this.youtubeService.getAnalysis(
+          trend,
+          this.geminiService,
         );
-        console.warn(`      ⚠️ Falling back to DB content...`);
+
+        if (result) {
+          return {
+            ...result,
+            id: trend.id,
+          } as AnalysisResult;
+        }
+
+        // YouTube 분석 실패
+        return this.createFailResult(
+          trend.id,
+          'API_ERROR',
+          'YouTube 분석 실패 (자막 없음 또는 API 오류)',
+        );
+      } catch (error: unknown) {
+        const msg = error instanceof Error ? error.message : String(error);
+        return this.createFailResult(
+          trend.id,
+          'API_ERROR',
+          `YouTube 분석 예외: ${msg}`,
+        );
       }
     }
 
-    // 2. [Fallback] 라이브 콘텐츠가 부실하면 DB에 저장된 본문 사용
-    if (
-      fetchedContent.length < MIN_CONTENT_LENGTH &&
-      trend.content &&
-      trend.content.length > fetchedContent.length
-    ) {
-      console.log(
-        `      ♻️ Live content insufficient (${fetchedContent.length} chars). Using STORED content (${trend.content.length} chars).`,
-      );
-      fetchedContent = trend.content;
-      isUsedStoredContent = true;
-    }
-
-    // ---------------------------------------------------------
-    // 🚀 [분석 실행] 확보한 fetchedContent 사용
-    // ---------------------------------------------------------
-
-    // A. Grok 실행
+    // ─────────────────────────────────────────────────────────
+    // 2️⃣ X(Twitter) 콘텐츠 → Grok 사용
+    // ─────────────────────────────────────────────────────────
     if (shouldUseGrok) {
       if (!this.grokService) {
-        console.warn('      ⚠️ Grok Service not initialized. Skipping.');
-        return null;
+        console.warn(
+          '      ⚠️ Grok Service not initialized. Skipping X content.',
+        );
+        return this.createFailResult(
+          trend.id,
+          'PROVIDER_MISMATCH',
+          'Grok API Key 미설정 (X 콘텐츠 분석 불가)',
+        );
       }
+
+      console.log(`      🦅 [Grok] Analyzing X content: ${safeTitle}...`);
+
       try {
-        // 💡 [수정 포인트] 스크린샷이 있으면 비전 모드 우선 실행
-        if (fetchedScreenshots && fetchedScreenshots.length > 0) {
-          console.log(`      📸 Using Grok (Vision Mode)...`);
-          const analysis = await this.grokService.analyzeWithVision(
-            trend,
-            fetchedContent || '',
-            fetchedScreenshots, // 스크린샷 전달
-          );
-
-          if (!analysis) return null;
+        // X 카테고리는 기존 analyze() 메서드 사용 (title + link만으로 분석)
+        if (isXCategory) {
+          const analysis = await this.grokService.analyze(trend);
 
           return {
             ...analysis,
@@ -196,97 +152,92 @@ export class AnalyzerService {
           };
         }
 
-        if (!isXCategory) {
-          console.log(`      🦅 Using Grok API (with content)...`);
+        // X가 아닌데 Grok 강제 사용 → URL 직접 분석
+        const result = await this.grokService.analyzeUrl(
+          trend.link,
+          trend.title,
+          trend.category,
+          trend.source,
+        );
 
-          const analysis = await this.grokService.analyzeWithContent(
-            trend,
-            fetchedContent,
-          );
-
-          if (!analysis) return null;
-
-          return {
-            ...analysis,
-            id: trend.id,
-            aiModel: this.grokService.getModelName(),
-            analyzedAt: new Date().toISOString(),
-            content: isUsedStoredContent ? undefined : fetchedContent,
-          };
+        if (isUrlAnalysisError(result)) {
+          return this.createFailResult(trend.id, result.type, result.message);
         }
-
-        // X 카테고리
-        console.log(`      🦅 Using Grok API (X post)...`);
-        const analysis = await this.grokService.analyze(trend);
-
-        if (!analysis) return null;
 
         return {
-          ...analysis,
+          ...result,
           id: trend.id,
           aiModel: this.grokService.getModelName(),
           analyzedAt: new Date().toISOString(),
         };
       } catch (error: unknown) {
-        const err = error as Error;
-        console.error(`❌ Grok analysis failed:`);
-        console.error(`      📍 Error name: ${err?.name}`);
-        console.error(`      📍 Error message: ${err?.message}`);
-        return null;
+        const msg = error instanceof Error ? error.message : String(error);
+        console.error(`      ❌ Grok analysis failed: ${msg}`);
+        return this.createFailResult(
+          trend.id,
+          'API_ERROR',
+          `Grok 분석 예외: ${msg}`,
+        );
       }
     }
 
-    // B. Gemini 실행
+    // ─────────────────────────────────────────────────────────
+    // 3️⃣ 일반 웹페이지 → Gemini URL 직접 분석
+    // ─────────────────────────────────────────────────────────
+    console.log(`      🤖 [Gemini] Analyzing URL directly: ${safeTitle}...`);
+
     try {
-      // 1️⃣ 텍스트 모드
-      if (fetchedContent.length >= MIN_CONTENT_LENGTH) {
-        console.log(`      📝 Using Gemini (Text Mode)...`);
-        const prompt = this.geminiService.buildPrompt(
-          trend.title,
-          trend.source,
-          trend.category,
-          fetchedContent,
-        );
-        const analysis = await this.geminiService.analyze(prompt);
+      const result = await this.geminiService.analyzeUrl(
+        trend.link,
+        trend.title,
+        trend.category,
+        trend.source,
+      );
 
-        if (!analysis) return null;
-
-        return {
-          ...analysis,
-          id: trend.id,
-          aiModel: this.geminiService.getModelName(),
-          analyzedAt: new Date().toISOString(),
-          content: isUsedStoredContent ? undefined : fetchedContent,
-        };
+      // URL 접근 실패 체크
+      if (isUrlAnalysisError(result)) {
+        console.log(`      ⚠️ Gemini URL access failed: ${result.message}`);
+        return this.createFailResult(trend.id, result.type, result.message);
       }
 
-      // 2️⃣ 스크린샷 모드
-      if (fetchedScreenshots) {
-        console.log(`      📸 Using Gemini (Vision Mode)...`);
-        const analysis = await this.geminiService.analyzeImage(
-          fetchedScreenshots,
-          trend.title,
-          trend.category,
-        );
-
-        if (!analysis) return null;
-
-        return {
-          ...analysis,
-          id: trend.id,
-          aiModel: this.geminiService.getModelName(),
-          analyzedAt: new Date().toISOString(),
-        };
-      }
-
-      console.log(`      ⚠️ No content or screenshot available`);
-      return null;
+      // 성공
+      return {
+        ...result,
+        id: trend.id,
+        aiModel: this.geminiService.getModelName(),
+        analyzedAt: new Date().toISOString(),
+      };
     } catch (error: unknown) {
-      const err = error as Error;
-      console.error(`❌ Gemini analysis failed:`);
-      console.error(`      📍 Error name: ${err?.name}`);
-      console.error(`      📍 Error message: ${err?.message}`);
-      return null;
+      const msg = error instanceof Error ? error.message : String(error);
+      console.error(`      ❌ Gemini analysis failed: ${msg}`);
+      return this.createFailResult(
+        trend.id,
+        'API_ERROR',
+        `Gemini 분석 예외: ${msg}`,
+      );
     }
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // 🆕 실패 결과 생성 헬퍼
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  private createFailResult(
+    id: number,
+    failType:
+      | 'PROVIDER_MISMATCH'
+      | 'URL_ACCESS_FAIL' // AI가 URL 접근 못함
+      | 'CONTENT_BLOCKED' // 차단됨
+      | 'API_ERROR' // AI API 자체 에러
+      | 'TIMEOUT' // Playwright 타임아웃
+      | 'EMPTY_CONTENT' // 본문 추출 실패
+      | 'SKIPPED', // 재시도 횟수 초과 등
+    failReason: string,
+  ): FailedAnalysisResult {
+    return {
+      id,
+      status: 'FAIL',
+      failType,
+      failReason,
+    };
   }
 }

@@ -1,10 +1,21 @@
+/**
+ * Grok AI Analysis Service
+ *
+ * 🆕 v2.0 - URL 분석 실패 타입 명시화
+ */
+
 import axios, { AxiosError } from 'axios';
 import { CONFIG } from '../config';
 import { GeminiAnalysisResponse, Trend } from '../types';
 import { parseGeminiResponse } from '../utils/helpers';
 
-// 딜레이 헬퍼
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// 🆕 URL 분석 실패 타입 (Gemini와 동일)
+export interface UrlAnalysisError {
+  type: 'URL_ACCESS_FAIL' | 'CONTENT_BLOCKED' | 'API_ERROR';
+  message: string;
+}
 
 export class GrokService {
   private apiKey: string;
@@ -14,6 +25,124 @@ export class GrokService {
     this.apiKey = apiKey;
     this.model = modelName || CONFIG.grok.defaultModel;
   }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // 🆕 URL 직접 분석 (Playwright 없이)
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  /**
+   * URL을 Grok이 직접 분석
+   */
+  async analyzeUrl(
+    url: string,
+    title: string,
+    category: string,
+    source: string,
+  ): Promise<GeminiAnalysisResponse | UrlAnalysisError> {
+    const systemPrompt = this.buildUrlAnalysisSystemPrompt();
+    const userContent = this.buildUrlAnalysisUserContent(
+      url,
+      title,
+      category,
+      source,
+    );
+
+    try {
+      const result = await this.callGrokAPI(systemPrompt, userContent);
+
+      // URL 접근 실패 여부 체크
+      if (this.isUrlAccessFailure(result)) {
+        return {
+          type: 'URL_ACCESS_FAIL',
+          message: `Grok이 URL에 접근할 수 없음: ${url}`,
+        };
+      }
+
+      return result;
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+
+      if (msg.includes('blocked') || msg.includes('safety')) {
+        return {
+          type: 'CONTENT_BLOCKED',
+          message: `콘텐츠 차단됨: ${msg}`,
+        };
+      }
+
+      return {
+        type: 'API_ERROR',
+        message: msg,
+      };
+    }
+  }
+
+  /**
+   * URL 분석용 시스템 프롬프트
+   */
+  private buildUrlAnalysisSystemPrompt(): string {
+    return `
+${CONFIG.prompt.role}
+
+**중요 지시사항:**
+1. 제공된 URL에 직접 접근하여 페이지 내용을 분석하세요.
+2. URL 접근이 불가능한 경우(차단, 로그인 필요, 404 등), 반드시 다음 형식으로 응답하세요:
+   - reason: "URL_ACCESS_FAIL: [구체적 사유]"
+3. URL 접근이 가능하면 아래 기준에 따라 분석하세요.
+
+${CONFIG.prompt.scoringCriteria}
+
+${CONFIG.prompt.jsonFormat}
+
+${CONFIG.prompt.tagGuide}
+`.trim();
+  }
+
+  /**
+   * URL 분석용 사용자 메시지
+   */
+  private buildUrlAnalysisUserContent(
+    url: string,
+    title: string,
+    category: string,
+    source: string,
+  ): string {
+    return `
+[분석 대상]
+- 제목: ${title}
+- URL: ${url}
+- 출처: ${source} (${category})
+
+위 URL의 페이지 내용을 분석해주세요.
+`.trim();
+  }
+
+  /**
+   * URL 접근 실패 여부 판단
+   */
+  private isUrlAccessFailure(result: GeminiAnalysisResponse): boolean {
+    const failurePatterns = [
+      'URL_ACCESS_FAIL',
+      '접근할 수 없',
+      'cannot access',
+      'unable to fetch',
+      'failed to load',
+      '페이지를 찾을 수 없',
+      '404',
+      '403',
+    ];
+
+    const reason = result.reason?.toLowerCase() || '';
+    const summary = result.oneLineSummary?.toLowerCase() || '';
+
+    return failurePatterns.some(
+      (pattern) =>
+        reason.includes(pattern.toLowerCase()) ||
+        summary.includes(pattern.toLowerCase()),
+    );
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // 기존 메서드들 (하위 호환성 유지)
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   /**
    * 공통 API 호출 (재시도 로직 포함)
@@ -57,7 +186,6 @@ export class GrokService {
       } catch (error) {
         lastError = error;
 
-        // 에러 분석
         const isAxiosError = axios.isAxiosError(error);
         const status = isAxiosError
           ? (error as AxiosError).response?.status
@@ -65,13 +193,12 @@ export class GrokService {
         const errorMessage =
           error instanceof Error ? error.message : String(error);
 
-        // 상세 로그
         console.error(
           `      ⚠️ Grok API Error [Attempt ${attempt}/${maxRetries}]`,
           { status, message: errorMessage },
         );
 
-        // 재시도 불가능한 에러 (즉시 실패)
+        // 재시도 불가능한 에러
         if (status === 401 || status === 403) {
           console.error('      ❌ Auth error - check GROK_API_KEY');
           throw error;
@@ -82,7 +209,6 @@ export class GrokService {
           throw error;
         }
 
-        // 재시도 가능: 429 (Rate Limit), 5xx (Server Error), Network Error
         const isRetryable =
           status === 429 || (status && status >= 500) || !status;
 
@@ -90,17 +216,15 @@ export class GrokService {
           throw error;
         }
 
-        // 마지막 시도였으면 throw
         if (attempt === maxRetries) {
           console.error(`      ❌ Max retries (${maxRetries}) reached`);
           throw error;
         }
 
-        // 429면 더 오래 대기
         const actualWait = status === 429 ? waitTime * 2 : waitTime;
         console.log(`      😴 Waiting ${actualWait}ms before retry...`);
         await delay(actualWait);
-        waitTime *= 2; // Exponential backoff
+        waitTime *= 2;
       }
     }
 
@@ -196,10 +320,7 @@ ${(content || '').substring(0, CONFIG.grok.maxContentLength)}
   }
 
   /**
-   * [신규] 이미지와 함께 분석하는 메서드
-   * @param trend 트렌드 정보
-   * @param content 텍스트 본문
-   * @param images base64 이미지 문자열 배열 (data:image/jpeg;base64,... 형태)
+   * 이미지와 함께 분석하는 메서드
    */
   async analyzeWithVision(
     trend: Trend,
@@ -214,7 +335,6 @@ ${CONFIG.prompt.jsonFormat}
 ${CONFIG.prompt.tagGuide}
 `.trim();
 
-    // 1. 텍스트 파트 구성
     const userContent: any[] = [
       {
         type: 'text',
@@ -236,7 +356,7 @@ ${(content || '').substring(0, CONFIG.grok.maxContentLength)}
           url: base64Image.startsWith('data:')
             ? base64Image
             : `data:image/jpeg;base64,${base64Image}`,
-          detail: 'high', // 상세 분석을 위해 high 설정
+          detail: 'high',
         },
       });
     });

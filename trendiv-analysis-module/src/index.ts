@@ -1,34 +1,53 @@
 /**
- * Trendiv Analysis Module
- * Refactored for better maintainability, error handling, and testability
+ * Trendiv Analysis Module v2.0
+ *
+ * 주요 변경사항:
+ * - Playwright 브라우저 생성 제거 (AI API URL 직접 분석)
+ * - 실패 시 status: 'FAIL' 반환 (별도 RetryService에서 Playwright 재시도)
+ * - 메모리 사용량 대폭 감소
  */
 
 import path from 'path';
 import dotenv from 'dotenv';
-import { Page } from 'playwright';
-import { chromium } from 'playwright-extra';
-import stealth from 'puppeteer-extra-plugin-stealth';
-import { CONFIG, getRandomContextOptions } from './config';
-import { Trend, PipelineResult } from './types';
+import { CONFIG } from './config';
+import {
+  Trend,
+  PipelineResult,
+  AnalysisResult,
+  FailedAnalysisResult,
+} from './types';
 import { GeminiService } from './services/gemini.service';
 import { GrokService } from './services/grok.service';
-import { AnalyzerService } from './services/analyzer.service';
+import {
+  AnalyzerService,
+  AnalyzerResult,
+  isFailedResult,
+} from './services/analyzer.service';
 import { delay } from './utils/helpers';
 
-// Re-export types for backward compatibility
-export type { AnalysisResult, Trend, PipelineResult } from './types';
+// Re-export types
+export type {
+  AnalysisResult,
+  Trend,
+  PipelineResult,
+  FailedAnalysisResult,
+} from './types';
 export { GrokService } from './services/grok.service';
+export { isFailedResult } from './services/analyzer.service';
 
-chromium.use(stealth());
+// 확장된 파이프라인 결과 (실패 항목 포함)
+export interface ExtendedPipelineResult extends PipelineResult {
+  failedIds?: number[];
+}
 
 // ---------------------------------------------------------
 // 🔧 Environment Setup
 // ---------------------------------------------------------
-// Load .env from project root (scrap/.env)
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 
 const apiKey = process.env.GEMINI_API_KEY;
 const grokKey = process.env.GROK_API_KEY;
+
 if (!apiKey) {
   console.error('❌ GEMINI_API_KEY가 없습니다. .env 파일을 확인해주세요.');
   process.exit(1);
@@ -46,18 +65,17 @@ export interface AnalysisOptions {
 }
 
 // ---------------------------------------------------------
-// 🚀 Main Analysis Function
+// 🚀 Main Analysis Function (Playwright 제거됨)
 // ---------------------------------------------------------
 export async function runAnalysis(
   trends: Trend[],
   options?: AnalysisOptions,
-): Promise<PipelineResult[]> {
+): Promise<(PipelineResult | FailedAnalysisResult)[]> {
   if (!trends || trends.length === 0) {
     console.log('⚠️ No trends to analyze');
     return [];
   }
 
-  // Validate API key again at runtime (for safety)
   if (!apiKey) {
     throw new Error('GEMINI_API_KEY is not configured');
   }
@@ -72,13 +90,13 @@ export async function runAnalysis(
   console.log(
     `🧠 [Analysis] Start analyzing ${trends.length} items (Provider: ${options?.provider || 'Auto'})...`,
   );
+  console.log(`   📊 Model: ${geminiModel}`);
+  console.log(`   🚀 Mode: AI API Direct URL Analysis (No Playwright)`);
 
-  // 2. 서비스 초기화
-  // GeminiService는 항상 초기화 (기본 엔진)
+  // 서비스 초기화 (브라우저 없음!)
   const geminiService = new GeminiService(apiKey!, geminiModel);
 
   let grokService: GrokService | undefined;
-
   if (grokKey) {
     const grokModel =
       options?.provider === 'grok' && requestModelName
@@ -88,112 +106,77 @@ export async function runAnalysis(
     grokService = new GrokService(grokKey, grokModel);
   }
 
-  const browser = await chromium.launch({
-    headless: true,
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-gpu',
-      '--no-zygote',
-      '--disable-images',
-      '--disable-extensions',
-      '--disable-blink-features=AutomationControlled',
-    ],
-    env: {
-      ...process.env,
-      DBUS_SESSION_BUS_ADDRESS: '/dev/null',
-    },
-  });
-
-  const sharedContext = await browser.newContext(getRandomContextOptions());
-
-  await sharedContext.addInitScript(() => {
-    // WebRTC 비활성화 (IP 유출 방지)
-    Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
-    // @ts-ignore
-    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-      // @ts-ignore
-      navigator.mediaDevices.getUserMedia = () =>
-        Promise.reject(new Error('Permission denied'));
-    }
-
-    // WebGL Fingerprint Spoofing (Intel 그래픽카드 위장)
-    const getParameter = WebGLRenderingContext.prototype.getParameter;
-    WebGLRenderingContext.prototype.getParameter = function (parameter) {
-      // UNMASKED_VENDOR_WEBGL
-      if (parameter === 37445) return 'Intel Inc.';
-      // UNMASKED_RENDERER_WEBGL
-      if (parameter === 37446) return 'Intel Iris OpenGL Engine';
-      return getParameter.apply(this, [parameter]);
-    };
-  });
-
-  // 3. AnalyzerService 생성 및 Provider 강제 설정
-  const analyzerService = new AnalyzerService(
-    browser,
-    geminiService,
-    sharedContext,
-    grokService,
-  );
+  // AnalyzerService 생성 (Browser, Context 파라미터 제거)
+  const analyzerService = new AnalyzerService(geminiService, grokService);
 
   if (options?.provider) {
     analyzerService.setForceProvider(options.provider);
   }
 
-  const results: PipelineResult[] = [];
+  const results: (PipelineResult | FailedAnalysisResult)[] = [];
 
-  try {
-    for (const trend of trends) {
-      console.log(
-        `\n   -> [${trend.category || 'Uncategorized'}] ${trend.title.substring(0, 50)}...`,
-      );
+  for (const trend of trends) {
+    console.log(
+      `\n   -> [${trend.category || 'Uncategorized'}] ${trend.title.substring(0, 50)}...`,
+    );
 
-      try {
-        const analysis = await analyzerService.analyzeTrend(trend);
+    try {
+      const analysis = await analyzerService.analyzeTrend(trend);
 
-        if (analysis) {
-          results.push({
-            ...analysis,
-            id: trend.id,
-            originalLink: trend.link,
-            date: trend.date,
-          });
-          console.log(`      ✅ Completed (Score: ${analysis.score}/10)`);
-        } else {
-          // X => 그록 만, YouTube => 제미나이만
-          console.log(`      ⏭️ Skipped (Provider mismatch or Logic)`);
-        }
-      } catch (error: unknown) {
-        const errorMessage =
-          error instanceof Error ? error.message : String(error);
-
-        console.error(
-          `❌ Failed to analyze trend #${trend.id}: ${errorMessage}`,
-        );
-        // Continue with next item
+      if (!analysis) {
+        console.log(`      ⭕️ Skipped (null result)`);
         continue;
       }
 
-      const used = process.memoryUsage();
-      console.log(
-        `메모리 사용량: RSS ${Math.round(used.rss / 1024 / 1024)}MB, Heap ${Math.round(used.heapUsed / 1024 / 1024)}MB`,
-      );
+      // 실패 결과 처리
+      if (isFailedResult(analysis)) {
+        console.log(
+          `      ❌ FAIL: ${analysis.failType} - ${analysis.failReason.substring(0, 50)}...`,
+        );
+        results.push(analysis);
+        continue;
+      }
 
-      // Rate limiting delay
-      await delay(CONFIG.content.delayBetweenRequests);
+      // 성공 결과
+      results.push({
+        ...analysis,
+        id: trend.id,
+        originalLink: trend.link,
+        date: trend.date,
+      });
+      console.log(`      ✅ Completed (Score: ${analysis.score}/10)`);
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      console.error(`      ❌ Exception: ${errorMessage}`);
+
+      // 예외도 FAIL로 처리
+      results.push({
+        id: trend.id,
+        status: 'FAIL',
+        failType: 'API_ERROR',
+        failReason: `Unexpected exception: ${errorMessage}`,
+      });
+      continue;
     }
-  } finally {
-    console.log('Closing shared context and browser...');
-    await sharedContext
-      ?.close()
-      .catch((e) => console.warn('Context close failed:', e));
-    await browser.close();
+
+    // 메모리 사용량 로깅 (Playwright 제거로 대폭 감소 예상)
+    const used = process.memoryUsage();
+    console.log(
+      `      📊 Memory: RSS ${Math.round(used.rss / 1024 / 1024)}MB, Heap ${Math.round(used.heapUsed / 1024 / 1024)}MB`,
+    );
+
+    // Rate limiting delay
+    await delay(CONFIG.content.delayBetweenRequests);
   }
 
-  console.log(
-    `\n✨ Analysis complete: ${results.length}/${trends.length} items processed`,
-  );
+  // 결과 요약
+  const successCount = results.filter((r) => !isFailedResult(r)).length;
+  const failCount = results.filter((r) => isFailedResult(r)).length;
+
+  console.log(`\n✨ Analysis complete:`);
+  console.log(`   ✅ Success: ${successCount}/${trends.length}`);
+  console.log(`   ❌ Failed: ${failCount}/${trends.length}`);
 
   return results;
 }
