@@ -1,6 +1,16 @@
-/**
- * Shared Types for Trendiv Analysis Module
- */
+export interface FailedAnalysisResult {
+  id: number;
+  status: 'FAIL';
+  failType:
+    | 'PROVIDER_MISMATCH'
+    | 'URL_ACCESS_FAIL' // AI가 URL 접근 못함
+    | 'CONTENT_BLOCKED' // 차단됨
+    | 'API_ERROR' // AI API 자체 에러
+    | 'TIMEOUT' // Playwright 타임아웃
+    | 'EMPTY_CONTENT' // 본문 추출 실패
+    | 'SKIPPED'; // 재시도 횟수 초과 등
+  failReason: string;
+}
 
 export interface AnalysisResult {
   id?: number;

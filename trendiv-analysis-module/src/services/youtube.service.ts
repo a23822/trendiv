@@ -17,7 +17,7 @@ export class YouTubeService {
     const currentModel = geminiService.getModelName();
 
     if (!CONFIG.youtube.allowProModels && currentModel.includes('pro')) {
-      return CONFIG.gemini.defaultModel || 'gemini-2.0-flash';
+      return CONFIG.gemini.defaultModel || 'gemini-3-flash-preview';
     }
 
     return currentModel;

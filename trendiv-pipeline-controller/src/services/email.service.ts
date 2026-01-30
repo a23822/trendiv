@@ -6,7 +6,7 @@ const emailAuthUser =
 const emailPass = process.env.GMAIL_PASS;
 const emailRecipient = process.env.TEST_EMAIL_RECIPIENT;
 
-type PipelineStatus = "SUCCESS" | "FAILURE";
+type PipelineStatus = "SUCCESS" | "FAILURE" | "RETRY_SUCCESS";
 
 // ✅ 타입 개선: any 대신 Record 사용
 type PipelineDetails = Record<string, unknown>;
@@ -52,7 +52,7 @@ function safeStringify(obj: unknown): string {
         }
         return value;
       },
-      2
+      2,
     );
   } catch (e) {
     return `[Serialization Failed: ${String(e)}]`;
@@ -61,7 +61,7 @@ function safeStringify(obj: unknown): string {
 
 export async function sendEmailReport(
   status: PipelineStatus,
-  details: PipelineDetails
+  details: PipelineDetails,
 ) {
   if (!transporter || !emailRecipient) {
     console.log("❌ 메일 전송 스킵: 설정 없음");

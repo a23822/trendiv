@@ -4,12 +4,18 @@ import dotenv from "dotenv";
 import * as path from "path";
 
 import { scrapeAll as runScraper } from "trendiv-scraper-module";
-import { runAnalysis } from "trendiv-analysis-module";
+import {
+  runAnalysis,
+  FailedAnalysisResult,
+  isFailedResult,
+} from "trendiv-analysis-module";
 import { composeEmailHtml as generateNewsletterHtml } from "trendiv-result-module";
 
 dotenv.config({ path: path.resolve(__dirname, "../../../.env") });
 
-// 🆕 타입 정의
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 타입 정의
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 interface TrendItem {
   id: number;
   title: string;
@@ -41,7 +47,6 @@ interface TrendDbItem {
   analysis_results: AnalysisEntry[] | null;
 }
 
-// 🆕 이메일용 타입 (trendiv-result-module과 동일)
 interface AnalyzedReport {
   title: string;
   oneLineSummary: string;
@@ -54,6 +59,7 @@ interface AnalyzedReport {
 interface PipelineResult {
   success: boolean;
   count?: number;
+  failedCount?: number;
   error?: unknown;
 }
 
@@ -66,17 +72,31 @@ interface UpsertItem {
   content?: string;
 }
 
-// 🆕 상수
-const MAX_LOOP_COUNT = 20; // ✅ [수정] 100 → 20 (안전장치 강화)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 상수
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const MAX_LOOP_COUNT = 20;
 const BATCH_DELAY_MS = 2000;
+const MAX_RETRY_COUNT = 3; // 🆕 최대 재시도 횟수
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+// 🆕 analysis_results에서 FAIL 재시도 횟수 계산
+const getRetryCount = (analysisResults: AnalysisEntry[] | null): number => {
+  if (!analysisResults) return 0;
+  return analysisResults.filter(
+    (h) => h.aiModel === "SYSTEM" && h.tags?.includes("_FAIL_RETRY"),
+  ).length;
+};
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 🎯 메인 파이프라인 (AI API URL 직접 분석)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 export const runPipeline = async (
   mode: "daily" | "weekly" = "daily",
 ): Promise<PipelineResult> => {
   const startTime = Date.now();
-  console.log("🔥 [Pipeline] Start processing ALL items...");
+  console.log("🔥 [Pipeline v2.0] Start processing (AI API Direct Mode)...");
 
   try {
     const supabaseUrl = process.env.SUPABASE_URL;
@@ -123,23 +143,22 @@ export const runPipeline = async (
         .upsert(dbRawData, { onConflict: "link", ignoreDuplicates: true });
 
       if (error) console.error("      ⚠️ 원본 저장 실패:", error.message);
-      else console.log(`      -> Saved raw items to DB.`);
+      else console.log(`      -> Saved ${rawData.length} raw items to DB.`);
     }
 
     // ---------------------------------------------------------
-    // 2️⃣ & 3️⃣ & 4️⃣ 반복 처리 루프 (Loop Process)
+    // 2️⃣ 배치 분석 루프 (AI API Direct - Playwright 없음!)
     // ---------------------------------------------------------
-    console.log(" 2. 🔄 Starting Batch Analysis Loop...");
+    console.log(" 2. 🔄 Starting Batch Analysis Loop (AI API Direct)...");
 
     let totalSuccessCount = 0;
+    let totalFailCount = 0;
     const allValidTrends: AnalyzedReport[] = [];
     let loopCount = 0;
 
-    // 🆕 무한루프 방지: MAX_LOOP_COUNT 제한
     while (loopCount < MAX_LOOP_COUNT) {
       loopCount++;
 
-      // A. 데이터 가져오기
       const targetModel = process.env.GEMINI_MODEL || "gemini-3-flash-preview";
 
       const { data: targetItems, error } = await supabase.rpc(
@@ -155,7 +174,6 @@ export const runPipeline = async (
         throw error;
       }
 
-      // B. 종료 조건
       if (!targetItems || targetItems.length === 0) {
         console.log("      ✅ 더 이상 분석할 데이터가 없습니다. 루프 종료.");
         break;
@@ -165,7 +183,6 @@ export const runPipeline = async (
         `      [Batch ${loopCount}/${MAX_LOOP_COUNT}] Analyzing ${targetItems.length} items...`,
       );
 
-      // C. 분석 데이터 정제
       const cleanData: TrendItem[] = targetItems.map((item: TrendItem) => ({
         id: item.id,
         title: item.title,
@@ -176,22 +193,16 @@ export const runPipeline = async (
         content: item.content,
       }));
 
-      // D. 분석 실행
-      let analysisResults: AnalysisResult[] = [];
-      const attemptedIds = cleanData.map((item) => item.id);
+      // 🆕 분석 실행 (Playwright 없이 AI API 직접 URL 분석)
+      let rawResults: (AnalysisResult | FailedAnalysisResult)[] = [];
 
       try {
-        // 주의: analyzer.service 내부에서 X 카테고리는 Gemini가 분석 못하므로 Skip(null) 처리됨
-        const rawResults = await runAnalysis(cleanData);
+        const results = await runAnalysis(cleanData);
 
-        // ✅ [수정] 배열 체크 후 else로 처리 (런타임 에러 방지)
-        if (!Array.isArray(rawResults)) {
+        if (!Array.isArray(results)) {
           console.error("runAnalysis returned invalid data");
-          // analysisResults는 빈 배열로 유지 → 아래에서 전부 failedIds로 처리됨
         } else {
-          analysisResults = rawResults.filter(
-            (r) => r && typeof r.id === "number",
-          );
+          rawResults = results;
         }
       } catch (e: unknown) {
         const err = e instanceof Error ? e : new Error(String(e));
@@ -201,41 +212,50 @@ export const runPipeline = async (
         );
       }
 
-      // E. DB 업데이트 (벌크 처리)
-      const ids = analysisResults.map((r) => r.id);
+      // 🆕 성공/실패 분리
+      const successResults: AnalysisResult[] = [];
+      const failedResults: FailedAnalysisResult[] = [];
 
-      // ✅ 분석에 실패한 ID(시도는 했으나 결과에 없는 ID)를 찾아 'REJECTED' 처리
-      const successIds = new Set(ids);
-      const failedIds = attemptedIds.filter((id) => !successIds.has(id));
+      for (const result of rawResults) {
+        if (isFailedResult(result)) {
+          failedResults.push(result);
+        } else if (result && typeof result.id === "number") {
+          successResults.push(result as AnalysisResult);
+        }
+      }
 
-      if (failedIds.length > 0) {
-        console.log(
-          `      🛑 Marking ${failedIds.length} items as REJECTED (Error Loop Prevention)...`,
-        );
+      console.log(
+        `      📊 Results: ${successResults.length} success, ${failedResults.length} failed`,
+      );
 
-        // 에러 마커 추가 - 나중에 디버깅 용이
-        const failedUpdates = failedIds.map((id) => {
-          const originalItem = targetItems.find((t: any) => t.id === id);
+      // ─────────────────────────────────────────────────────────
+      // 🆕 FAIL 상태 저장 (Playwright 재시도 대상)
+      // ─────────────────────────────────────────────────────────
+      if (failedResults.length > 0) {
+        console.log(`      💾 Saving ${failedResults.length} items as FAIL...`);
+
+        const failUpdates = failedResults.map((failed) => {
+          const originalItem = targetItems.find((t: any) => t.id === failed.id);
           const existingHistory = originalItem?.analysis_results || [];
 
           return {
-            id: id,
+            id: failed.id,
             link: originalItem?.link || "",
             title: originalItem?.title || "제목 없음",
             source: originalItem?.source,
             category: originalItem?.category,
             date: originalItem?.date,
-            status: "REJECTED",
+            status: "FAIL",
             analysis_results: [
               ...existingHistory,
               {
                 aiModel: "SYSTEM",
                 score: 0,
-                reason: "분석 실패 (콘텐츠 수집 불가 또는 API 오류)",
+                reason: `FAIL: ${failed.failType} - ${failed.failReason}`,
                 title_ko: "",
                 oneLineSummary: "",
                 keyPoints: [],
-                tags: ["_ANALYSIS_FAILED"],
+                tags: ["_API_ACCESS_FAIL"],
                 analyzedAt: new Date().toISOString(),
               },
             ],
@@ -244,22 +264,25 @@ export const runPipeline = async (
 
         const { error: failError } = await supabase
           .from("trend")
-          .upsert(failedUpdates, { onConflict: "id" });
+          .upsert(failUpdates, { onConflict: "id" });
 
         if (failError) {
-          console.error(
-            "      ❌ Failed status update error:",
-            failError.message,
-          );
+          console.error("      ❌ FAIL status save error:", failError.message);
+        } else {
+          totalFailCount += failedResults.length;
         }
       }
 
-      // 결과가 없으면(전부 X라서 스킵되었거나 에러) 다음 배치로
-      if (ids.length === 0) {
-        console.log("      ⚠️ 유효한 분석 결과 없음 (X 항목일 수 있음), 스킵");
+      // ─────────────────────────────────────────────────────────
+      // 성공 결과 저장 (기존 로직 유지)
+      // ─────────────────────────────────────────────────────────
+      if (successResults.length === 0) {
+        console.log("      ⚠️ 유효한 분석 결과 없음, 다음 배치로...");
         await delay(1000);
         continue;
       }
+
+      const ids = successResults.map((r) => r.id);
 
       const { data: currentItems } = await supabase
         .from("trend")
@@ -274,12 +297,11 @@ export const runPipeline = async (
       const analyzedUpdates: UpsertItem[] = [];
       const rejectedUpdates: UpsertItem[] = [];
 
-      for (const result of analysisResults) {
+      for (const result of successResults) {
         const current = currentItems.find(
           (item: TrendDbItem) => item.id === result.id,
         );
 
-        // 1️⃣ 원본 아이템
         const originalItem = cleanData.find((item) => item.id === result.id);
 
         const existingHistory: AnalysisEntry[] =
@@ -317,7 +339,6 @@ export const runPipeline = async (
 
         if (!originalItem) continue;
 
-        // 2️⃣ 공통 데이터 payload 구성
         const commonPayload = {
           ...originalItem,
           title: result.title_ko || originalItem?.title || "제목 없음",
@@ -352,7 +373,6 @@ export const runPipeline = async (
       const allUpdates = [...analyzedUpdates, ...rejectedUpdates];
 
       if (allUpdates.length > 0) {
-        console.log("DEBUG: Final Payload Sample", allUpdates[0]);
         const { error } = await supabase
           .from("trend")
           .upsert(allUpdates, { onConflict: "id" });
@@ -361,7 +381,7 @@ export const runPipeline = async (
           console.error("      ⚠️ Batch upsert failed:", error.message);
         } else {
           console.log(
-            `      💾 Saved batch updates: ${analyzedUpdates.length} analyzed, ${rejectedUpdates.length} rejected.`,
+            `      💾 Saved: ${analyzedUpdates.length} analyzed, ${rejectedUpdates.length} rejected.`,
           );
         }
       }
@@ -375,12 +395,11 @@ export const runPipeline = async (
     }
 
     // ---------------------------------------------------------
-    // 5️⃣ 이메일 발송
+    // 3️⃣ 이메일 발송
     // ---------------------------------------------------------
-    console.log(` 5. 📧 Preparing Email for ${allValidTrends.length} items...`);
+    console.log(` 3. 📧 Preparing Email for ${allValidTrends.length} items...`);
 
-    if (allValidTrends.length > 0) {
-      console.log("      Sending Email...");
+    if (allValidTrends.length > 0 && resend) {
       const emailPayload = {
         date: new Date().toISOString().split("T")[0],
         count: allValidTrends.length,
@@ -389,24 +408,27 @@ export const runPipeline = async (
 
       const newsletterHtml = await generateNewsletterHtml(emailPayload);
 
-      if (resend) {
-        await resend.emails.send({
-          from: "Trendiv <chanwoochae@trendiv.org>",
-          to: ["a238220@gmail.com"],
-          subject: `🔥 Trendiv 통합 분석 알림 (${mode.toUpperCase()} - ${allValidTrends.length}건)`,
-          html: newsletterHtml,
-        });
-        console.log("      ✅ Email Sent!");
-      }
+      await resend.emails.send({
+        from: "Trendiv <chanwoochae@trendiv.org>",
+        to: ["a238220@gmail.com"],
+        subject: `🔥 Trendiv 분석 알림 (${mode.toUpperCase()} - ${allValidTrends.length}건, FAIL: ${totalFailCount}건)`,
+        html: newsletterHtml,
+      });
+      console.log("      ✅ Email Sent!");
     } else {
       console.log("      📭 보낼 유효한 뉴스가 없습니다.");
     }
 
     const duration = ((Date.now() - startTime) / 1000).toFixed(2);
     console.log(
-      `🎉 [Pipeline] All Done! processed total ${totalSuccessCount} items in ${duration}s`,
+      `🎉 [Pipeline] Done! ${totalSuccessCount} success, ${totalFailCount} failed in ${duration}s`,
     );
-    return { success: true, count: totalSuccessCount };
+
+    return {
+      success: true,
+      count: totalSuccessCount,
+      failedCount: totalFailCount,
+    };
   } catch (e: unknown) {
     const error = e instanceof Error ? e : new Error(String(e));
     console.error("❌ [Pipeline] Critical Error:", error.message);
@@ -414,9 +436,217 @@ export const runPipeline = async (
   }
 };
 
-// ---------------------------------------------------------
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 🆕 FAIL 재시도 파이프라인 (Playwright 사용)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+export const runRetryPipeline = async (): Promise<PipelineResult> => {
+  const startTime = Date.now();
+  console.log(
+    "🔄 [Retry Pipeline] Starting FAIL items retry with Playwright...",
+  );
+
+  try {
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_KEY;
+    const geminiKey = process.env.GEMINI_API_KEY;
+
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error("❌ Supabase 환경변수 누락");
+    }
+
+    if (!geminiKey) {
+      throw new Error("❌ GEMINI_API_KEY 누락");
+    }
+
+    const supabase: SupabaseClient = createClient(supabaseUrl, supabaseKey);
+
+    // FAIL 상태 항목 조회
+    const { data: failedItems, error } = await supabase
+      .from("trend")
+      .select("*")
+      .eq("status", "FAIL")
+      .order("date", { ascending: false })
+      .limit(30);
+
+    if (error) {
+      throw error;
+    }
+
+    if (!failedItems || failedItems.length === 0) {
+      console.log("      ✅ 재시도할 FAIL 항목이 없습니다.");
+      return { success: true, count: 0 };
+    }
+
+    // 🆕 재시도 횟수 필터링 (analysis_results에서 계산)
+    const retryTargets = failedItems.filter((item) => {
+      const retryCount = getRetryCount(item.analysis_results);
+      return retryCount < MAX_RETRY_COUNT;
+    });
+
+    if (retryTargets.length === 0) {
+      console.log(
+        `      ✅ 모든 FAIL 항목이 최대 재시도 횟수(${MAX_RETRY_COUNT})에 도달했습니다.`,
+      );
+
+      // 최대 재시도 도달 항목들 REJECTED로 변경
+      const maxRetryItems = failedItems.filter((item) => {
+        const retryCount = getRetryCount(item.analysis_results);
+        return retryCount >= MAX_RETRY_COUNT;
+      });
+
+      if (maxRetryItems.length > 0) {
+        const rejectUpdates = maxRetryItems.map((item) => ({
+          id: item.id,
+          status: "REJECTED",
+          analysis_results: [
+            ...(item.analysis_results || []),
+            {
+              aiModel: "SYSTEM",
+              score: 0,
+              reason: `MAX_RETRY_EXCEEDED: ${MAX_RETRY_COUNT}회 재시도 후 최종 실패`,
+              title_ko: "",
+              oneLineSummary: "",
+              keyPoints: [],
+              tags: ["_MAX_RETRY_EXCEEDED"],
+              analyzedAt: new Date().toISOString(),
+            },
+          ],
+        }));
+
+        await supabase
+          .from("trend")
+          .upsert(rejectUpdates, { onConflict: "id" });
+
+        console.log(
+          `      🗑️ ${maxRetryItems.length}건 REJECTED로 변경 (최대 재시도 초과)`,
+        );
+      }
+
+      return { success: true, count: 0, failedCount: maxRetryItems.length };
+    }
+
+    console.log(
+      `      📋 Found ${retryTargets.length} FAIL items to retry (filtered from ${failedItems.length})`,
+    );
+
+    // RetryService 동적 import (Playwright 의존성 분리)
+    const { RetryService } = await import(
+      "trendiv-analysis-module/src/services/retry.service"
+    );
+
+    const retryService = new RetryService(geminiKey, process.env.GROK_API_KEY);
+
+    // 재시도 실행
+    const retryResults = await retryService.retryFailedItems(
+      retryTargets as TrendItem[],
+    );
+
+    // 결과 DB 업데이트
+    let recoveredCount = 0;
+    let finalFailCount = 0;
+
+    for (const result of retryResults) {
+      const originalItem = retryTargets.find((item) => item.id === result.id);
+      const existingHistory = originalItem?.analysis_results || [];
+
+      if (result.success && result.analysis) {
+        // 성공 → ANALYZED/REJECTED로 업데이트
+        const newEntry: AnalysisEntry = {
+          aiModel: result.analysis.aiModel,
+          score: result.analysis.score,
+          reason: result.analysis.reason,
+          title_ko: result.analysis.title_ko,
+          oneLineSummary: result.analysis.oneLineSummary,
+          keyPoints: result.analysis.keyPoints,
+          tags: result.analysis.tags,
+          analyzedAt: new Date().toISOString(),
+        };
+
+        // SYSTEM 실패 기록은 유지하고 새 결과 추가
+        const updatedHistory = [...existingHistory, newEntry];
+
+        const sortedHistory = [...updatedHistory]
+          .filter((h) => h.aiModel !== "SYSTEM")
+          .sort((a, b) => {
+            if (b.score !== a.score) return b.score - a.score;
+            return (
+              new Date(b.analyzedAt).getTime() -
+              new Date(a.analyzedAt).getTime()
+            );
+          });
+
+        const updateData: any = {
+          id: result.id,
+          status: result.analysis.score > 0 ? "ANALYZED" : "REJECTED",
+          analysis_results: updatedHistory,
+          represent_result: sortedHistory[0] || null,
+        };
+
+        if (result.analysis.content) {
+          updateData.content = result.analysis.content;
+        }
+
+        await supabase.from("trend").upsert(updateData, { onConflict: "id" });
+        recoveredCount++;
+        console.log(
+          `      ✅ Recovered ID ${result.id} (Score: ${result.analysis.score})`,
+        );
+      } else {
+        // 실패 → FAIL 유지 + 재시도 기록 추가
+        const currentRetryCount = getRetryCount(existingHistory) + 1;
+        const isMaxRetry = currentRetryCount >= MAX_RETRY_COUNT;
+
+        const retryEntry: AnalysisEntry = {
+          aiModel: "SYSTEM",
+          score: 0,
+          reason: `RETRY_FAIL (${currentRetryCount}/${MAX_RETRY_COUNT}): ${result.error || "Unknown error"}`,
+          title_ko: "",
+          oneLineSummary: "",
+          keyPoints: [],
+          tags: isMaxRetry ? ["_MAX_RETRY_EXCEEDED"] : ["_FAIL_RETRY"],
+          analyzedAt: new Date().toISOString(),
+        };
+
+        await supabase.from("trend").upsert(
+          {
+            id: result.id,
+            status: isMaxRetry ? "REJECTED" : "FAIL",
+            analysis_results: [...existingHistory, retryEntry],
+          },
+          { onConflict: "id" },
+        );
+
+        if (isMaxRetry) {
+          finalFailCount++;
+          console.log(`      🗑️ ID ${result.id} → REJECTED (최대 재시도 초과)`);
+        } else {
+          console.log(
+            `      ⚠️ ID ${result.id} retry failed (${currentRetryCount}/${MAX_RETRY_COUNT})`,
+          );
+        }
+      }
+    }
+
+    const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+    console.log(
+      `🎉 [Retry Pipeline] Done! Recovered: ${recoveredCount}, Final Failed: ${finalFailCount} in ${duration}s`,
+    );
+
+    return {
+      success: true,
+      count: recoveredCount,
+      failedCount: finalFailCount,
+    };
+  } catch (e: unknown) {
+    const error = e instanceof Error ? e : new Error(String(e));
+    console.error("❌ [Retry Pipeline] Critical Error:", error.message);
+    return { success: false, error };
+  }
+};
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 1️⃣ Gemini Pro 심층 분석 (Non-X 전용)
-// ---------------------------------------------------------
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 export const runGeminiProAnalysis = async (): Promise<void> => {
   console.log("✨ [Gemini Pro] Starting analysis for Non-X items...");
 
@@ -489,16 +719,16 @@ export const runGeminiProAnalysis = async (): Promise<void> => {
       modelName: modelName,
       provider: "gemini",
     });
-    await saveAnalysisResults(supabase, results);
+    await saveAnalysisResults(supabase, results as AnalysisResult[]);
     console.log(`   ✅ Gemini Pro Done: ${results.length} processed`);
   } catch (e) {
     console.error("   ❌ Gemini Pro Failed:", e);
   }
 };
 
-// ---------------------------------------------------------
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 2️⃣ Grok 심층 분석 (X "RAW" + 모든 "ANALYZED")
-// ---------------------------------------------------------
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 export const runGrokAnalysis = async (): Promise<void> => {
   console.log(
     "🦅 [Grok Analysis] Starting analysis (X: Raw/Analyzed, Others: Analyzed)...",
@@ -580,14 +810,16 @@ export const runGrokAnalysis = async (): Promise<void> => {
       modelName: modelName,
       provider: "grok",
     });
-    await saveAnalysisResults(supabase, results);
+    await saveAnalysisResults(supabase, results as AnalysisResult[]);
     console.log(`   ✅ Grok Done: ${results.length} processed`);
   } catch (e) {
     console.error("   ❌ Grok Failed:", e);
   }
 };
 
-// 💾 결과 저장 헬퍼 (품질 관리를 위해 하나라도 0점이면 REJECTED 처리)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 💾 결과 저장 헬퍼
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 async function saveAnalysisResults(
   supabase: SupabaseClient,
   results: AnalysisResult[],
@@ -601,7 +833,6 @@ async function saveAnalysisResults(
 
   const ids = results.map((r) => r.id);
 
-  // 1. 현재 DB 상태 한 번에 조회
   const { data: currentItems } = await supabase
     .from("trend")
     .select("*")
@@ -616,9 +847,6 @@ async function saveAnalysisResults(
 
   const updates: UpsertItem[] = [];
 
-  const validIds = new Set<number>();
-
-  // 2. 메모리에서 데이터 가공
   for (const result of results) {
     const current = currentItems.find(
       (item: TrendDbItem) => item.id === result.id,
@@ -631,10 +859,8 @@ async function saveAnalysisResults(
       continue;
     }
 
-    // 2-1. 기존 기록 가져오기
     const existingHistory: AnalysisEntry[] = current.analysis_results || [];
 
-    // 2-2. 새 분석 결과 객체 생성
     const newEntry: AnalysisEntry = {
       aiModel: result.aiModel,
       score: result.score,
@@ -646,14 +872,12 @@ async function saveAnalysisResults(
       analyzedAt: new Date().toISOString(),
     };
 
-    // 2-3. 기록 복사 및 병합 (updatedHistory 생성)
     const updatedHistory = [...existingHistory];
     const idx = existingHistory.findIndex((h) => h.aiModel === result.aiModel);
 
     if (idx >= 0) updatedHistory[idx] = newEntry;
     else updatedHistory.push(newEntry);
 
-    // 2-4. 품질 체크 (로깅용)
     const isHighQuality = updatedHistory.every((h) => h.score > 0);
     if (!isHighQuality) {
       const zeroModel = updatedHistory.find((h) => h.score === 0)?.aiModel;
@@ -662,7 +886,6 @@ async function saveAnalysisResults(
       );
     }
 
-    // 2-5. 정렬 (대표 결과 선정용)
     const sortedHistory = [...updatedHistory].sort((a, b) => {
       if (b.score !== a.score) return b.score - a.score;
       return (
@@ -670,7 +893,6 @@ async function saveAnalysisResults(
       );
     });
 
-    // 2-6. 업데이트 데이터 생성 (UpsertItem 타입 준수)
     const updateData: UpsertItem = {
       id: result.id,
       title: result.title_ko || "제목 없음",
@@ -686,7 +908,6 @@ async function saveAnalysisResults(
     updates.push(updateData);
   }
 
-  // 3. 한 번에 DB 업데이트 (Bulk Upsert)
   if (updates.length > 0) {
     const { error } = await supabase
       .from("trend")

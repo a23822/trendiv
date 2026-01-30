@@ -1,6 +1,8 @@
 /**
  * Gemini AI Analysis Service
  * Migrated to @google/genai SDK (Google GenAI SDK)
+ *
+ * 🆕 v2.0 - URL 직접 분석 기능 추가 (Playwright 의존도 감소)
  */
 
 import { GoogleGenAI, HarmCategory, HarmBlockThreshold } from '@google/genai';
@@ -27,14 +29,18 @@ interface Content {
   parts: ContentPart[];
 }
 
+// 🆕 URL 분석 실패 타입
+export interface UrlAnalysisError {
+  type: 'URL_ACCESS_FAIL' | 'CONTENT_BLOCKED' | 'API_ERROR';
+  message: string;
+}
+
 export class GeminiService {
   private ai: GoogleGenAI;
   private modelName: string;
 
   constructor(apiKey: string, modelName?: string) {
     this.modelName = modelName || CONFIG.gemini.defaultModel;
-
-    // 새 SDK: GoogleGenAI 클라이언트 생성
     this.ai = new GoogleGenAI({ apiKey });
   }
 
@@ -42,13 +48,129 @@ export class GeminiService {
     return this.modelName;
   }
 
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // 🆕 URL 직접 분석 (Playwright 없이 AI가 직접 URL 접근)
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   /**
-   * 🎬 YouTube 영상 분석 (Direct URL 지원)
-   * 새 SDK에서는 YouTube URL을 fileUri로 직접 전달 가능
-   * @param videoUrl - YouTube 영상 URL
-   * @param title - 영상 제목
+   * 일반 웹페이지 URL을 AI가 직접 분석
+   * @param url - 분석할 URL
+   * @param title - 콘텐츠 제목
    * @param category - 카테고리
-   * @param modelOverride - 사용할 모델명 (선택, 기본값: Pro 제한 로직 적용)
+   * @param source - 출처
+   * @returns 분석 결과 또는 에러
+   */
+  async analyzeUrl(
+    url: string,
+    title: string,
+    category: string,
+    source: string,
+  ): Promise<GeminiAnalysisResponse | UrlAnalysisError> {
+    const promptText = this.buildUrlAnalysisPrompt(
+      url,
+      title,
+      category,
+      source,
+    );
+
+    const contents: Content[] = [
+      {
+        role: 'user',
+        parts: [{ text: promptText }],
+      },
+    ];
+
+    try {
+      const result = await this.generateWithRetry(contents);
+
+      // 🔍 API가 URL 접근 실패를 보고한 경우 체크
+      if (this.isUrlAccessFailure(result)) {
+        return {
+          type: 'URL_ACCESS_FAIL',
+          message: `Gemini가 URL에 접근할 수 없음: ${url}`,
+        };
+      }
+
+      return result;
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+
+      // 특정 에러 패턴 감지
+      if (msg.includes('blocked') || msg.includes('SAFETY')) {
+        return {
+          type: 'CONTENT_BLOCKED',
+          message: `콘텐츠 차단됨: ${msg}`,
+        };
+      }
+
+      return {
+        type: 'API_ERROR',
+        message: msg,
+      };
+    }
+  }
+
+  /**
+   * URL 접근 실패 여부 판단
+   */
+  private isUrlAccessFailure(result: GeminiAnalysisResponse): boolean {
+    // API가 URL 접근 불가를 보고하는 패턴들
+    const failurePatterns = [
+      'URL_ACCESS_FAIL',
+      '접근할 수 없',
+      'cannot access',
+      'unable to fetch',
+      'failed to load',
+      '페이지를 찾을 수 없',
+      '404',
+      '403',
+    ];
+
+    const reason = result.reason?.toLowerCase() || '';
+    const summary = result.oneLineSummary?.toLowerCase() || '';
+
+    return failurePatterns.some(
+      (pattern) =>
+        reason.includes(pattern.toLowerCase()) ||
+        summary.includes(pattern.toLowerCase()),
+    );
+  }
+
+  /**
+   * URL 분석 전용 프롬프트 생성
+   */
+  private buildUrlAnalysisPrompt(
+    url: string,
+    title: string,
+    category: string,
+    source: string,
+  ): string {
+    return `
+${CONFIG.prompt.role}
+
+[분석 대상]
+- 제목: ${title}
+- URL: ${url}
+- 출처: ${source} (${category})
+
+**중요 지시사항:**
+1. 위 URL에 직접 접근하여 페이지 내용을 분석하세요.
+2. URL 접근이 불가능한 경우(차단, 로그인 필요, 404 등), 반드시 다음 형식으로 응답하세요:
+   - reason: "URL_ACCESS_FAIL: [구체적 사유]"
+3. URL 접근이 가능하면 아래 기준에 따라 분석하세요.
+
+${CONFIG.prompt.scoringCriteria}
+
+${CONFIG.prompt.jsonFormat}
+
+${CONFIG.prompt.tagGuide}
+    `.trim();
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // 🎬 YouTube 영상 분석 (Direct URL 지원)
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  /**
+   * YouTube 영상 분석 (Direct URL 지원)
    */
   async analyzeYoutubeVideo(
     videoUrl: string,
@@ -56,10 +178,8 @@ export class GeminiService {
     category: string,
     modelOverride?: string,
   ): Promise<GeminiAnalysisResponse> {
-    // 💡 모델 결정: 외부 지정 > Pro 제한 로직 > 기본 모델
     let targetModelName = modelOverride || this.modelName;
 
-    // modelOverride가 없을 때만 Pro 제한 로직 적용
     if (
       !modelOverride &&
       !CONFIG.youtube.allowProModels &&
@@ -75,7 +195,6 @@ export class GeminiService {
       '영상 내용을 분석하세요.',
     );
 
-    // 💡 새 SDK: YouTube URL을 fileUri에 직접 전달 + mimeType 명시 (안정성)
     const contents: Content[] = [
       {
         role: 'user',
@@ -93,6 +212,10 @@ export class GeminiService {
 
     return this.generateWithRetry(contents, targetModelName);
   }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // 공통 메서드들
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   /**
    * 공통 프롬프트 생성기
@@ -120,10 +243,7 @@ ${CONFIG.prompt.tagGuide}
   }
 
   /**
-   * 📝 텍스트 분석
-   * 일관성을 위해 Content[] 형식으로 감싸서 전달
-   * @param prompt - 분석할 프롬프트
-   * @param modelOverride - 사용할 모델명 (선택, 기본값: 생성자에서 설정한 모델)
+   * 텍스트 분석
    */
   async analyze(
     prompt: string,
@@ -139,11 +259,7 @@ ${CONFIG.prompt.tagGuide}
   }
 
   /**
-   * 📸 이미지 분석
-   * @param images - Base64 인코딩된 이미지 (단일 string 또는 string[])
-   * @param title - 제목
-   * @param category - 카테고리
-   * @param modelOverride - 사용할 모델명 (선택)
+   * 이미지 분석
    */
   async analyzeImage(
     images: string | string[],
@@ -160,13 +276,11 @@ ${CONFIG.prompt.tagGuide}
 
     const imageList = Array.isArray(images) ? images : [images];
 
-    // 새 SDK: contents 배열 형식
     const contents: Content[] = [
       {
         role: 'user',
         parts: [
           { text: promptText },
-          // 모든 스크린샷 조각을 inlineData 파트로 추가
           ...imageList.map((img) => ({
             inlineData: {
               data: img,
@@ -182,7 +296,6 @@ ${CONFIG.prompt.tagGuide}
 
   /**
    * 재시도 로직이 포함된 실행기 (공통 함수)
-   * 새 SDK API 방식으로 변경
    */
   private async generateWithRetry(
     contents: Content[],
@@ -191,7 +304,6 @@ ${CONFIG.prompt.tagGuide}
     const { maxRetries, initialRetryDelay } = CONFIG.gemini;
     const targetModel = modelOverride || this.modelName;
 
-    // 🛡️ 비속어 등으로 인한 차단을 방지하기 위해 필터 해제
     const safetySettings = [
       {
         category: HarmCategory.HARM_CATEGORY_HARASSMENT,
@@ -210,12 +322,12 @@ ${CONFIG.prompt.tagGuide}
         threshold: HarmBlockThreshold.BLOCK_NONE,
       },
     ];
+
     let waitTime = initialRetryDelay;
     let lastError: unknown;
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        // 새 SDK: ai.models.generateContent() 사용
         const response = await this.ai.models.generateContent({
           model: targetModel,
           contents: contents,
@@ -225,24 +337,20 @@ ${CONFIG.prompt.tagGuide}
           },
         });
 
-        // 새 SDK: response.text 직접 접근 (함수 호출 아님)
         const text = response.text;
 
         if (!text) {
           throw new Error('Empty response from Gemini API');
         }
 
-        // JSON 파싱
         return parseGeminiResponse<GeminiAnalysisResponse>(text);
       } catch (error) {
         lastError = error;
 
-        // 재시도 불가능한 에러면 즉시 중단
         if (!isRetryableError(error)) {
           throw new GeminiAPIError(`Non-retryable error`, attempt, error);
         }
 
-        // 마지막 시도였으면 에러 던짐
         if (attempt === maxRetries) {
           throw new GeminiAPIError(
             `Max retries (${maxRetries}) reached`,
@@ -251,7 +359,6 @@ ${CONFIG.prompt.tagGuide}
           );
         }
 
-        // Exponential Backoff
         console.warn(
           `      ⚠️ Gemini retry ${attempt}/${maxRetries} (waiting ${waitTime}ms)...`,
         );

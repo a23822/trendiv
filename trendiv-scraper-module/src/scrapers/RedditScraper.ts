@@ -117,8 +117,7 @@ export class RedditScraper implements Scraper {
             : new Date().toISOString(),
           source: `${config.name}/${p.subreddit ?? p.subreddit}`,
           category: config.category,
-          content:
-            p.selftext && p.selftext.trim() !== '' ? p.selftext : p.title,
+          content: '',
         };
       });
     } catch (error: unknown) {
