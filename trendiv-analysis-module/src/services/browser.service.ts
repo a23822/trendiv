@@ -57,6 +57,10 @@ export class BrowserService {
   }
 
   private async getPage(): Promise<Page> {
+    if (!POOLS.viewports || POOLS.viewports.length === 0) {
+      throw new Error('No viewports configured in POOLS');
+    }
+
     const viewport =
       POOLS.viewports[Math.floor(Math.random() * POOLS.viewports.length)];
     // 이미 있는 sharedContext에서 탭(Page)만 새로 엽니다.
@@ -101,12 +105,14 @@ export class BrowserService {
         return null;
       }
       return sanitizeText(content, CONFIG.content.maxLength);
-    } catch (error: any) {
-      console.error(`      Fetch error for ${url}:`, error.message);
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+      console.error(`      Fetch error for ${url}:`, msg);
       return null;
     } finally {
       // 페이지는 닫고, 컨텍스트는 유지
-      if (page) await page.close().catch(() => {});
+      if (page)
+        await page.close().catch((e) => console.warn('Page close error:', e));
     }
   }
 
@@ -167,11 +173,13 @@ export class BrowserService {
         : null;
 
       return { content: contentResult, screenshots };
-    } catch (error: any) {
-      console.error(`      ❌ Fetch error: ${error.message}`);
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+      console.error(`      ❌ Fetch error: ${msg}`);
       return { content: null, screenshots: null };
     } finally {
-      if (page) await page.close().catch(() => {});
+      if (page)
+        await page.close().catch((e) => console.warn('Page close error:', e));
     }
   }
 
@@ -206,7 +214,8 @@ export class BrowserService {
         ? article.textContent
         : await page.evaluate(() => document.body.innerText);
     } catch (e) {
-      console.error('      ⚠️ extractTextContent failed:', e);
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error('      ⚠️ extractTextContent failed:', msg);
       return null;
     }
   }

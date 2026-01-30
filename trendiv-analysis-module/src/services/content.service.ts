@@ -24,8 +24,9 @@ export class ContentService {
   ): Promise<ContentFetchResult | null> {
     try {
       return await this.fetchWebpageContent(url, title);
-    } catch (error: any) {
-      console.error(`      ❌ fetchContent failed for ${url}:`, error.message);
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+      console.error(`      ❌ fetchContent failed for ${url}:`, msg);
       return null;
     }
   }
@@ -46,10 +47,11 @@ export class ContentService {
         url,
         title,
       );
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
       console.error(
         `      ❌ fetchContentWithScreenshot failed for ${url}:`,
-        error.message,
+        msg,
       );
       return { content: null, screenshots: null };
     }
@@ -77,11 +79,9 @@ export class ContentService {
       }
 
       return null;
-    } catch (error: any) {
-      console.error(
-        `      ❌ Webpage fetch failed for ${safeTitle}:`,
-        error.message,
-      );
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+      console.error(`      ❌ YouTube fetch failed for ${safeTitle}:`, msg);
       return null;
     }
   }
