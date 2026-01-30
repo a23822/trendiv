@@ -6,8 +6,7 @@ import { Browser, BrowserContext, Page } from 'playwright';
 import { CONFIG, POOLS } from '../config';
 import { sanitizeText } from '../utils/helpers';
 import { ContentFetchResult } from '../types';
-import { Readability } from '@mozilla/readability';
-import { JSDOM } from 'jsdom';
+import path from 'path';
 
 const AD_KEYWORDS = [
   'doubleclick',
@@ -125,16 +124,23 @@ export class BrowserService {
   }> {
     let page: Page | null = null;
     try {
+      // [메모리 체크 강화] 시작부터 너무 높으면 아예 진입 차단 (2.5GB)
+      const used = process.memoryUsage();
+      if (used.rss > 2.5 * 1024 * 1024 * 1024) {
+        console.warn(
+          `🔥 Critical memory usage (RSS: ${(used.rss / 1024 / 1024).toFixed(1)}MB) - Skipping fetch entirely for safety.`,
+        );
+        return { content: null, screenshots: null };
+      }
+
       page = await this.getPage();
       console.log(`      🌐 Fetching: ${title.substring(0, 30)}...`);
       console.log('fetchPageContentWithScreenshot');
 
-      const used = process.memoryUsage();
-      if (used.rss > 2.8 * 1024 * 1024 * 1024) {
-        // 2.8GB 넘으면
+      // 2.0GB 넘으면 경고 및 스크린샷 스킵 여부 판단
+      if (used.rss > 2.0 * 1024 * 1024 * 1024) {
         console.warn(
-          `High memory usage (RSS: ${(used.rss / 1024 / 1024).toFixed(1)}MB), ` +
-            `skipping screenshot for ${title.substring(0, 30)}...`,
+          `High memory usage (RSS: ${(used.rss / 1024 / 1024).toFixed(1)}MB), proceed with caution...`,
         );
       }
 
@@ -146,12 +152,14 @@ export class BrowserService {
 
       const screenshots: string[] = [];
 
+      const quality = used.rss > 1.8 * 1024 ** 3 ? 60 : 70;
+
       // 최대 3번 분할 캡처
       for (let i = 0; i < 2; i++) {
         const buffer = await page.screenshot({
           fullPage: false, // 뷰포트 크기만큼만 촬영
           type: 'jpeg',
-          quality: 70,
+          quality: quality,
         });
         screenshots.push(buffer.toString('base64'));
 
@@ -194,29 +202,84 @@ export class BrowserService {
 
   private async extractTextContent(page: Page): Promise<string | null> {
     try {
-      // HTML 가져오기 (네이버 블로그 iframe 대응 포함)
-      let html: string;
-      const url = page.url();
-
-      if (url.includes('blog.naver.com')) {
-        const mainFrame = page.frames().find((f) => f.name() === 'mainFrame');
-        html = mainFrame ? await mainFrame.content() : await page.content();
-      } else {
-        html = await page.content();
+      // 1. 경로 찾기
+      let readabilityPath: string;
+      try {
+        readabilityPath = require.resolve(
+          '@mozilla/readability/Readability.js',
+        );
+      } catch (error: unknown) {
+        console.warn(
+          '      ⚠️ require.resolve failed, trying fallback path...',
+        );
+        readabilityPath = path.join(
+          process.cwd(),
+          'node_modules/@mozilla/readability/Readability.js',
+        );
       }
 
-      // JSDOM + Readability로 본문 파싱 (Node.js 환경에서 실행)
-      const dom = new JSDOM(html, { url });
-      const reader = new Readability(dom.window.document);
-      const article = reader.parse();
+      // 안전장치: 파일 실제 존재 여부 확인
+      const fs = require('fs');
+      if (!fs.existsSync(readabilityPath)) {
+        console.error(
+          `Readability.js 파일을 찾을 수 없습니다: ${readabilityPath}`,
+        );
+        return await page.evaluate(() => document.body.innerText);
+      }
 
-      return article
-        ? article.textContent
-        : await page.evaluate(() => document.body.innerText);
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
+      // 2. 브라우저 페이지에 스크립트 주입 (File I/O는 Playwright가 처리)
+      await page.addScriptTag({ path: readabilityPath });
+
+      // 3. Readability 로드 대기 (최대 5초)
+      try {
+        await page.waitForFunction(
+          () => typeof (window as any).Readability !== 'undefined',
+          {
+            timeout: 5000,
+          },
+        );
+      } catch (e) {
+        console.warn(
+          '      ⚠️ Readability load timeout, falling back to innerText',
+        );
+      }
+
+      // 4. 실행 (cloneNode 제거로 메모리 절약)
+      const extractedText = await page.evaluate(() => {
+        // @ts-ignore
+        if (typeof Readability === 'undefined') return document.body.innerText;
+
+        // 네이버 블로그 iframe 대응 (name="mainFrame")
+        if (window.location.href.includes('blog.naver.com')) {
+          const mainFrame = document.querySelector(
+            'iframe[name="mainFrame"]',
+          ) as HTMLIFrameElement;
+          if (mainFrame && mainFrame.contentDocument) {
+            // iframe 내부는 cloneNode 사용 추천 (안전성) 혹은 그대로 사용
+            // @ts-ignore
+            const reader = new Readability(mainFrame.contentDocument);
+            return reader.parse()?.textContent;
+          }
+        }
+
+        // 일반 페이지: document 직접 전달 (메모리 절약)
+        // @ts-ignore
+        const reader = new Readability(document);
+        const article = reader.parse();
+        return article ? article.textContent : document.body.innerText;
+      });
+
+      return extractedText || null;
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
       console.error('      ⚠️ extractTextContent failed:', msg);
-      return null;
+      // 실패 시 최소한의 텍스트라도 건지기 위해 innerText 시도
+      try {
+        return await page.evaluate(() => document.body.innerText);
+      } catch (fallbackErr) {
+        console.error('Fallback innerText also failed:', fallbackErr);
+        return '';
+      }
     }
   }
 }
