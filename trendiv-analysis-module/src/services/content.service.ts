@@ -65,7 +65,7 @@ export class ContentService {
     const safeTitle = title?.substring(0, 30) || 'Unknown';
 
     try {
-      const content = await this.browserService.fetchPageContent(url, false);
+      const content = await this.browserService.fetchPageContent(url);
 
       if (content) {
         console.log(`      ✅ Webpage content fetched: ${safeTitle}...`);

@@ -6,6 +6,8 @@ import { Browser, BrowserContext, Page } from 'playwright';
 import { CONFIG, POOLS } from '../config';
 import { sanitizeText } from '../utils/helpers';
 import { ContentFetchResult } from '../types';
+import { Readability } from '@mozilla/readability';
+import { JSDOM } from 'jsdom';
 
 const AD_KEYWORDS = [
   'doubleclick',
@@ -86,17 +88,14 @@ export class BrowserService {
     return page;
   }
 
-  async fetchPageContent(
-    url: string,
-    isYoutube: boolean = false,
-  ): Promise<string | null> {
+  async fetchPageContent(url: string): Promise<string | null> {
     let page: Page | null = null;
     try {
       page = await this.getPage();
 
       await this.navigateAndPrepare(page, url);
 
-      const content = await this.extractTextContent(page, isYoutube);
+      const content = await this.extractTextContent(page);
 
       if (!content || content.length < CONFIG.content.minLength) {
         return null;
@@ -124,6 +123,15 @@ export class BrowserService {
       console.log(`      🌐 Fetching: ${title.substring(0, 30)}...`);
       console.log('fetchPageContentWithScreenshot');
 
+      const used = process.memoryUsage();
+      if (used.rss > 2.8 * 1024 * 1024 * 1024) {
+        // 2.8GB 넘으면
+        console.warn(
+          `High memory usage (RSS: ${(used.rss / 1024 / 1024).toFixed(1)}MB), ` +
+            `skipping screenshot for ${title.substring(0, 30)}...`,
+        );
+      }
+
       await this.navigateAndPrepare(page, url);
 
       // 3. 다시 설정할 필요 없이, 이미 설정된 높이값을 가져와서 사용함
@@ -133,7 +141,7 @@ export class BrowserService {
       const screenshots: string[] = [];
 
       // 최대 3번 분할 캡처
-      for (let i = 0; i < 3; i++) {
+      for (let i = 0; i < 2; i++) {
         const buffer = await page.screenshot({
           fullPage: false, // 뷰포트 크기만큼만 촬영
           type: 'jpeg',
@@ -149,7 +157,7 @@ export class BrowserService {
       }
 
       // 4. 최대 3회 분할 캡처 로직 추가
-      const rawText = await this.extractTextContent(page, false);
+      const rawText = await this.extractTextContent(page);
       const contentResult: ContentFetchResult | null = rawText
         ? {
             content: sanitizeText(rawText, CONFIG.content.maxLength),
@@ -176,22 +184,30 @@ export class BrowserService {
     await this.simulateHumanBehavior(page);
   }
 
-  private async extractTextContent(page: Page, isYoutube: boolean = false) {
-    return await page.evaluate((isYoutubePage) => {
-      if (isYoutubePage) {
-        const metaDesc = document.querySelector('meta[name="description"]');
-        return metaDesc
-          ? (metaDesc as HTMLMetaElement).content
-          : document.body.innerText;
+  private async extractTextContent(page: Page): Promise<string | null> {
+    try {
+      // HTML 가져오기 (네이버 블로그 iframe 대응 포함)
+      let html: string;
+      const url = page.url();
+
+      if (url.includes('blog.naver.com')) {
+        const mainFrame = page.frames().find((f) => f.name() === 'mainFrame');
+        html = mainFrame ? await mainFrame.content() : await page.content();
+      } else {
+        html = await page.content();
       }
-      const trash = document.querySelectorAll(
-        'script, style, nav, footer, header, aside, .ads, .comments, iframe',
-      );
-      trash.forEach((el) => el.remove());
-      const article = document.querySelector(
-        'article, main, .post-content, .entry-content',
-      ) as HTMLElement;
-      return (article || document.body).innerText;
-    }, isYoutube);
+
+      // JSDOM + Readability로 본문 파싱 (Node.js 환경에서 실행)
+      const dom = new JSDOM(html, { url });
+      const reader = new Readability(dom.window.document);
+      const article = reader.parse();
+
+      return article
+        ? article.textContent
+        : await page.evaluate(() => document.body.innerText);
+    } catch (e) {
+      console.error('      ⚠️ extractTextContent failed:', e);
+      return null;
+    }
   }
 }
