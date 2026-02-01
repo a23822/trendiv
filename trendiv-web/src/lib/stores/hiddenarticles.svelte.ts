@@ -14,6 +14,10 @@ class HiddenArticlesStore {
 	// 중복 클릭 방지용 처리 중인 URL Set
 	private processingUrls = new Set<string>();
 
+	get list(): string[] {
+		return this.hiddenArticles.map((h) => h.article_url);
+	}
+
 	constructor() {
 		// SSR 안전: 브라우저에서만 구독 설정
 		if (browser && supabase) {

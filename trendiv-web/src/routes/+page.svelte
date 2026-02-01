@@ -8,6 +8,7 @@
 	import ArticleModal from '$lib/components/modal/ArticleModal/ArticleModal.svelte';
 	import FilterModal from '$lib/components/modal/FilterModal/FilterModal.svelte';
 	import { auth } from '$lib/stores/auth.svelte.js';
+	import { bookmarks } from '$lib/stores/bookmarks.svelte';
 	import { hiddenArticles } from '$lib/stores/hiddenarticles.svelte';
 	import { modal } from '$lib/stores/modal.svelte.js';
 	import type { Trend, ArticleStatusFilter } from '$lib/types';
@@ -137,9 +138,26 @@
 		);
 	}
 
+	// 실제 렌더링할 아이템 (숨김 필터 상태에 따라 다르게 처리)
+	let displayTrends = $derived.by(() => {
+		const hiddenList = hiddenArticles.list ?? [];
+		const bookmarkList = bookmarks.list ?? [];
+
+		if (statusFilter === 'hidden') {
+			return trends.filter((t) => hiddenList.includes(t.link));
+		}
+
+		if (statusFilter === 'bookmarked') {
+			return trends.filter((t) => bookmarkList.includes(t.link));
+		}
+		return trends;
+	});
+
 	let masonryColumns = $derived.by(() => {
 		const cols = columnCount;
-		const items = trends; // ✅ 전체 리스트 사용
+		const items = displayTrends;
+
+		const hiddenList = hiddenArticles.list;
 
 		if (cols === 1) return [items];
 		if (items.length === 0) return [[], []];
@@ -150,7 +168,8 @@
 		for (const trend of items) {
 			const shorter = heights[0] <= heights[1] ? 0 : 1;
 			columns[shorter].push(trend);
-			heights[shorter] += estimateHeight(trend);
+			const isHidden = hiddenList.includes(trend.link);
+			heights[shorter] += isHidden ? 48 : estimateHeight(trend);
 		}
 
 		return columns;
