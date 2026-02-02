@@ -47,9 +47,8 @@
 
 	const isBookmarked = $derived(bookmarks.isBookmarked(trend.link));
 
-	const isHidden = $derived(hiddenArticles.isHidden(trend.link));
+	const isHidden = $derived(hiddenArticles.list.includes(trend.link));
 	let isHiddenHovered = $state(false);
-
 	// 숨김 상태이더라도 강제 확장 모드라면 접지 않음
 	const isCollapsed = $derived(isHidden && !isForceExpand);
 
