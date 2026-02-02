@@ -2,9 +2,7 @@ import { browser } from '$app/environment';
 import { supabase } from '$lib/stores/db';
 import type { Trend, HiddenArticle } from '$lib/types';
 import { auth } from './auth.svelte.js';
-import { SvelteSet } from 'svelte/reactivity';
-
-// [필수] Svelte 5 전용 Set
+import { tick } from 'svelte';
 
 class HiddenArticlesStore {
 	// 일반 데이터 상태
@@ -12,9 +10,8 @@ class HiddenArticlesStore {
 	isLoading = $state(false);
 	isReady = $state(false);
 
-	// [수정] 내장 Set 대신 SvelteSet 사용 ($state 불필요)
-	// .add, .delete 호출 시 즉시 반응형 업데이트가 발생합니다.
-	recentlyHidden = new SvelteSet<string>();
+	// [핵심] $state 배열 사용 → 반응성 보장
+	recentlyHidden = $state<string[]>([]);
 
 	// 콜백 (페이지 이동 시 초기화 대상)
 	onHide: ((hiddenLink: string) => void) | null = null;
@@ -28,17 +25,17 @@ class HiddenArticlesStore {
 
 	// [로직] 숨김 상태이면서(AND) '방금 숨김' 목록에 없어야 완전히 화면에서 사라짐
 	isFullyHidden(url: string): boolean {
-		return this.isHidden(url) && !this.recentlyHidden.has(url);
+		return this.isHidden(url) && !this.recentlyHidden.includes(url);
 	}
 
 	isRecentlyHidden(url: string): boolean {
-		return this.recentlyHidden.has(url);
+		return this.recentlyHidden.includes(url);
 	}
 
 	// [중요] 페이지 이동 시 호출: 이전 페이지의 콜백 및 애니메이션 상태 초기화
 	resetView() {
-		this.recentlyHidden.clear(); // [수정] SvelteSet 메서드로 초기화
-		this.onHide = null; // 잘못된 콜백 실행 방지
+		this.recentlyHidden = [];
+		this.onHide = null;
 		this.processingUrls.clear();
 	}
 
@@ -111,9 +108,11 @@ class HiddenArticlesStore {
 					(h) => h.article_url !== article.link
 				);
 
-				// 2. 애니메이션 상태 정리 (SvelteSet 메서드 사용)
-				if (this.recentlyHidden.has(article.link)) {
-					this.recentlyHidden.delete(article.link);
+				// 2. 애니메이션 상태 정리
+				if (this.recentlyHidden.includes(article.link)) {
+					this.recentlyHidden = this.recentlyHidden.filter(
+						(url) => url !== article.link
+					);
 				}
 
 				try {
@@ -130,17 +129,12 @@ class HiddenArticlesStore {
 			}
 			// === [CASE 2: 숨김 추가] ===
 			else {
-				// 1. [순서 중요] recentlyHidden 먼저 추가하여 애니메이션 트리거
-				// SvelteSet.add는 즉시 반응성을 가집니다.
-				this.recentlyHidden.add(article.link);
-
 				const newHidden = {
 					user_id: auth.user.id,
 					article_url: article.link,
 					article_title: article.title
 				};
 
-				// 임시 ID (-Time으로 고유성 확보)
 				const tempId = -Date.now();
 				const tempHidden: HiddenArticle = {
 					...newHidden,
@@ -148,8 +142,17 @@ class HiddenArticlesStore {
 					created_at: new Date().toISOString()
 				};
 
-				// 2. 목록 업데이트
-				this.hiddenArticles = [...this.hiddenArticles, tempHidden];
+				// [핵심] 두 상태를 동시에 업데이트하여 하나의 렌더 사이클에서 처리
+				// recentlyHidden에 먼저 추가한 새 배열 생성
+				const newRecentlyHidden = [...this.recentlyHidden, article.link];
+				const newHiddenArticles = [...this.hiddenArticles, tempHidden];
+
+				// 두 상태를 연속으로 할당 (Svelte가 배칭 처리)
+				this.recentlyHidden = newRecentlyHidden;
+				this.hiddenArticles = newHiddenArticles;
+
+				// tick()으로 DOM 업데이트 완료 대기
+				await tick();
 
 				try {
 					const { data, error } = await supabase
@@ -173,7 +176,9 @@ class HiddenArticlesStore {
 					this.hiddenArticles = this.hiddenArticles.filter(
 						(h) => h.article_url !== article.link
 					);
-					this.recentlyHidden.delete(article.link); // 롤백도 delete 사용
+					this.recentlyHidden = this.recentlyHidden.filter(
+						(url) => url !== article.link
+					);
 					this.fetchHiddenArticles();
 				}
 			}

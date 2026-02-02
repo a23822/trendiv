@@ -13,6 +13,7 @@
 	import { cn } from '$lib/utils/ClassMerge';
 	import { formatDate } from '$lib/utils/date';
 	import { capitalizeFirst } from '$lib/utils/string';
+	import { onMount, onDestroy } from 'svelte';
 	import { fade } from 'svelte/transition';
 
 	interface Props {
@@ -47,10 +48,79 @@
 
 	const isBookmarked = $derived(bookmarks.isBookmarked(trend.link));
 
-	const isHidden = $derived(hiddenArticles.list.includes(trend.link));
+	// 스토어에서 숨김 상태 가져오기
+	const isHiddenInStore = $derived(hiddenArticles.list.includes(trend.link));
+
+	// [추가] recentlyHidden 상태 - 방금 숨김 처리되었는지 확인
+	const isRecentlyHidden = $derived(
+		hiddenArticles.recentlyHidden.includes(trend.link)
+	);
+
+	// [핵심] 컴포넌트 내부 상태로 애니메이션 제어
+	let isCollapsed = $state(false);
 	let isHiddenHovered = $state(false);
-	// 숨김 상태이더라도 강제 확장 모드라면 접지 않음
-	const isCollapsed = $derived(isHidden && !isForceExpand);
+	let isAnimating = $state(false);
+
+	// 이전 숨김 상태 추적 (변화 감지용)
+	let prevHiddenState: boolean | null = null;
+	let isMounted = false;
+
+	onMount(() => {
+		// [수정] 마운트 시 recentlyHidden이면 애니메이션 상태로 시작
+		if (isRecentlyHidden) {
+			// 방금 숨김 처리된 경우: 펼친 상태에서 시작 → 애니메이션으로 접기
+			prevHiddenState = false; // 이전 상태를 "숨김 안됨"으로 설정
+			isCollapsed = false; // 펼친 상태로 시작
+		} else {
+			// 기존 로직: 이미 숨겨진 상태면 바로 접힌 상태로
+			prevHiddenState = isHiddenInStore;
+			isCollapsed = isHiddenInStore && !isForceExpand;
+		}
+		isMounted = true;
+	});
+
+	// 숨김 상태 변화 감지 및 애니메이션 처리
+	$effect(() => {
+		// 마운트 전에는 실행 안 함
+		if (!isMounted) return;
+
+		const currentHidden = isHiddenInStore;
+		const forceExpand = isForceExpand;
+		const isRecent = isRecentlyHidden; // 반응성 등록
+
+		// [추가] recentlyHidden이고 아직 안 접혔으면 애니메이션 시작
+		if (isRecent && currentHidden && !isCollapsed && !forceExpand) {
+			requestAnimationFrame(() => {
+				isCollapsed = true;
+			});
+			prevHiddenState = true;
+			return;
+		}
+
+		// 상태가 변경되었을 때만 처리
+		if (currentHidden !== prevHiddenState) {
+			prevHiddenState = currentHidden;
+
+			if (currentHidden && !forceExpand) {
+				// false → true: 숨김 추가됨 → 애니메이션으로 접기
+				requestAnimationFrame(() => {
+					isCollapsed = true;
+				});
+			} else {
+				// true → false: 숨김 해제됨 → 즉시 펼치기
+				isCollapsed = false;
+			}
+		}
+
+		// forceExpand 변경 처리
+		if (forceExpand && isCollapsed) {
+			isCollapsed = false;
+		}
+	});
+
+	onDestroy(() => {
+		isMounted = false;
+	});
 
 	function handleBookmark(e: MouseEvent) {
 		e.stopPropagation();
@@ -64,9 +134,6 @@
 
 	// 날짜 안전 체크
 	const displayDate = $derived(trend.date ? formatDate(trend.date) : '');
-
-	// 애니메이션 진행 상태를 추적하는 state
-	let isAnimating = $state(false);
 </script>
 
 <div
@@ -162,14 +229,16 @@
 					<button
 						type="button"
 						onclick={handleHide}
-						title={isHidden ? '숨김 해제' : '숨김 추가'}
+						title={isHiddenInStore ? '숨김 해제' : '숨김 추가'}
 						class={cn(
 							'flex h-6 w-6 shrink-0 items-center justify-center rounded-full',
 							'hover:bg-alert-subtle hover:text-alert text-gray-400',
 							CommonStyles.DEFAULT_TRANSITION_COLOR,
-							isHidden && 'text-alert'
+							isHiddenInStore && 'text-alert'
 						)}
-						><span class="sr-only">{isHidden ? '숨김 해제' : '숨김 추가'}</span>
+						><span class="sr-only"
+							>{isHiddenInStore ? '숨김 해제' : '숨김 추가'}</span
+						>
 						<div><IconHide /></div></button
 					>
 				</div>
@@ -282,7 +351,7 @@
 		</div>
 	</div>
 
-	{#if isHidden && !isForceExpand}
+	{#if isHiddenInStore && !isForceExpand}
 		<div
 			class={cn('absolute inset-0')}
 			in:fade={{ duration: 500 }}

@@ -67,7 +67,9 @@
 
 		if (source && page === 1 && !isLoadingMore) {
 			if (ready && statusFilter !== 'hidden') {
-				trends = source.filter((t) => !hiddenArticles.isHidden(t.link));
+				// [수정] isHidden 대신 isFullyHidden을 사용하여
+				// 방금 숨긴 항목(recentlyHidden)은 리스트에서 즉시 제거되지 않도록 함
+				trends = source.filter((t) => !hiddenArticles.isFullyHidden(t.link));
 			} else {
 				trends = source;
 			}
@@ -159,9 +161,21 @@
 		);
 	}
 
+	// [단순화] displayTrends - recentlyHidden 체크 제거
+	// ArticleCard에서 애니메이션을 자체 처리하므로, 여기서는 숨김 상태만 확인
 	let displayTrends = $derived.by(() => {
 		const hiddenList = hiddenArticles.list ?? [];
 		const bookmarkList = bookmarks.list ?? [];
+		// recentlyHidden을 참조하여 반응성 유지 (카드가 리스트에 남아있어야 애니메이션 가능)
+		const recentlyHiddenList = hiddenArticles.recentlyHidden;
+
+		// 디버그 로그
+		console.log(
+			'[displayTrends] hiddenList:',
+			hiddenList.length,
+			'recentlyHidden:',
+			recentlyHiddenList
+		);
 
 		if (statusFilter === 'hidden') {
 			return trends.filter((t) => hiddenList.includes(t.link));
@@ -170,7 +184,27 @@
 		if (statusFilter === 'bookmarked') {
 			return trends.filter((t) => bookmarkList.includes(t.link));
 		}
-		return trends.filter((t) => !hiddenArticles.isFullyHidden(t.link));
+
+		// [핵심] 숨김 상태이지만 recentlyHidden에 있으면 애니메이션을 위해 유지
+		return trends.filter((t) => {
+			const isHidden = hiddenList.includes(t.link);
+			const isRecent = recentlyHiddenList.includes(t.link);
+
+			// 디버그: 숨김 처리되는 아이템 로그
+			if (isHidden) {
+				console.log(
+					'[displayTrends] hidden item:',
+					t.link,
+					'isRecent:',
+					isRecent,
+					'keep:',
+					!isHidden || isRecent
+				);
+			}
+
+			// 완전히 숨겨진 상태(isHidden && !isRecent)만 필터링
+			return !isHidden || isRecent;
+		});
 	});
 
 	// 컬럼 할당 캐시
@@ -194,6 +228,7 @@
 
 			if (colIndex !== undefined) {
 				columns[colIndex].push(trend);
+				// 숨김 상태인 아이템은 접힌 높이(48px)로 계산
 				const isHidden = hiddenArticles.list.includes(trend.link);
 				heights[colIndex] += isHidden ? 48 : estimateHeight(trend);
 			} else {
@@ -232,7 +267,8 @@
 			trends = [];
 			bufferTrends = [];
 			columnAssignments.clear();
-			hiddenArticles.recentlyHidden.clear();
+			// recentlyHidden 초기화
+			hiddenArticles.recentlyHidden = [];
 		} else {
 			isLoadingMore = true;
 			page += 1;
