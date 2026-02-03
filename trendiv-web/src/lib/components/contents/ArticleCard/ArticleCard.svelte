@@ -13,6 +13,7 @@
 	import { cn } from '$lib/utils/ClassMerge';
 	import { formatDate } from '$lib/utils/date';
 	import { capitalizeFirst } from '$lib/utils/string';
+	import { onMount, onDestroy } from 'svelte';
 	import { fade } from 'svelte/transition';
 
 	interface Props {
@@ -23,7 +24,7 @@
 
 	let { trend, onclick, isForceExpand = false }: Props = $props();
 
-	// 분석 결과 가져오기
+	// 분석 결과
 	const analysis = $derived(
 		trend.represent_result ||
 			(trend.analysis_results && trend.analysis_results.length > 0
@@ -35,7 +36,7 @@
 		Math.max(0, (trend.analysis_results?.length ?? 0) - 1)
 	);
 
-	// 아이콘용 고유 ID
+	// 표시 데이터
 	const iconId = $derived(`article-${trend.id}`);
 	const displayTitle = $derived(analysis?.title_ko || trend.title || '');
 	const displaySummary = $derived(analysis?.oneLineSummary || '');
@@ -44,14 +45,78 @@
 	const displayModel = $derived(analysis?.aiModel || 'AI Analysis');
 	const displayLink = $derived(trend.link || '');
 	const displayCategory = $derived(trend.category || 'General');
+	const displayDate = $derived(trend.date ? formatDate(trend.date) : '');
 
+	// 스토어 상태
 	const isBookmarked = $derived(bookmarks.isBookmarked(trend.link));
+	const isHiddenInStore = $derived(hiddenArticles.list.includes(trend.link));
 
-	const isHidden = $derived(hiddenArticles.isHidden(trend.link));
+	// 애니메이션 상태 (전체 목록에서 숨김 추가 시)
+	const isRecentlyHidden = $derived(
+		hiddenArticles.recentlyHidden.includes(trend.link)
+	);
+
+	// 컴포넌트 내부 상태
+	let isCollapsed = $state(false);
 	let isHiddenHovered = $state(false);
+	let isAnimating = $state(false);
 
-	// 숨김 상태이더라도 강제 확장 모드라면 접지 않음
-	const isCollapsed = $derived(isHidden && !isForceExpand);
+	// 이전 상태 추적
+	let prevHiddenState: boolean | null = null;
+	let isMounted = false;
+
+	onMount(() => {
+		// 마운트 시 상태 결정
+		if (isRecentlyHidden) {
+			// 방금 숨김 처리됨: 펼친 상태에서 시작 → 애니메이션
+			prevHiddenState = false;
+			isCollapsed = false;
+		} else {
+			// 기존 상태: 숨김이면 접힌 상태로
+			prevHiddenState = isHiddenInStore;
+			isCollapsed = isHiddenInStore && !isForceExpand;
+		}
+		isMounted = true;
+	});
+
+	// 상태 변화 감지 및 애니메이션
+	$effect(() => {
+		if (!isMounted) return;
+
+		const currentHidden = isHiddenInStore;
+		const forceExpand = isForceExpand;
+
+		// 방금 숨김 처리됨 → 접기 애니메이션
+		if (isRecentlyHidden && currentHidden && !isCollapsed && !forceExpand) {
+			requestAnimationFrame(() => {
+				isCollapsed = true;
+			});
+			prevHiddenState = true;
+			return;
+		}
+
+		// 일반적인 상태 변경 처리
+		if (currentHidden !== prevHiddenState) {
+			prevHiddenState = currentHidden;
+
+			if (currentHidden && !forceExpand) {
+				requestAnimationFrame(() => {
+					isCollapsed = true;
+				});
+			} else {
+				isCollapsed = false;
+			}
+		}
+
+		// forceExpand 처리
+		if (forceExpand && isCollapsed) {
+			isCollapsed = false;
+		}
+	});
+
+	onDestroy(() => {
+		isMounted = false;
+	});
 
 	function handleBookmark(e: MouseEvent) {
 		e.stopPropagation();
@@ -62,12 +127,6 @@
 		e.stopPropagation();
 		hiddenArticles.toggle(trend);
 	}
-
-	// 날짜 안전 체크
-	const displayDate = $derived(trend.date ? formatDate(trend.date) : '');
-
-	// 애니메이션 진행 상태를 추적하는 state
-	let isAnimating = $state(false);
 </script>
 
 <div
@@ -76,7 +135,7 @@
 		'group relative flex h-full flex-col overflow-hidden bg-(--color-gray-0)'
 	)}
 >
-	<!-- Gradient Overlay (Matching SVG paint0_linear_12_5: #80DED1 (Mint 200) opacity 0.2) -->
+	<!-- Gradient Overlay -->
 	<div
 		class="pointer-events-none absolute top-0 right-0 left-0 h-40 bg-linear-to-b from-(--color-mint-200)/20 to-transparent"
 	></div>
@@ -163,14 +222,16 @@
 					<button
 						type="button"
 						onclick={handleHide}
-						title={isHidden ? '숨김 해제' : '숨김 추가'}
+						title={isHiddenInStore ? '숨김 해제' : '숨김 추가'}
 						class={cn(
 							'flex h-6 w-6 shrink-0 items-center justify-center rounded-full',
 							'hover:bg-alert-subtle hover:text-alert text-gray-400',
 							CommonStyles.DEFAULT_TRANSITION_COLOR,
-							isHidden && 'text-alert'
+							isHiddenInStore && 'text-alert'
 						)}
-						><span class="sr-only">{isHidden ? '숨김 해제' : '숨김 추가'}</span>
+						><span class="sr-only"
+							>{isHiddenInStore ? '숨김 해제' : '숨김 추가'}</span
+						>
 						<div><IconHide /></div></button
 					>
 				</div>
@@ -215,7 +276,6 @@
 			<!-- articleCard - footer -->
 			<div class="relative z-10 mt-auto flex flex-col gap-4">
 				<!-- tagGroup -->
-				<!-- 키 중복 방지 (인덱스 추가) -->
 				<div class="flex flex-wrap gap-1.5">
 					{#each displayTags as tag, i (tag + '-' + i)}
 						<KeywordTag {tag} />
@@ -260,7 +320,6 @@
 								+{extraModelCount}
 							</span>
 						{/if}
-						<!-- Arrow Icon simulated with CSS or simple SVG if needed, but per instructions relying on text/layout mostly -->
 						<svg
 							width="12"
 							height="12"
@@ -283,7 +342,7 @@
 		</div>
 	</div>
 
-	{#if isHidden && !isForceExpand}
+	{#if isHiddenInStore && !isForceExpand}
 		<div
 			class={cn('absolute inset-0')}
 			in:fade={{ duration: 500 }}

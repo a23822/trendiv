@@ -7,19 +7,25 @@
 	import Header from '$lib/components/layout/Header/Header.svelte';
 	import ArticleModal from '$lib/components/modal/ArticleModal/ArticleModal.svelte';
 	import FilterModal from '$lib/components/modal/FilterModal/FilterModal.svelte';
+	import DotLoading from '$lib/components/pure/Load/DotLoading.svelte';
+	import IconScroll from '$lib/icons/icon_scroll.svelte';
 	import { auth } from '$lib/stores/auth.svelte.js';
-	import { hiddenArticles } from '$lib/stores/hiddenarticles.svelte';
+	import { bookmarks } from '$lib/stores/bookmarks.svelte.ts';
+	import { hiddenArticles } from '$lib/stores/hiddenarticles.svelte.ts';
 	import { modal } from '$lib/stores/modal.svelte.js';
 	import type { Trend, ArticleStatusFilter } from '$lib/types';
+	import { cn } from '$lib/utils/ClassMerge';
 	import type { PageData } from './$types';
-	import { onMount, untrack } from 'svelte';
+	import { onMount } from 'svelte';
 
 	let { data }: { data: PageData } = $props();
 
-	// 개인화 필터 상태
+	// 필터 상태
 	let statusFilter = $state<ArticleStatusFilter>('all');
 
+	// 데이터 상태
 	let trends = $state<Trend[]>(data.trends ?? []);
+	let bufferTrends = $state<Trend[]>([]);
 	let page = $state(1);
 	let isLoadingMore = $state(false);
 	let hasMore = $state(true);
@@ -27,7 +33,7 @@
 	let selectedTags = $state<string[]>([]);
 	let isSearching = $state(false);
 
-	//filter - category
+	// 카테고리 필터
 	let categoryList = $derived(data.categories ?? []);
 	let selectedCategories = $state<string[]>([]);
 
@@ -51,26 +57,27 @@
 		}, 150);
 	}
 
+	// 페이지 진입 시 초기화
 	$effect(() => {
-		// 반응형 의존성: 데이터나 스토어 준비 상태가 바뀌면 실행
+		hiddenArticles.resetView();
+		bookmarks.resetView();
+	});
+
+	// 초기 데이터 필터링
+	$effect(() => {
 		const source = data.trends;
 		const ready = hiddenArticles.isReady;
 
-		untrack(() => {
-			// 페이지 첫 진입이고 아직 로딩 중이 아닐 때만 실행
-			if (source && page === 1 && !isLoadingMore) {
-				// 1. 숨김 보관함('hidden')이 아닐 때는 숨겨진 글을 리스트에서 제거
-				if (ready && statusFilter !== 'hidden') {
-					trends = source.filter((t) => !hiddenArticles.isHidden(t.link));
-				}
-				// 2. 아직 스토어가 준비 안 됐거나, 숨김 보관함이면 그대로 표시
-				else {
-					trends = source;
-				}
+		if (source && page === 1 && !isLoadingMore) {
+			if (ready && statusFilter !== 'hidden') {
+				trends = source.filter((t) => !hiddenArticles.isFullyHidden(t.link));
+			} else {
+				trends = source;
 			}
-		});
+		}
 	});
 
+	// 이메일 동기화
 	$effect(() => {
 		if (auth.user?.email) {
 			email = auth.user.email;
@@ -81,6 +88,11 @@
 		innerWidth = window.innerWidth;
 		window.addEventListener('resize', handleResize);
 
+		// 콜백 설정
+		hiddenArticles.onHide = handleHideCallback;
+		hiddenArticles.onUnhide = handleUnhideCallback;
+		bookmarks.onUnbookmark = handleUnbookmarkCallback;
+
 		if (trends.length === 0) {
 			fetchTrends(true);
 		}
@@ -89,8 +101,42 @@
 			window.removeEventListener('resize', handleResize);
 			clearTimeout(resizeTimeout);
 			abortController?.abort();
+			hiddenArticles.onHide = null;
+			hiddenArticles.onUnhide = null;
+			bookmarks.onUnbookmark = null;
 		};
 	});
+
+	// 버퍼에서 아이템 보충
+	function replaceFromBuffer() {
+		if (bufferTrends.length > 0) {
+			const replacement = bufferTrends[0];
+			bufferTrends = bufferTrends.slice(1);
+			trends = [...trends, replacement];
+		}
+
+		if (bufferTrends.length <= 10 && hasMore && !isLoadingMore) {
+			fetchBuffer();
+		}
+	}
+
+	// 전체 목록에서 숨김 추가 시
+	function handleHideCallback(hiddenLink: string) {
+		if (statusFilter !== 'all') return;
+		replaceFromBuffer();
+	}
+
+	// 숨김 필터에서 숨김 해제 시
+	function handleUnhideCallback(unhiddenLink: string) {
+		if (statusFilter !== 'hidden') return;
+		replaceFromBuffer();
+	}
+
+	// 북마크 필터에서 북마크 해제 시
+	function handleUnbookmarkCallback(unbookmarkedLink: string) {
+		if (statusFilter !== 'bookmarked') return;
+		replaceFromBuffer();
+	}
 
 	async function handleSubscribe() {
 		const targetEmail = auth.user?.email || email;
@@ -120,7 +166,7 @@
 	}
 
 	// =============================================
-	// Masonry 증분 처리 관련
+	// Masonry 관련
 	// =============================================
 
 	const columnCount = $derived(innerWidth < 640 ? 1 : 2);
@@ -137,9 +183,36 @@
 		);
 	}
 
+	// displayTrends
+	let displayTrends = $derived.by(() => {
+		const hiddenList = hiddenArticles.list ?? [];
+		const bookmarkList = bookmarks.list ?? [];
+		const recentlyHiddenList = hiddenArticles.recentlyHidden;
+
+		// 숨김 필터: 숨김된 것만
+		if (statusFilter === 'hidden') {
+			return trends.filter((t) => hiddenList.includes(t.link));
+		}
+
+		// 북마크 필터: 북마크된 것만
+		if (statusFilter === 'bookmarked') {
+			return trends.filter((t) => bookmarkList.includes(t.link));
+		}
+
+		// 전체 목록: 숨김 + 애니메이션 처리
+		return trends.filter((t) => {
+			const isHidden = hiddenList.includes(t.link);
+			const isRecent = recentlyHiddenList.includes(t.link);
+			return !isHidden || isRecent;
+		});
+	});
+
+	// 컬럼 할당 캐시
+	const columnAssignments = new Map<number, number>();
+
 	let masonryColumns = $derived.by(() => {
 		const cols = columnCount;
-		const items = trends; // ✅ 전체 리스트 사용
+		const items = displayTrends;
 
 		if (cols === 1) return [items];
 		if (items.length === 0) return [[], []];
@@ -147,10 +220,27 @@
 		const columns: Trend[][] = [[], []];
 		const heights = [0, 0];
 
+		const unassigned: Trend[] = [];
+
 		for (const trend of items) {
-			const shorter = heights[0] <= heights[1] ? 0 : 1;
-			columns[shorter].push(trend);
-			heights[shorter] += estimateHeight(trend);
+			const colIndex = columnAssignments.get(trend.id);
+
+			if (colIndex !== undefined) {
+				columns[colIndex].push(trend);
+				const isHidden = hiddenArticles.list.includes(trend.link);
+				heights[colIndex] += isHidden ? 48 : estimateHeight(trend);
+			} else {
+				unassigned.push(trend);
+			}
+		}
+
+		for (const trend of unassigned) {
+			const colIndex = heights[0] <= heights[1] ? 0 : 1;
+			columnAssignments.set(trend.id, colIndex);
+			columns[colIndex].push(trend);
+
+			const isHidden = hiddenArticles.list.includes(trend.link);
+			heights[colIndex] += isHidden ? 48 : estimateHeight(trend);
 		}
 
 		return columns;
@@ -162,10 +252,8 @@
 	async function fetchTrends(reset = false) {
 		if (isLoadingMore && !reset) return;
 
-		// 현재 요청의 컨트롤러를 로컬 변수로 저장
 		const currentController = new AbortController();
 
-		// 이전 요청 중단
 		abortController?.abort();
 		abortController = currentController;
 
@@ -174,6 +262,9 @@
 			page = 1;
 			hasMore = true;
 			trends = [];
+			bufferTrends = [];
+			columnAssignments.clear();
+			hiddenArticles.recentlyHidden = [];
 		} else {
 			isLoadingMore = true;
 			page += 1;
@@ -182,7 +273,7 @@
 		try {
 			const params = new URLSearchParams({
 				page: page.toString(),
-				limit: '20',
+				limit: '40',
 				searchKeyword: searchKeyword,
 				tagFilter: selectedTags.join(',')
 			});
@@ -191,7 +282,6 @@
 				params.append('category', selectedCategories.join(','));
 			}
 
-			// 개인화 필터 파라미터 추가
 			if (auth.user?.id) {
 				params.append('userId', auth.user.id);
 			}
@@ -208,28 +298,28 @@
 			if (result.success) {
 				const currentFilter = statusFilter;
 
-				untrack(() => {
-					// 새로 가져온 데이터 중 이미 숨김 처리된 것은 제외
-					const incoming =
-						currentFilter === 'hidden'
-							? result.data
-							: result.data.filter(
-									(t: Trend) => !hiddenArticles.isHidden(t.link)
-								);
+				const incoming =
+					currentFilter === 'hidden'
+						? result.data
+						: result.data.filter(
+								(t: Trend) => !hiddenArticles.isHidden(t.link)
+							);
 
-					if (reset) {
-						trends = incoming;
-					} else {
-						const existingIds = new Set(trends.map((t) => t.id));
-						const newItems = incoming.filter(
-							(t: Trend) => !existingIds.has(t.id)
-						);
-						trends = [...trends, ...newItems];
-					}
-				});
+				if (reset) {
+					trends = incoming.slice(0, 20);
+					bufferTrends = incoming.slice(20);
+				} else {
+					const existingIds = new Set(trends.map((t) => t.id));
+					const bufferIds = new Set(bufferTrends.map((t) => t.id));
+					const newItems = incoming.filter(
+						(t: Trend) => !existingIds.has(t.id) && !bufferIds.has(t.id)
+					);
 
-				// 무한 루프 방지 조건 (전체 개수와 비교)
-				if (result.data.length === 0 || trends.length >= result.total) {
+					trends = [...trends, ...bufferTrends, ...newItems.slice(0, 20)];
+					bufferTrends = newItems.slice(20);
+				}
+
+				if (result.data.length === 0 || result.data.length < 40) {
 					hasMore = false;
 				}
 			} else {
@@ -244,10 +334,62 @@
 			isLoadingMore = false;
 			isSearching = false;
 
-			// 내가 생성한 컨트롤러일 때만 null 처리
 			if (abortController === currentController) {
 				abortController = null;
 			}
+		}
+	}
+
+	async function fetchBuffer() {
+		if (isLoadingMore || !hasMore) return;
+
+		isLoadingMore = true;
+		const nextPage = page + 1;
+
+		try {
+			const params = new URLSearchParams({
+				page: nextPage.toString(),
+				limit: '10',
+				searchKeyword: searchKeyword,
+				tagFilter: selectedTags.join(',')
+			});
+
+			if (selectedCategories.length > 0) {
+				params.append('category', selectedCategories.join(','));
+			}
+
+			if (auth.user?.id) {
+				params.append('userId', auth.user.id);
+			}
+			params.append('statusFilter', statusFilter);
+
+			const res = await fetch(`${API_URL}/api/trends?${params}`);
+
+			if (!res.ok) return;
+
+			const result = await res.json();
+
+			if (result.success) {
+				page = nextPage;
+
+				const existingIds = new Set(trends.map((t) => t.id));
+				const bufferIds = new Set(bufferTrends.map((t) => t.id));
+				const newItems = result.data.filter(
+					(t: Trend) =>
+						!existingIds.has(t.id) &&
+						!bufferIds.has(t.id) &&
+						(statusFilter === 'hidden' || !hiddenArticles.isHidden(t.link))
+				);
+				bufferTrends = [...bufferTrends, ...newItems];
+
+				if (result.data.length === 0 || result.data.length < 10) {
+					hasMore = false;
+				}
+			}
+		} catch (e) {
+			console.error('버퍼 로드 오류:', e);
+		} finally {
+			isLoadingMore = false;
 		}
 	}
 
@@ -258,18 +400,15 @@
 
 	function handleClear() {
 		if (searchKeyword === '') return;
-
 		searchKeyword = '';
 		fetchTrends(true);
 	}
 
-	// SearchCard용 - 즉시 API 호출
 	function handleTagChange(newTags: string[]) {
 		selectedTags = newTags;
 		fetchTrends(true);
 	}
 
-	// SearchCard용 - 즉시 API 호출
 	function handleCategorySelect(category: string) {
 		if (selectedCategories.includes(category)) {
 			selectedCategories = selectedCategories.filter((c) => c !== category);
@@ -279,9 +418,7 @@
 		fetchTrends(true);
 	}
 
-	// SearchCard용 - 개인화 필터 변경 (즉시 API 호출)
 	function handleStatusFilterChange(status: ArticleStatusFilter) {
-		// 북마크/숨김 필터는 로그인 필요
 		if (status !== 'all' && !auth.user) {
 			auth.openLoginModal();
 			return;
@@ -290,19 +427,15 @@
 		fetchTrends(true);
 	}
 
-	// 모달용 - API 호출 없이 상태만 변경
 	function handleModalTagChange(newTags: string[]) {
 		selectedTags = newTags;
 	}
 
-	// 모달용 - API 호출 없이 상태만 변경
 	function handleModalCategoryChange(categories: string[]) {
 		selectedCategories = categories;
 	}
 
-	// 모달용 - 개인화 필터 상태만 변경
 	function handleModalStatusFilterChange(status: ArticleStatusFilter) {
-		// 북마크/숨김 필터는 로그인 필요
 		if (status !== 'all' && !auth.user) {
 			auth.openLoginModal();
 			return;
@@ -311,12 +444,9 @@
 	}
 
 	function openArticleModal(trend: Trend) {
-		modal.open(ArticleModal, {
-			trend: trend
-		});
+		modal.open(ArticleModal, { trend });
 	}
 
-	// 모달 열기 - onapply에서만 API 호출
 	function openFilterModal() {
 		modal.open(FilterModal, {
 			open: true,
@@ -391,32 +521,48 @@
 					{/if}
 				</div>
 			{:else}
-				<div class="grid grid-cols-1 items-start gap-6 sm:grid-cols-2">
-					{#each masonryColumns as column, colIndex (colIndex)}
-						<div class="flex flex-col gap-6">
-							{#each column as trend (trend.id)}
-								<ArticleCard
-									{trend}
-									onclick={() => openArticleModal(trend)}
-									isForceExpand={statusFilter === 'hidden'}
-								/>
-							{/each}
-						</div>
-					{/each}
-				</div>
-
-				{#if hasMore}
-					<div
-						use:infiniteScroll
-						class="flex justify-center py-16 text-sm text-gray-400"
-					>
-						{#if isLoadingMore}
-							로딩 중...
-						{:else}
-							스크롤하여 더 보기
-						{/if}
+				<div class="relative">
+					<div class={cn('grid grid-cols-1 items-start gap-6 sm:grid-cols-2')}>
+						{#each masonryColumns as column, colIndex (colIndex)}
+							<div class="flex flex-col gap-6">
+								{#each column as trend (trend.id)}
+									<ArticleCard
+										{trend}
+										onclick={() => openArticleModal(trend)}
+										isForceExpand={statusFilter === 'hidden'}
+									/>
+								{/each}
+							</div>
+						{/each}
 					</div>
-				{/if}
+
+					{#if hasMore}
+						<div
+							class={cn(
+								'absolute inset-x-0 bottom-0 z-50',
+								'h-150 pt-70',
+								'from-bg-surface bg-linear-to-t from-50% to-transparent to-100%',
+								'flex items-end justify-center pb-8',
+								'flex flex-col items-center justify-center gap-2',
+								'text-sm text-gray-400'
+							)}
+						>
+							{#if isLoadingMore}
+								<DotLoading
+									size="sm"
+									withBackground={false}
+								/>
+							{:else}
+								<IconScroll />
+								<span>스크롤하여 더 보기</span>
+							{/if}
+							<div
+								use:infiniteScroll
+								class="pointer-events-auto"
+							></div>
+						</div>
+					{/if}
+				</div>
 			{/if}
 		</div>
 	</div>
