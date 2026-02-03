@@ -8,6 +8,8 @@
 	import ArticleModal from '$lib/components/modal/ArticleModal/ArticleModal.svelte';
 	import FilterModal from '$lib/components/modal/FilterModal/FilterModal.svelte';
 	import DotLoading from '$lib/components/pure/Load/DotLoading.svelte';
+	import IconLoadingAlert from '$lib/icons/icon_loading_alert.svelte';
+	import IconLoadingScan from '$lib/icons/icon_loading_scan.svelte';
 	import IconScroll from '$lib/icons/icon_scroll.svelte';
 	import { auth } from '$lib/stores/auth.svelte.js';
 	import { bookmarks } from '$lib/stores/bookmarks.svelte.ts';
@@ -16,7 +18,7 @@
 	import type { Trend, ArticleStatusFilter } from '$lib/types';
 	import { cn } from '$lib/utils/ClassMerge';
 	import type { PageData } from './$types';
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 
 	let { data }: { data: PageData } = $props();
 
@@ -32,6 +34,9 @@
 	let searchKeyword = $state('');
 	let selectedTags = $state<string[]>([]);
 	let isSearching = $state(false);
+
+	// 레이아웃 준비 상태 (FOUC 방지)
+	let isLayoutReady = $state(false);
 
 	// 카테고리 필터
 	let categoryList = $derived(data.categories ?? []);
@@ -74,6 +79,17 @@
 			} else {
 				trends = source;
 			}
+		}
+	});
+
+	// 레이아웃 준비 완료 처리
+	$effect(() => {
+		// displayTrends가 계산되고 trends에 데이터가 있을 때
+		if (!isSearching && !isLayoutReady) {
+			// DOM 업데이트 후 레이아웃 준비 완료
+			tick().then(() => {
+				isLayoutReady = true;
+			});
 		}
 	});
 
@@ -259,6 +275,7 @@
 
 		if (reset) {
 			isSearching = true;
+			isLayoutReady = false; // 검색/필터 시 레이아웃 리셋
 			page = 1;
 			hasMore = true;
 			trends = [];
@@ -508,17 +525,19 @@
 				onchange={handleTagChange}
 			/>
 
-			{#if isSearching}
-				<div class="py-32 text-center text-gray-400">로딩 중...</div>
+			{#if isSearching || !isLayoutReady}
+				<div class="flex flex-col items-center justify-center py-32">
+					<IconLoadingScan />
+					<span class="text-base whitespace-pre-line text-gray-500"
+						>로딩 중입니다...</span
+					>
+				</div>
 			{:else if trends.length === 0}
-				<div class="py-32 text-center text-gray-400">
-					{#if statusFilter === 'bookmarked'}
-						북마크한 아티클이 없습니다.
-					{:else if statusFilter === 'hidden'}
-						숨김 처리한 아티클이 없습니다.
-					{:else}
-						결과가 없습니다.
-					{/if}
+				<div class="flex flex-col items-center py-32">
+					<IconLoadingAlert />
+					<span class="text-center text-base whitespace-pre-line text-gray-500"
+						>{`결과가 없습니다.\n필터를 바꾸거나 새로고침해주세요`}</span
+					>
 				</div>
 			{:else}
 				<div class="relative">
@@ -539,19 +558,17 @@
 					{#if hasMore}
 						<div
 							class={cn(
-								'absolute inset-x-0 bottom-0 z-50',
-								'h-150 pt-70',
+								'absolute inset-x-0 bottom-0',
+								'z-50 h-150 pt-70',
 								'from-bg-surface bg-linear-to-t from-50% to-transparent to-100%',
 								'flex items-end justify-center pb-8',
 								'flex flex-col items-center justify-center gap-2',
-								'text-sm text-gray-400'
+								'text-sm text-gray-400',
+								'pointer-events-none'
 							)}
 						>
 							{#if isLoadingMore}
-								<DotLoading
-									size="sm"
-									withBackground={false}
-								/>
+								<DotLoading />
 							{:else}
 								<IconScroll />
 								<span>스크롤하여 더 보기</span>
