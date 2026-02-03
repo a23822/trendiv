@@ -10,8 +10,8 @@
 	import DotLoading from '$lib/components/pure/Load/DotLoading.svelte';
 	import IconScroll from '$lib/icons/icon_scroll.svelte';
 	import { auth } from '$lib/stores/auth.svelte.js';
-	import { bookmarks } from '$lib/stores/bookmarks.svelte';
-	import { hiddenArticles } from '$lib/stores/hiddenarticles.svelte';
+	import { bookmarks } from '$lib/stores/bookmarks.svelte.ts';
+	import { hiddenArticles } from '$lib/stores/hiddenarticles.svelte.ts';
 	import { modal } from '$lib/stores/modal.svelte.js';
 	import type { Trend, ArticleStatusFilter } from '$lib/types';
 	import { cn } from '$lib/utils/ClassMerge';
