@@ -24,7 +24,7 @@
 
 	let { trend, onclick, isForceExpand = false }: Props = $props();
 
-	// 분석 결과 가져오기
+	// 분석 결과
 	const analysis = $derived(
 		trend.represent_result ||
 			(trend.analysis_results && trend.analysis_results.length > 0
@@ -36,7 +36,7 @@
 		Math.max(0, (trend.analysis_results?.length ?? 0) - 1)
 	);
 
-	// 아이콘용 고유 ID
+	// 표시 데이터
 	const iconId = $derived(`article-${trend.id}`);
 	const displayTitle = $derived(analysis?.title_ko || trend.title || '');
 	const displaySummary = $derived(analysis?.oneLineSummary || '');
@@ -45,51 +45,49 @@
 	const displayModel = $derived(analysis?.aiModel || 'AI Analysis');
 	const displayLink = $derived(trend.link || '');
 	const displayCategory = $derived(trend.category || 'General');
+	const displayDate = $derived(trend.date ? formatDate(trend.date) : '');
 
+	// 스토어 상태
 	const isBookmarked = $derived(bookmarks.isBookmarked(trend.link));
-
-	// 스토어에서 숨김 상태 가져오기
 	const isHiddenInStore = $derived(hiddenArticles.list.includes(trend.link));
 
-	// [추가] recentlyHidden 상태 - 방금 숨김 처리되었는지 확인
+	// 애니메이션 상태 (전체 목록에서 숨김 추가 시)
 	const isRecentlyHidden = $derived(
 		hiddenArticles.recentlyHidden.includes(trend.link)
 	);
 
-	// [핵심] 컴포넌트 내부 상태로 애니메이션 제어
+	// 컴포넌트 내부 상태
 	let isCollapsed = $state(false);
 	let isHiddenHovered = $state(false);
 	let isAnimating = $state(false);
 
-	// 이전 숨김 상태 추적 (변화 감지용)
+	// 이전 상태 추적
 	let prevHiddenState: boolean | null = null;
 	let isMounted = false;
 
 	onMount(() => {
-		// [수정] 마운트 시 recentlyHidden이면 애니메이션 상태로 시작
+		// 마운트 시 상태 결정
 		if (isRecentlyHidden) {
-			// 방금 숨김 처리된 경우: 펼친 상태에서 시작 → 애니메이션으로 접기
-			prevHiddenState = false; // 이전 상태를 "숨김 안됨"으로 설정
-			isCollapsed = false; // 펼친 상태로 시작
+			// 방금 숨김 처리됨: 펼친 상태에서 시작 → 애니메이션
+			prevHiddenState = false;
+			isCollapsed = false;
 		} else {
-			// 기존 로직: 이미 숨겨진 상태면 바로 접힌 상태로
+			// 기존 상태: 숨김이면 접힌 상태로
 			prevHiddenState = isHiddenInStore;
 			isCollapsed = isHiddenInStore && !isForceExpand;
 		}
 		isMounted = true;
 	});
 
-	// 숨김 상태 변화 감지 및 애니메이션 처리
+	// 상태 변화 감지 및 애니메이션
 	$effect(() => {
-		// 마운트 전에는 실행 안 함
 		if (!isMounted) return;
 
 		const currentHidden = isHiddenInStore;
 		const forceExpand = isForceExpand;
-		const isRecent = isRecentlyHidden; // 반응성 등록
 
-		// [추가] recentlyHidden이고 아직 안 접혔으면 애니메이션 시작
-		if (isRecent && currentHidden && !isCollapsed && !forceExpand) {
+		// 방금 숨김 처리됨 → 접기 애니메이션
+		if (isRecentlyHidden && currentHidden && !isCollapsed && !forceExpand) {
 			requestAnimationFrame(() => {
 				isCollapsed = true;
 			});
@@ -97,22 +95,20 @@
 			return;
 		}
 
-		// 상태가 변경되었을 때만 처리
+		// 일반적인 상태 변경 처리
 		if (currentHidden !== prevHiddenState) {
 			prevHiddenState = currentHidden;
 
 			if (currentHidden && !forceExpand) {
-				// false → true: 숨김 추가됨 → 애니메이션으로 접기
 				requestAnimationFrame(() => {
 					isCollapsed = true;
 				});
 			} else {
-				// true → false: 숨김 해제됨 → 즉시 펼치기
 				isCollapsed = false;
 			}
 		}
 
-		// forceExpand 변경 처리
+		// forceExpand 처리
 		if (forceExpand && isCollapsed) {
 			isCollapsed = false;
 		}
@@ -131,9 +127,6 @@
 		e.stopPropagation();
 		hiddenArticles.toggle(trend);
 	}
-
-	// 날짜 안전 체크
-	const displayDate = $derived(trend.date ? formatDate(trend.date) : '');
 </script>
 
 <div
@@ -142,7 +135,7 @@
 		'group relative flex h-full flex-col overflow-hidden bg-(--color-gray-0)'
 	)}
 >
-	<!-- Gradient Overlay (Matching SVG paint0_linear_12_5: #80DED1 (Mint 200) opacity 0.2) -->
+	<!-- Gradient Overlay -->
 	<div
 		class="pointer-events-none absolute top-0 right-0 left-0 h-40 bg-linear-to-b from-(--color-mint-200)/20 to-transparent"
 	></div>
@@ -283,7 +276,6 @@
 			<!-- articleCard - footer -->
 			<div class="relative z-10 mt-auto flex flex-col gap-4">
 				<!-- tagGroup -->
-				<!-- 키 중복 방지 (인덱스 추가) -->
 				<div class="flex flex-wrap gap-1.5">
 					{#each displayTags as tag, i (tag + '-' + i)}
 						<KeywordTag {tag} />
@@ -328,7 +320,6 @@
 								+{extraModelCount}
 							</span>
 						{/if}
-						<!-- Arrow Icon simulated with CSS or simple SVG if needed, but per instructions relying on text/layout mostly -->
 						<svg
 							width="12"
 							height="12"

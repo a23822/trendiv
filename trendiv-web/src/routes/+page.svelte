@@ -20,9 +20,10 @@
 
 	let { data }: { data: PageData } = $props();
 
-	// 개인화 필터 상태
+	// 필터 상태
 	let statusFilter = $state<ArticleStatusFilter>('all');
 
+	// 데이터 상태
 	let trends = $state<Trend[]>(data.trends ?? []);
 	let bufferTrends = $state<Trend[]>([]);
 	let page = $state(1);
@@ -32,7 +33,7 @@
 	let selectedTags = $state<string[]>([]);
 	let isSearching = $state(false);
 
-	//filter - category
+	// 카테고리 필터
 	let categoryList = $derived(data.categories ?? []);
 	let selectedCategories = $state<string[]>([]);
 
@@ -56,19 +57,19 @@
 		}, 150);
 	}
 
+	// 페이지 진입 시 초기화
 	$effect(() => {
-		// 페이지 진입 시 이전 페이지의 잔여 상태(콜백, 애니메이션 등) 초기화
 		hiddenArticles.resetView();
+		bookmarks.resetView();
 	});
 
+	// 초기 데이터 필터링
 	$effect(() => {
 		const source = data.trends;
 		const ready = hiddenArticles.isReady;
 
 		if (source && page === 1 && !isLoadingMore) {
 			if (ready && statusFilter !== 'hidden') {
-				// [수정] isHidden 대신 isFullyHidden을 사용하여
-				// 방금 숨긴 항목(recentlyHidden)은 리스트에서 즉시 제거되지 않도록 함
 				trends = source.filter((t) => !hiddenArticles.isFullyHidden(t.link));
 			} else {
 				trends = source;
@@ -76,6 +77,7 @@
 		}
 	});
 
+	// 이메일 동기화
 	$effect(() => {
 		if (auth.user?.email) {
 			email = auth.user.email;
@@ -86,7 +88,10 @@
 		innerWidth = window.innerWidth;
 		window.addEventListener('resize', handleResize);
 
+		// 콜백 설정
 		hiddenArticles.onHide = handleHideCallback;
+		hiddenArticles.onUnhide = handleUnhideCallback;
+		bookmarks.onUnbookmark = handleUnbookmarkCallback;
 
 		if (trends.length === 0) {
 			fetchTrends(true);
@@ -97,23 +102,40 @@
 			clearTimeout(resizeTimeout);
 			abortController?.abort();
 			hiddenArticles.onHide = null;
+			hiddenArticles.onUnhide = null;
+			bookmarks.onUnbookmark = null;
 		};
 	});
 
-	// 숨김 처리 시 호출되는 콜백
-	function handleHideCallback(hiddenLink: string) {
-		if (statusFilter === 'hidden') return;
-
+	// 버퍼에서 아이템 보충
+	function replaceFromBuffer() {
 		if (bufferTrends.length > 0) {
 			const replacement = bufferTrends[0];
 			bufferTrends = bufferTrends.slice(1);
 			trends = [...trends, replacement];
 		}
 
-		// 버퍼가 10개 이하면 충전
 		if (bufferTrends.length <= 10 && hasMore && !isLoadingMore) {
 			fetchBuffer();
 		}
+	}
+
+	// 전체 목록에서 숨김 추가 시
+	function handleHideCallback(hiddenLink: string) {
+		if (statusFilter !== 'all') return;
+		replaceFromBuffer();
+	}
+
+	// 숨김 필터에서 숨김 해제 시
+	function handleUnhideCallback(unhiddenLink: string) {
+		if (statusFilter !== 'hidden') return;
+		replaceFromBuffer();
+	}
+
+	// 북마크 필터에서 북마크 해제 시
+	function handleUnbookmarkCallback(unbookmarkedLink: string) {
+		if (statusFilter !== 'bookmarked') return;
+		replaceFromBuffer();
 	}
 
 	async function handleSubscribe() {
@@ -161,48 +183,26 @@
 		);
 	}
 
-	// [단순화] displayTrends - recentlyHidden 체크 제거
-	// ArticleCard에서 애니메이션을 자체 처리하므로, 여기서는 숨김 상태만 확인
+	// displayTrends
 	let displayTrends = $derived.by(() => {
 		const hiddenList = hiddenArticles.list ?? [];
 		const bookmarkList = bookmarks.list ?? [];
-		// recentlyHidden을 참조하여 반응성 유지 (카드가 리스트에 남아있어야 애니메이션 가능)
 		const recentlyHiddenList = hiddenArticles.recentlyHidden;
 
-		// 디버그 로그
-		console.log(
-			'[displayTrends] hiddenList:',
-			hiddenList.length,
-			'recentlyHidden:',
-			recentlyHiddenList
-		);
-
+		// 숨김 필터: 숨김된 것만
 		if (statusFilter === 'hidden') {
 			return trends.filter((t) => hiddenList.includes(t.link));
 		}
 
+		// 북마크 필터: 북마크된 것만
 		if (statusFilter === 'bookmarked') {
 			return trends.filter((t) => bookmarkList.includes(t.link));
 		}
 
-		// [핵심] 숨김 상태이지만 recentlyHidden에 있으면 애니메이션을 위해 유지
+		// 전체 목록: 숨김 + 애니메이션 처리
 		return trends.filter((t) => {
 			const isHidden = hiddenList.includes(t.link);
 			const isRecent = recentlyHiddenList.includes(t.link);
-
-			// 디버그: 숨김 처리되는 아이템 로그
-			if (isHidden) {
-				console.log(
-					'[displayTrends] hidden item:',
-					t.link,
-					'isRecent:',
-					isRecent,
-					'keep:',
-					!isHidden || isRecent
-				);
-			}
-
-			// 완전히 숨겨진 상태(isHidden && !isRecent)만 필터링
 			return !isHidden || isRecent;
 		});
 	});
@@ -220,7 +220,6 @@
 		const columns: Trend[][] = [[], []];
 		const heights = [0, 0];
 
-		// 1단계: 기존 할당된 아이템 먼저 배치
 		const unassigned: Trend[] = [];
 
 		for (const trend of items) {
@@ -228,7 +227,6 @@
 
 			if (colIndex !== undefined) {
 				columns[colIndex].push(trend);
-				// 숨김 상태인 아이템은 접힌 높이(48px)로 계산
 				const isHidden = hiddenArticles.list.includes(trend.link);
 				heights[colIndex] += isHidden ? 48 : estimateHeight(trend);
 			} else {
@@ -236,7 +234,6 @@
 			}
 		}
 
-		// 2단계: 새 아이템만 현재 높이 기준으로 배치
 		for (const trend of unassigned) {
 			const colIndex = heights[0] <= heights[1] ? 0 : 1;
 			columnAssignments.set(trend.id, colIndex);
@@ -267,7 +264,6 @@
 			trends = [];
 			bufferTrends = [];
 			columnAssignments.clear();
-			// recentlyHidden 초기화
 			hiddenArticles.recentlyHidden = [];
 		} else {
 			isLoadingMore = true;
@@ -310,20 +306,16 @@
 							);
 
 				if (reset) {
-					// 처음: 20개 표시 + 20개 버퍼
 					trends = incoming.slice(0, 20);
 					bufferTrends = incoming.slice(20);
 				} else {
-					// 추가 로딩: 버퍼 전체 + 새 데이터 20개를 trends에, 나머지 20개는 버퍼
 					const existingIds = new Set(trends.map((t) => t.id));
 					const bufferIds = new Set(bufferTrends.map((t) => t.id));
 					const newItems = incoming.filter(
 						(t: Trend) => !existingIds.has(t.id) && !bufferIds.has(t.id)
 					);
 
-					// 버퍼 전체 + 새 아이템 20개를 trends에 추가
 					trends = [...trends, ...bufferTrends, ...newItems.slice(0, 20)];
-					// 새 아이템 나머지는 버퍼로
 					bufferTrends = newItems.slice(20);
 				}
 
@@ -348,7 +340,6 @@
 		}
 	}
 
-	// 버퍼만 채우는 로드
 	async function fetchBuffer() {
 		if (isLoadingMore || !hasMore) return;
 
@@ -387,7 +378,7 @@
 					(t: Trend) =>
 						!existingIds.has(t.id) &&
 						!bufferIds.has(t.id) &&
-						!hiddenArticles.isHidden(t.link)
+						(statusFilter === 'hidden' || !hiddenArticles.isHidden(t.link))
 				);
 				bufferTrends = [...bufferTrends, ...newItems];
 
@@ -409,7 +400,6 @@
 
 	function handleClear() {
 		if (searchKeyword === '') return;
-
 		searchKeyword = '';
 		fetchTrends(true);
 	}
@@ -454,9 +444,7 @@
 	}
 
 	function openArticleModal(trend: Trend) {
-		modal.open(ArticleModal, {
-			trend: trend
-		});
+		modal.open(ArticleModal, { trend });
 	}
 
 	function openFilterModal() {

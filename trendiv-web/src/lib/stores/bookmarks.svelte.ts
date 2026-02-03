@@ -4,19 +4,27 @@ import type { Trend, Bookmark } from '$lib/types';
 import { auth } from './auth.svelte.js';
 
 class BookmarkStore {
-	// 상태 선언
+	// 데이터 상태
 	bookmarks = $state<Bookmark[]>([]);
 	isLoading = $state(false);
 
-	// 중복 클릭 방지용 처리 중인 URL Set
+	// 콜백
+	onUnbookmark: ((unbookmarkedLink: string) => void) | null = null;
+
+	// 중복 클릭 방지
 	private processingUrls = new Set<string>();
 
 	get list(): string[] {
 		return this.bookmarks.map((b) => b.article_url);
 	}
 
+	// 페이지 이동 시 초기화
+	resetView() {
+		this.onUnbookmark = null;
+		this.processingUrls.clear();
+	}
+
 	constructor() {
-		// SSR 안전: 브라우저에서만 구독 설정
 		if (browser && supabase) {
 			supabase.auth.onAuthStateChange((event, session) => {
 				if (session?.user) {
@@ -28,18 +36,14 @@ class BookmarkStore {
 		}
 	}
 
-	// URL로 북마크 여부 확인
 	isBookmarked(url: string) {
 		return this.bookmarks.some((b) => b.article_url === url);
 	}
 
-	// 북마크 목록 불러오기
 	async fetchBookmarks(userId?: string) {
-		// supabase 가드
 		if (!supabase) return;
 
 		const targetId = userId || auth.user?.id;
-
 		if (!targetId || this.isLoading) return;
 
 		this.isLoading = true;
@@ -58,31 +62,23 @@ class BookmarkStore {
 		}
 	}
 
-	// 북마크 토글 로직
 	async toggle(article: Trend) {
-		// supabase 가드
 		if (!supabase) return;
-
 		if (!auth.user) {
 			auth.openLoginModal();
 			return;
 		}
-
-		// 유효하지 않은 link 체크
 		if (!article.link) {
 			console.error('북마크 토글 실패: article.link가 없습니다.');
 			return;
 		}
+		if (this.processingUrls.has(article.link)) return;
 
-		// 중복 클릭 방지
-		if (this.processingUrls.has(article.link)) {
-			return;
-		}
 		this.processingUrls.add(article.link);
 
 		try {
 			if (this.isBookmarked(article.link)) {
-				// 삭제 로직 (Optimistic UI)
+				// === 북마크 해제 ===
 				this.bookmarks = this.bookmarks.filter(
 					(b) => b.article_url !== article.link
 				);
@@ -98,8 +94,11 @@ class BookmarkStore {
 					console.error('북마크 삭제 오류:', e);
 					this.fetchBookmarks();
 				}
+
+				// 북마크 해제 콜백 호출 (버퍼 보충)
+				this.onUnbookmark?.(article.link);
 			} else {
-				// 추가 로직
+				// === 북마크 추가 ===
 				const newBookmark = {
 					user_id: auth.user.id,
 					article_url: article.link,
@@ -108,7 +107,6 @@ class BookmarkStore {
 					article_source: article.source
 				};
 
-				// 임시 데이터 추가 (Optimistic UI)
 				const tempBookmark: Bookmark = {
 					...newBookmark,
 					id: -1,
@@ -141,7 +139,6 @@ class BookmarkStore {
 				}
 			}
 		} finally {
-			// 처리 완료 후 Set에서 제거
 			this.processingUrls.delete(article.link);
 		}
 	}
