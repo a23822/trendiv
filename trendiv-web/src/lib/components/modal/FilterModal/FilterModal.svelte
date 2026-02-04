@@ -172,6 +172,7 @@
 			statusFilter={localStatusFilter}
 			onchange={handleTagChange}
 			onselectCategory={handleCategorySelect}
+			onresetCategory={() => (localSelectedCategory = [])}
 			onstatusChange={handleStatusChange}
 			variant="flat"
 		/>

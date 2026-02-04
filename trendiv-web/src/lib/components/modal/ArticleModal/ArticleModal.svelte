@@ -3,7 +3,6 @@
 	import ModelSelectCard from '$lib/components/contents/ModelSelectCard/ModelSelectCard.svelte';
 	import ModalLayout from '$lib/components/modal/ModalLayout.svelte';
 	import CircleProgress from '$lib/components/pure/Progress/circleProgress.svelte';
-	import ScrollContainer from '$lib/components/pure/Scroll/scrollContainer.svelte';
 	import KeywordTag from '$lib/components/pure/Tag/keywordTag.svelte';
 	import IconBookmark from '$lib/icons/icon_bookmark.svelte';
 	import IconBot from '$lib/icons/icon_bot.svelte';
@@ -16,14 +15,14 @@
 	import { bookmarks } from '$lib/stores/bookmarks.svelte';
 	import { modal } from '$lib/stores/modal.svelte.js';
 	import type { Trend } from '$lib/types';
-	import { cn } from '$lib/utils/ClassMerge';
 	import { formatDate } from '$lib/utils/date';
 
 	interface Props {
 		trend: Trend;
+		onclose?: () => void;
 	}
 
-	let { trend }: Props = $props();
+	let { trend, onclose }: Props = $props();
 
 	let open = $state(true);
 
@@ -48,6 +47,14 @@
 	const displayReason = $derived(currentData?.reason || '');
 	const displayDate = $derived(formatDate(trend.date));
 	const displayCategory = $derived(trend.category);
+
+	function handleClose() {
+		if (onclose) {
+			onclose();
+		} else {
+			modal.close();
+		}
+	}
 
 	function handleBookmark() {
 		bookmarks.toggle(trend);
@@ -136,7 +143,7 @@
 
 <ModalLayout
 	bind:open
-	onclose={() => modal.close()}
+	onclose={handleClose}
 	{headerComponent}
 	{footerComponent}
 	><!-- body -->

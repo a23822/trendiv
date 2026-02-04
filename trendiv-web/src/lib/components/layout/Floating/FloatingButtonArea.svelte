@@ -55,9 +55,9 @@
 		<div
 			class={cn(
 				'relative flex h-6 w-6 items-center justify-center',
+				CommonStyles.DEFAULT_TRANSITION,
 				isOpen ? 'rotate-135' : 'rotate-0'
 			)}
-			style="transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);"
 		>
 			<span class="absolute h-1 w-5 rounded-full bg-current"></span>
 			<span class="absolute h-1 w-5 rotate-90 rounded-full bg-current"></span>

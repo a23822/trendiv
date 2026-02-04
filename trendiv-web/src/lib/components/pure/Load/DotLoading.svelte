@@ -11,7 +11,7 @@
 		withBackground?: boolean;
 	}
 
-	const { size = 'md', withBackground = true }: Props = $props();
+	const { size = 'md', withBackground = false }: Props = $props();
 
 	const sizeConfig = {
 		sm: {

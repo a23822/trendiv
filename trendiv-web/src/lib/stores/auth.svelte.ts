@@ -18,7 +18,38 @@ class AuthStore {
 			supabase.auth.onAuthStateChange((event, session) => {
 				this.user = session?.user || null;
 				this.updateAvatarColor();
+
+				// 로그인 성공 후 URL 정리 (Supabase가 토큰 처리 완료 후)
+				if (
+					event === 'SIGNED_IN' ||
+					event === 'TOKEN_REFRESHED' ||
+					event === 'INITIAL_SESSION'
+				) {
+					// 약간의 딜레이 후 정리 (Supabase 내부 처리 완료 보장)
+					setTimeout(() => {
+						this.cleanupAuthUrl();
+					}, 100);
+				}
 			});
+		}
+	}
+
+	// OAuth 콜백 URL 정리 (access_token 등 제거)
+	private cleanupAuthUrl() {
+		if (!browser) return;
+
+		const hash = window.location.hash;
+
+		// hash에 access_token이 있으면 OAuth 콜백 URL
+		if (hash && hash.includes('access_token')) {
+			// 현재 URL에서 hash 제거 (쿼리 파라미터는 유지)
+			const cleanUrl =
+				window.location.origin +
+				window.location.pathname +
+				window.location.search;
+
+			// 히스토리 교체 (뒤로 가기해도 토큰 URL 안 나옴)
+			window.history.replaceState({}, '', cleanUrl);
 		}
 	}
 
