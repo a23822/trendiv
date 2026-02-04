@@ -762,7 +762,7 @@
 						>로딩 중입니다...</span
 					>
 				</div>
-			{:else if trends.length === 0}
+			{:else if displayTrends.length === 0}
 				<div class="flex flex-col items-center py-32">
 					<IconLoadingAlert />
 					<span class="text-center text-base whitespace-pre-line text-gray-500"
