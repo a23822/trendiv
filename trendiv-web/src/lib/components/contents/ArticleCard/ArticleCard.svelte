@@ -7,8 +7,8 @@
 	import IconLink from '$lib/icons/icon_link.svelte';
 	import IconLogoModel from '$lib/icons/icon_logo_model.svelte';
 	import IconLogoSource from '$lib/icons/icon_logo_source.svelte';
-	import { bookmarks } from '$lib/stores/bookmarks.svelte';
-	import { hiddenArticles } from '$lib/stores/hiddenarticles.svelte';
+	import { bookmarks } from '$lib/stores/bookmarks.svelte.ts';
+	import { hiddenArticles } from '$lib/stores/hiddenarticles.svelte.ts';
 	import type { Trend } from '$lib/types';
 	import { cn } from '$lib/utils/ClassMerge';
 	import { formatDate } from '$lib/utils/date';

@@ -20,7 +20,7 @@
 	import type { Trend, ArticleStatusFilter } from '$lib/types';
 	import { cn } from '$lib/utils/ClassMerge';
 	import type { PageData } from './$types';
-	import { onMount, tick } from 'svelte';
+	import { onMount, tick, untrack } from 'svelte';
 
 	let { data }: { data: PageData } = $props();
 
@@ -140,6 +140,9 @@
 	// 이전 URL 파라미터 추적 (변경 감지용)
 	let prevUrlSearch: string | null = $state(null);
 
+	const FETCH_LIMIT = 40;
+	const VIEW_SIZE = 20;
+
 	function handleResize() {
 		clearTimeout(resizeTimeout);
 		resizeTimeout = setTimeout(() => {
@@ -201,13 +204,18 @@
 
 		if (hasUrlFilters) return;
 
-		if (source && page_num === 1 && !isLoadingMore) {
-			if (ready) {
-				trends = source.filter((t) => !hiddenArticles.isFullyHidden(t.link));
-			} else {
-				trends = source;
+		untrack(() => {
+			if (source && page_num === 1 && !isLoadingMore) {
+				if (ready) {
+					// 이미 trends가 변경(버퍼 추가 등)된 상태라면 초기화하지 않도록 보호할 수도 있으나,
+					// data.trends가 변경된 경우(페이지 이동)에는 갱신되어야 함.
+					// 가장 확실한 건 '숨김 동작'으로 인한 재실행을 막는 것.
+					trends = source.filter((t) => !hiddenArticles.isFullyHidden(t.link));
+				} else {
+					trends = source;
+				}
 			}
-		}
+		});
 	});
 
 	// 레이아웃 준비 완료 처리
@@ -452,7 +460,7 @@
 		try {
 			const params = new URLSearchParams({
 				page: page_num.toString(),
-				limit: '40',
+				limit: FETCH_LIMIT.toString(),
 				searchKeyword: searchKeyword,
 				tagFilter: selectedTags.join(',')
 			});
@@ -475,31 +483,31 @@
 			const result = await res.json();
 
 			if (result.success) {
-				const currentFilter = statusFilter;
+				// 1. hasMore 판단: 40개를 요청했는데 40개가 꽉 차서 왔으면 "더 있다"
+				// (필터링 하기 전의 원본 개수로 판단해야 정확합니다)
+				hasMore = result.data.length === FETCH_LIMIT;
 
+				// 2. 필터링 (숨김 처리 등)
 				const incoming =
-					currentFilter === 'hidden'
+					statusFilter === 'hidden'
 						? result.data
 						: result.data.filter(
 								(t: Trend) => !hiddenArticles.isHidden(t.link)
 							);
 
+				// 3. 중복 제거
+				const currentIds = new Set(
+					[...trends, ...bufferTrends].map((t) => t.id)
+				);
+				const newItems = incoming.filter((t: Trend) => !currentIds.has(t.id));
+
 				if (reset) {
-					trends = incoming.slice(0, 20);
-					bufferTrends = incoming.slice(20);
+					// 첫 로딩: 20개는 화면, 나머지는 버퍼
+					trends = newItems.slice(0, VIEW_SIZE);
+					bufferTrends = newItems.slice(VIEW_SIZE);
 				} else {
-					const existingIds = new Set(trends.map((t) => t.id));
-					const bufferIds = new Set(bufferTrends.map((t) => t.id));
-					const newItems = incoming.filter(
-						(t: Trend) => !existingIds.has(t.id) && !bufferIds.has(t.id)
-					);
-
-					trends = [...trends, ...bufferTrends, ...newItems.slice(0, 20)];
-					bufferTrends = newItems.slice(20);
-				}
-
-				if (result.data.length === 0 || result.data.length < 40) {
-					hasMore = false;
+					// 추가 로딩: 일단 버퍼 뒤에 다 줄 세워둠
+					bufferTrends = [...bufferTrends, ...newItems];
 				}
 			} else {
 				console.error('데이터 로드 실패:', result.error);
@@ -677,17 +685,19 @@
 		});
 	}
 
+	let isSentinelVisible = $state(false);
+
 	function infiniteScroll(node: HTMLElement) {
-		const observer = new IntersectionObserver((entries) => {
-			if (
-				entries.at(0)?.isIntersecting &&
-				hasMore &&
-				!isSearching &&
-				!isLoadingMore
-			) {
-				fetchTrends(false);
+		const observer = new IntersectionObserver(
+			(entries) => {
+				// 복잡한 로직 다 빼고 "보인다/안 보인다" 상태만 업데이트
+				isSentinelVisible = entries[0].isIntersecting;
+			},
+			{
+				// 바닥에 닿기 100px 전부터 미리 로딩 (스크롤 끊김 방지)
+				rootMargin: '100px'
 			}
-		});
+		);
 
 		observer.observe(node);
 
@@ -697,6 +707,28 @@
 			}
 		};
 	}
+
+	$effect(() => {
+		// 조건: 바닥이 보이고(isSentinelVisible) + 로딩 중이 아니고 + 검색 중이 아닐 때
+		if (isSentinelVisible && !isLoadingMore && !isSearching) {
+			// 1. 버퍼(창고)에 데이터가 있으면 -> 즉시 꺼내서 화면에 뿌림
+			if (bufferTrends.length > 0) {
+				const VIEW_SIZE = 20;
+				const nextBatch = bufferTrends.slice(0, VIEW_SIZE);
+				trends = [...trends, ...nextBatch];
+				bufferTrends = bufferTrends.slice(VIEW_SIZE);
+
+				// Pre-fetch
+				if (bufferTrends.length < 10 && hasMore) {
+					fetchTrends(false);
+				}
+			}
+			// 2. 버퍼는 비었고 서버에 데이터가 있다면 -> 서버 요청
+			else if (hasMore) {
+				fetchTrends(false);
+			}
+		}
+	});
 </script>
 
 <Header />
@@ -753,7 +785,7 @@
 						{/each}
 					</div>
 
-					{#if hasMore}
+					{#if hasMore || bufferTrends.length > 0}
 						<div
 							class={cn(
 								'absolute inset-x-0 bottom-0',
@@ -773,7 +805,7 @@
 							{/if}
 							<div
 								use:infiniteScroll
-								class="pointer-events-auto"
+								class="pointer-events-auto absolute inset-x-0 bottom-0 h-px"
 							></div>
 						</div>
 					{/if}
