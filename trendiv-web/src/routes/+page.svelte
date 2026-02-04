@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
 	import { PUBLIC_API_URL } from '$env/static/public';
 	import ArticleCard from '$lib/components/contents/ArticleCard/ArticleCard.svelte';
 	import HeroSection from '$lib/components/contents/HeroSection.svelte';
@@ -22,17 +24,98 @@
 
 	let { data }: { data: PageData } = $props();
 
-	// 필터 상태
-	let statusFilter = $state<ArticleStatusFilter>('all');
+	// =============================================
+	// URL 파라미터에서 필터 상태 파싱
+	// =============================================
+	function getStatusFilterFromUrl(): ArticleStatusFilter {
+		const value = $page.url.searchParams.get('status');
+		if (value === 'bookmarked' || value === 'hidden') return value;
+		return 'all';
+	}
+
+	function getCategoriesFromUrl(): string[] {
+		const value = $page.url.searchParams.get('categories');
+		return value ? value.split(',').filter(Boolean) : [];
+	}
+
+	function getTagsFromUrl(): string[] {
+		const value = $page.url.searchParams.get('tags');
+		return value ? value.split(',').filter(Boolean) : [];
+	}
+
+	function getSearchKeywordFromUrl(): string {
+		return $page.url.searchParams.get('q') || '';
+	}
+
+	// =============================================
+	// URL 파라미터 업데이트 함수
+	// =============================================
+	function updateUrlParams(params: {
+		status?: ArticleStatusFilter;
+		categories?: string[];
+		tags?: string[];
+		q?: string;
+	}) {
+		const url = new URL($page.url);
+
+		// status
+		if (params.status !== undefined) {
+			if (params.status === 'all') {
+				url.searchParams.delete('status');
+			} else {
+				url.searchParams.set('status', params.status);
+			}
+		}
+
+		// categories
+		if (params.categories !== undefined) {
+			if (params.categories.length === 0) {
+				url.searchParams.delete('categories');
+			} else {
+				url.searchParams.set('categories', params.categories.join(','));
+			}
+		}
+
+		// tags
+		if (params.tags !== undefined) {
+			if (params.tags.length === 0) {
+				url.searchParams.delete('tags');
+			} else {
+				url.searchParams.set('tags', params.tags.join(','));
+			}
+		}
+
+		// search keyword
+		if (params.q !== undefined) {
+			if (params.q === '') {
+				url.searchParams.delete('q');
+			} else {
+				url.searchParams.set('q', params.q);
+			}
+		}
+
+		// URL 업데이트 (히스토리 대체, 스크롤 유지)
+		goto(url.toString(), {
+			replaceState: true,
+			noScroll: true,
+			keepFocus: true
+		});
+	}
+
+	// =============================================
+	// 필터 상태 (URL 파라미터 기반)
+	// =============================================
+	let statusFilter = $derived(getStatusFilterFromUrl());
+	let selectedCategories = $derived(getCategoriesFromUrl());
+	let selectedTags = $derived(getTagsFromUrl());
+	let searchKeyword = $derived(getSearchKeywordFromUrl());
 
 	// 데이터 상태
 	let trends = $state<Trend[]>(data.trends ?? []);
 	let bufferTrends = $state<Trend[]>([]);
-	let page = $state(1);
+	let page_num = $state(1);
 	let isLoadingMore = $state(false);
 	let hasMore = $state(true);
-	let searchKeyword = $state('');
-	let selectedTags = $state<string[]>([]);
 	let isSearching = $state(false);
 
 	// 레이아웃 준비 상태 (FOUC 방지)
@@ -40,7 +123,6 @@
 
 	// 카테고리 필터
 	let categoryList = $derived(data.categories ?? []);
-	let selectedCategories = $state<string[]>([]);
 
 	let abortController: AbortController | null = null;
 
@@ -55,6 +137,9 @@
 	let innerWidth = $state(0);
 	let resizeTimeout: ReturnType<typeof setTimeout>;
 
+	// 이전 URL 파라미터 추적 (변경 감지용)
+	let prevUrlSearch: string | null = $state(null);
+
 	function handleResize() {
 		clearTimeout(resizeTimeout);
 		resizeTimeout = setTimeout(() => {
@@ -68,13 +153,38 @@
 		bookmarks.resetView();
 	});
 
-	// 초기 데이터 필터링
+	// URL 파라미터 변경 감지 및 데이터 재로드
+	$effect(() => {
+		const currentSearch = $page.url.search;
+
+		// onMount 전에는 아무것도 하지 않음
+		if (prevUrlSearch === null) {
+			return;
+		}
+
+		// URL 파라미터가 변경되었을 때만 데이터 재로드
+		if (currentSearch !== prevUrlSearch) {
+			prevUrlSearch = currentSearch;
+			fetchTrends(true);
+		}
+	});
+
+	// 초기 데이터 필터링 (URL 필터가 없을 때만)
 	$effect(() => {
 		const source = data.trends;
 		const ready = hiddenArticles.isReady;
 
-		if (source && page === 1 && !isLoadingMore) {
-			if (ready && statusFilter !== 'hidden') {
+		// URL 필터가 있으면 fetchTrends가 처리하므로 스킵
+		const hasUrlFilters =
+			statusFilter !== 'all' ||
+			selectedCategories.length > 0 ||
+			selectedTags.length > 0 ||
+			searchKeyword !== '';
+
+		if (hasUrlFilters) return;
+
+		if (source && page_num === 1 && !isLoadingMore) {
+			if (ready) {
 				trends = source.filter((t) => !hiddenArticles.isFullyHidden(t.link));
 			} else {
 				trends = source;
@@ -109,12 +219,46 @@
 		hiddenArticles.onUnhide = handleUnhideCallback;
 		bookmarks.onUnbookmark = handleUnbookmarkCallback;
 
-		if (trends.length === 0) {
+		// URL 파라미터 초기화
+		prevUrlSearch = $page.url.search;
+
+		// URL에 필터가 있거나 초기 데이터가 없으면 fetch
+		const hasUrlFilters =
+			statusFilter !== 'all' ||
+			selectedCategories.length > 0 ||
+			selectedTags.length > 0 ||
+			searchKeyword !== '';
+
+		if (trends.length === 0 || hasUrlFilters) {
 			fetchTrends(true);
 		}
 
+		// 탭이 다시 활성화될 때 URL 필터 확인 및 재적용
+		function handleVisibilityChange() {
+			if (document.visibilityState === 'visible') {
+				const currentHasFilters =
+					getStatusFilterFromUrl() !== 'all' ||
+					getCategoriesFromUrl().length > 0 ||
+					getTagsFromUrl().length > 0 ||
+					getSearchKeywordFromUrl() !== '';
+
+				// URL에 필터가 있는데 trends가 비어있거나 필터가 적용 안 된 경우
+				if (currentHasFilters && (trends.length === 0 || !isSearching)) {
+					// 현재 URL과 prevUrlSearch가 다르면 재로드
+					const currentSearch = $page.url.search;
+					if (currentSearch !== prevUrlSearch) {
+						prevUrlSearch = currentSearch;
+						fetchTrends(true);
+					}
+				}
+			}
+		}
+
+		document.addEventListener('visibilitychange', handleVisibilityChange);
+
 		return () => {
 			window.removeEventListener('resize', handleResize);
+			document.removeEventListener('visibilitychange', handleVisibilityChange);
 			clearTimeout(resizeTimeout);
 			abortController?.abort();
 			hiddenArticles.onHide = null;
@@ -276,7 +420,7 @@
 		if (reset) {
 			isSearching = true;
 			isLayoutReady = false; // 검색/필터 시 레이아웃 리셋
-			page = 1;
+			page_num = 1;
 			hasMore = true;
 			trends = [];
 			bufferTrends = [];
@@ -284,12 +428,12 @@
 			hiddenArticles.recentlyHidden = [];
 		} else {
 			isLoadingMore = true;
-			page += 1;
+			page_num += 1;
 		}
 
 		try {
 			const params = new URLSearchParams({
-				page: page.toString(),
+				page: page_num.toString(),
 				limit: '40',
 				searchKeyword: searchKeyword,
 				tagFilter: selectedTags.join(',')
@@ -361,7 +505,7 @@
 		if (isLoadingMore || !hasMore) return;
 
 		isLoadingMore = true;
-		const nextPage = page + 1;
+		const nextPage = page_num + 1;
 
 		try {
 			const params = new URLSearchParams({
@@ -387,7 +531,7 @@
 			const result = await res.json();
 
 			if (result.success) {
-				page = nextPage;
+				page_num = nextPage;
 
 				const existingIds = new Set(trends.map((t) => t.id));
 				const bufferIds = new Set(bufferTrends.map((t) => t.id));
@@ -410,29 +554,27 @@
 		}
 	}
 
+	// =============================================
+	// 이벤트 핸들러 (URL 파라미터 업데이트)
+	// =============================================
 	function handleSearch(keyword: string) {
-		searchKeyword = keyword;
-		fetchTrends(true);
+		updateUrlParams({ q: keyword });
 	}
 
 	function handleClear() {
 		if (searchKeyword === '') return;
-		searchKeyword = '';
-		fetchTrends(true);
+		updateUrlParams({ q: '' });
 	}
 
 	function handleTagChange(newTags: string[]) {
-		selectedTags = newTags;
-		fetchTrends(true);
+		updateUrlParams({ tags: newTags });
 	}
 
 	function handleCategorySelect(category: string) {
-		if (selectedCategories.includes(category)) {
-			selectedCategories = selectedCategories.filter((c) => c !== category);
-		} else {
-			selectedCategories = [...selectedCategories, category];
-		}
-		fetchTrends(true);
+		const newCategories = selectedCategories.includes(category)
+			? selectedCategories.filter((c) => c !== category)
+			: [...selectedCategories, category];
+		updateUrlParams({ categories: newCategories });
 	}
 
 	function handleStatusFilterChange(status: ArticleStatusFilter) {
@@ -440,16 +582,15 @@
 			auth.openLoginModal();
 			return;
 		}
-		statusFilter = status;
-		fetchTrends(true);
+		updateUrlParams({ status });
 	}
 
 	function handleModalTagChange(newTags: string[]) {
-		selectedTags = newTags;
+		updateUrlParams({ tags: newTags });
 	}
 
 	function handleModalCategoryChange(categories: string[]) {
-		selectedCategories = categories;
+		updateUrlParams({ categories });
 	}
 
 	function handleModalStatusFilterChange(status: ArticleStatusFilter) {
@@ -457,7 +598,7 @@
 			auth.openLoginModal();
 			return;
 		}
-		statusFilter = status;
+		updateUrlParams({ status });
 	}
 
 	function openArticleModal(trend: Trend) {
@@ -512,7 +653,7 @@
 	<div class="bg-bg-surface min-h-screen">
 		<div class="mx-auto max-w-5xl p-4 sm:p-6">
 			<SearchCard
-				bind:searchKeyword
+				{searchKeyword}
 				{selectedTags}
 				tags={popularTags}
 				{categoryList}
