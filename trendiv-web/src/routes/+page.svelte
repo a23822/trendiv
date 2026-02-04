@@ -605,6 +605,10 @@
 		updateUrlParams({ categories: newCategories });
 	}
 
+	function handleCategoryReset() {
+		updateUrlParams({ categories: [] });
+	}
+
 	function handleStatusFilterChange(status: ArticleStatusFilter) {
 		if (status !== 'all' && !auth.user) {
 			auth.openLoginModal();
@@ -749,6 +753,7 @@
 				selectedCategory={selectedCategories}
 				{statusFilter}
 				onselectCategory={handleCategorySelect}
+				onresetCategory={handleCategoryReset}
 				onstatusChange={handleStatusFilterChange}
 				onsearch={handleSearch}
 				onclear={handleClear}

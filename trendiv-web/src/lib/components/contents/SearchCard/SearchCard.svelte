@@ -15,6 +15,7 @@
 		/** 개인화 필터 상태 */
 		statusFilter?: ArticleStatusFilter;
 		onselectCategory?: (category: string) => void;
+		onresetCategory?: () => void;
 		onsearch?: (value: string) => void;
 		onclear?: () => void;
 		onchange?: (selectedTags: string[]) => void;
@@ -30,6 +31,7 @@
 		selectedCategory = [],
 		statusFilter = 'all',
 		onselectCategory = () => {},
+		onresetCategory = () => {},
 		onsearch = () => {},
 		onclear = () => {},
 		onchange = () => {},
@@ -67,6 +69,7 @@
 		{selectedCategory}
 		{statusFilter}
 		{onselectCategory}
+		{onresetCategory}
 		{onchange}
 		{onstatusChange}
 		variant="collapsible"
