@@ -178,6 +178,7 @@
 	});
 
 	// URL의 article 파라미터와 모달 상태 동기화 (뒤로 가기 대응)
+	// ArticleModal인 경우에만 적용 (FilterModal 등 다른 모달은 영향 없음)
 	$effect(() => {
 		const articleId = $page.url.searchParams.get('article');
 
@@ -628,15 +629,16 @@
 	// 모달 관련 (History 연동)
 	// =============================================
 	async function openArticleModal(trend: Trend) {
-		// URL에 article 파라미터 추가 (history push)
+		// URL 먼저 업데이트 (완료 대기)
 		const url = new URL($page.url);
 		url.searchParams.set('article', trend.id.toString());
 		await goto(url.toString(), {
-			replaceState: false,
+			replaceState: false, // push (뒤로 가기 가능하게)
 			noScroll: true,
 			keepFocus: true
 		});
 
+		// URL 업데이트 후 모달 열기
 		modal.open(ArticleModal, {
 			trend,
 			onclose: closeArticleModal
