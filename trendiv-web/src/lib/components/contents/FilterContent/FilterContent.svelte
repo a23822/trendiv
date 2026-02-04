@@ -13,6 +13,7 @@
 		/** 개인화 필터 상태 */
 		statusFilter?: ArticleStatusFilter;
 		onselectCategory?: (category: string) => void;
+		onresetCategory?: () => void;
 		onchange?: (selectedTags: string[]) => void;
 		/** 개인화 필터 변경 콜백 */
 		onstatusChange?: (status: ArticleStatusFilter) => void;
@@ -45,6 +46,7 @@
 		selectedCategory = [],
 		statusFilter = 'all',
 		onselectCategory,
+		onresetCategory,
 		onchange,
 		onstatusChange,
 		variant = 'collapsible',
@@ -565,6 +567,17 @@
 
 {#snippet sourceChips()}
 	<div class="mt-4 flex flex-wrap gap-2">
+		{#if categoryList.length > 0}
+			<SearchChip
+				onclick={() => onresetCategory?.()}
+				active={false}
+			>
+				<span class="flex items-center gap-1">
+					<IconRefresh size={16} />
+					<span>초기화</span>
+				</span>
+			</SearchChip>
+		{/if}
 		{#each categoryList as category}
 			<SearchChip
 				active={selectedCategory.includes(category)}
