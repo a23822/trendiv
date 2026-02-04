@@ -162,10 +162,27 @@
 			return;
 		}
 
-		// URL 파라미터가 변경되었을 때만 데이터 재로드
-		if (currentSearch !== prevUrlSearch) {
+		// article 파라미터만 변경된 경우 무시 (모달 관련)
+		const prevParams = new URLSearchParams(prevUrlSearch || '');
+		const currParams = new URLSearchParams(currentSearch);
+		prevParams.delete('article');
+		currParams.delete('article');
+
+		if (prevParams.toString() !== currParams.toString()) {
 			prevUrlSearch = currentSearch;
 			fetchTrends(true);
+		} else {
+			// article만 변경된 경우에도 prevUrlSearch 업데이트
+			prevUrlSearch = currentSearch;
+		}
+	});
+
+	// URL의 article 파라미터와 모달 상태 동기화 (뒤로 가기 대응)
+	$effect(() => {
+		const articleId = $page.url.searchParams.get('article');
+
+		if (!articleId && modal.component === ArticleModal) {
+			modal.close();
 		}
 	});
 
@@ -488,6 +505,8 @@
 			}
 		} catch (e) {
 			if (e instanceof Error && e.name === 'AbortError') {
+				// AbortError도 상태 정리 필요
+				isSearching = false;
 				return;
 			}
 			console.error('API 호출 중 오류 발생:', e);
@@ -582,7 +601,9 @@
 			auth.openLoginModal();
 			return;
 		}
-		updateUrlParams({ status });
+		// 같은 필터를 다시 누르면 전체로 토글
+		const newStatus = statusFilter === status ? 'all' : status;
+		updateUrlParams({ status: newStatus });
 	}
 
 	function handleModalTagChange(newTags: string[]) {
@@ -598,11 +619,45 @@
 			auth.openLoginModal();
 			return;
 		}
-		updateUrlParams({ status });
+		// 같은 필터를 다시 누르면 전체로 토글
+		const newStatus = statusFilter === status ? 'all' : status;
+		updateUrlParams({ status: newStatus });
 	}
 
-	function openArticleModal(trend: Trend) {
-		modal.open(ArticleModal, { trend });
+	// =============================================
+	// 모달 관련 (History 연동)
+	// =============================================
+	async function openArticleModal(trend: Trend) {
+		// URL에 article 파라미터 추가 (history push)
+		const url = new URL($page.url);
+		url.searchParams.set('article', trend.id.toString());
+		await goto(url.toString(), {
+			replaceState: false,
+			noScroll: true,
+			keepFocus: true
+		});
+
+		modal.open(ArticleModal, {
+			trend,
+			onclose: closeArticleModal
+		});
+	}
+
+	function closeArticleModal() {
+		if (!modal.isOpen) return;
+
+		// URL에서 article 파라미터 제거
+		const url = new URL($page.url);
+		if (url.searchParams.has('article')) {
+			url.searchParams.delete('article');
+			goto(url.toString(), {
+				replaceState: true, // 히스토리 안 쌓음
+				noScroll: true,
+				keepFocus: true
+			});
+		}
+
+		modal.close();
 	}
 
 	function openFilterModal() {

@@ -14,6 +14,9 @@ export const modal = {
 	get props() {
 		return props;
 	},
+	get isOpen() {
+		return component !== null;
+	},
 
 	// Actions (열기)
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
