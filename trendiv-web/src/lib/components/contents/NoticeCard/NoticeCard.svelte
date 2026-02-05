@@ -24,7 +24,7 @@
 	}
 </script>
 
-{#if isVisible}
+{#if !isVisible}
 	<div
 		transition:slide={{ duration: 300, axis: 'y' }}
 		class={cn(CommonStyles.CARD, 'mb-4 sm:mb-6', 'p-0 sm:p-0')}
@@ -84,6 +84,7 @@
 				onclick={handleClose}
 				size={30}
 				class={cn('absolute top-2 right-2')}
+				variant={'inverted'}
 			/>
 		</div>
 	</div>
