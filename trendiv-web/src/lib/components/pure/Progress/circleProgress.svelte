@@ -44,11 +44,11 @@
 			>
 				<stop
 					offset="0%"
-					stop-color="#148A7D"
+					stop-color="var(--color-mint-500)"
 				/>
 				<stop
 					offset="100%"
-					stop-color="#E0F7F4"
+					stop-color="var(--color-mint-200)"
 				/>
 			</linearGradient>
 		</defs>
@@ -59,7 +59,7 @@
 			cy={size / 2}
 			r={radius}
 			fill="none"
-			stroke="#E0F7F4"
+			stroke="var(--color-mint-50)"
 			stroke-width={strokeWidth}
 		/>
 
@@ -79,7 +79,7 @@
 	</svg>
 
 	<!-- 중앙 숫자 -->
-	<span class="absolute text-sm font-semibold text-[#09504B]">
+	<span class="text-mint-800 absolute text-sm font-semibold">
 		{score}
 	</span>
 </div>

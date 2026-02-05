@@ -20,9 +20,15 @@
 		trend: Trend;
 		onclick?: () => void;
 		isForceExpand?: boolean;
+		statusFilter?: string;
 	}
 
-	let { trend, onclick, isForceExpand = false }: Props = $props();
+	let {
+		trend,
+		onclick,
+		isForceExpand = false,
+		statusFilter = 'all'
+	}: Props = $props();
 
 	// 분석 결과
 	const analysis = $derived(
@@ -199,41 +205,45 @@
 							>
 						</div>
 					</div>
-					<!-- Bookmark Button -->
-					<button
-						type="button"
-						onclick={handleBookmark}
-						title={isBookmarked ? '북마크 해제' : '북마크 추가'}
-						class={cn(
-							'flex h-6 w-6 shrink-0 items-center justify-center rounded-full',
-							'ml-auto',
-							'hover:bg-primary-subtle hover:text-primary text-gray-400',
-							CommonStyles.DEFAULT_TRANSITION_COLOR,
-							isBookmarked && 'text-primary'
-						)}
-					>
-						<span class="sr-only">
-							{isBookmarked ? '북마크 해제' : '북마크 추가'}
-						</span>
-						<div>
-							<IconBookmark filled={isBookmarked} />
-						</div>
-					</button>
-					<button
-						type="button"
-						onclick={handleHide}
-						title={isHiddenInStore ? '숨김 해제' : '숨김 추가'}
-						class={cn(
-							'flex h-6 w-6 shrink-0 items-center justify-center rounded-full',
-							'hover:bg-alert-subtle hover:text-alert text-gray-400',
-							CommonStyles.DEFAULT_TRANSITION_COLOR,
-							isHiddenInStore && 'text-alert'
-						)}
-						><span class="sr-only"
-							>{isHiddenInStore ? '숨김 해제' : '숨김 추가'}</span
+					{#if statusFilter !== 'hidden'}
+						<!-- Bookmark Button -->
+						<button
+							type="button"
+							onclick={handleBookmark}
+							title={isBookmarked ? '북마크 해제' : '북마크 추가'}
+							class={cn(
+								'flex h-6 w-6 shrink-0 items-center justify-center rounded-full',
+								'ml-auto',
+								'hover:bg-primary-subtle hover:text-primary text-gray-400',
+								CommonStyles.DEFAULT_TRANSITION_COLOR,
+								isBookmarked && 'text-primary'
+							)}
 						>
-						<div><IconHide /></div></button
-					>
+							<span class="sr-only">
+								{isBookmarked ? '북마크 해제' : '북마크 추가'}
+							</span>
+							<div>
+								<IconBookmark filled={isBookmarked} />
+							</div>
+						</button>
+					{/if}
+					{#if statusFilter !== 'bookmarked'}
+						<button
+							type="button"
+							onclick={handleHide}
+							title={isHiddenInStore ? '숨김 해제' : '숨김 추가'}
+							class={cn(
+								'flex h-6 w-6 shrink-0 items-center justify-center rounded-full',
+								'hover:bg-alert-subtle hover:text-alert text-gray-400',
+								CommonStyles.DEFAULT_TRANSITION_COLOR,
+								isHiddenInStore && 'text-alert'
+							)}
+							><span class="sr-only"
+								>{isHiddenInStore ? '숨김 해제' : '숨김 추가'}</span
+							>
+							<div><IconHide /></div></button
+						>
+					{/if}
 				</div>
 
 				<!-- metaInfoArea -->

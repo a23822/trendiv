@@ -784,6 +784,7 @@
 										{trend}
 										onclick={() => openArticleModal(trend)}
 										isForceExpand={statusFilter === 'hidden'}
+										{statusFilter}
 									/>
 								{/each}
 							</div>
