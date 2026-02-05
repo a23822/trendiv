@@ -1,8 +1,8 @@
 <script lang="ts">
 	import TextLoading from '$lib/components/pure/Load/TextLoading.svelte';
-	import { IDs } from '$lib/constants/ids';
 	import IconLogoHero from '$lib/icons/icon_logo_hero.svelte';
 	import { auth } from '$lib/stores/auth.svelte.js';
+	import { IDs } from '$lib/stores/ids';
 	import { uiState } from '$lib/stores/state.svelte';
 	import { cn } from '$lib/utils/ClassMerge';
 	import { onMount } from 'svelte';
