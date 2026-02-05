@@ -1,6 +1,7 @@
 export const IDs = {
 	LAYOUT: {
-		SIDE_MENU: 'layout-side-menu'
+		SIDE_MENU: 'layout-side-menu',
+		MAIN_NOTICE: 'layout-main-notice'
 	},
 	BUTTON: {
 		MENU_BUTTON: 'header-menu-button'

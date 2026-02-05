@@ -4,6 +4,7 @@
 	import { PUBLIC_API_URL } from '$env/static/public';
 	import ArticleCard from '$lib/components/contents/ArticleCard/ArticleCard.svelte';
 	import HeroSection from '$lib/components/contents/HeroSection.svelte';
+	import NoticeCard from '$lib/components/contents/NoticeCard/NoticeCard.svelte';
 	import SearchCard from '$lib/components/contents/SearchCard/SearchCard.svelte';
 	import FloatingButtonArea from '$lib/components/layout/Floating/FloatingButtonArea.svelte';
 	import Header from '$lib/components/layout/Header/Header.svelte';
@@ -759,6 +760,10 @@
 				onclear={handleClear}
 				onchange={handleTagChange}
 			/>
+
+			{#if !isSearching && isLayoutReady}
+				<NoticeCard />
+			{/if}
 
 			{#if isSearching || !isLayoutReady}
 				<div class="flex flex-col items-center justify-center py-32">

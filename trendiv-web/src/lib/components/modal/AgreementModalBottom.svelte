@@ -1,6 +1,6 @@
 <script lang="ts">
 	import AgreementCheckBoxGroup from '$lib/components/pure/CheckBox/AgreementCheckBoxGroup.svelte';
-	import { IDs } from '$lib/constants/ids';
+	import { IDs } from '$lib/stores/ids';
 	import { cn } from '$lib/utils/ClassMerge';
 	import type { Component } from 'svelte';
 	import { untrack } from 'svelte';

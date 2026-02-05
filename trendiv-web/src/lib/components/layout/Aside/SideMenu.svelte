@@ -2,7 +2,7 @@
 	import AuthButton from '$lib/components/pure/Button/AuthButton.svelte';
 	import CloseButton from '$lib/components/pure/Button/CloseButton.svelte';
 	import ThemeSwitch from '$lib/components/pure/ToggleSwitch/ThemeSwitch.svelte';
-	import { IDs } from '$lib/constants/ids';
+	import { IDs } from '$lib/stores/ids';
 	import BodyScrollLock from '$lib/utils/BodyScrollLock.svelte';
 	import { cn } from '$lib/utils/ClassMerge';
 	import { fly } from 'svelte/transition';
@@ -49,7 +49,7 @@
 		<aside
 			id={IDs.LAYOUT.SIDE_MENU}
 			class={cn(
-				'z-100 fixed right-0 top-0',
+				'fixed top-0 right-0 z-100',
 				' flex flex-col justify-between',
 				'w-sidemenu h-dvh max-w-full',
 				'bg-bg-body shadow-2xl'
@@ -60,7 +60,7 @@
 			<div class="shrink-0">
 				<ThemeSwitch className="align-top" />
 			</div>
-			<div class="absolute right-0 top-0">
+			<div class="absolute top-0 right-0">
 				<CloseButton onclick={closeMenu} />
 			</div>
 			<div class={cn('mb-auto shrink-0 p-4')}>

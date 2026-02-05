@@ -1,10 +1,10 @@
 <script lang="ts">
 	import DotLoading from '$lib/components/pure/Load/DotLoading.svelte';
-	import { IDs } from '$lib/constants/ids';
 	import { CommonStyles } from '$lib/constants/styles';
 	import IconArrow from '$lib/icons/icon_arrow.svelte';
 	import IconClose from '$lib/icons/icon_close.svelte';
 	import IconSearch from '$lib/icons/icon_search.svelte';
+	import { IDs } from '$lib/stores/ids';
 	import { cn } from '$lib/utils/ClassMerge';
 
 	let {

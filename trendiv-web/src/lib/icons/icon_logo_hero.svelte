@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { IDs } from '$lib/constants/ids';
+	import { IDs } from '$lib/stores/ids';
 
 	let { ...rest } = $props();
 </script>
