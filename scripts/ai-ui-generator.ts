@@ -9,7 +9,7 @@ import { glob } from "glob";
 // ==========================================
 const API_KEY = process.env.GEMINI_API_KEY;
 const FIGMA_TOKEN = process.env.FIGMA_ACCESS_TOKEN;
-const MODEL_NAME = process.env.GEMINI_MODEL_PRO || "gemini-3-pro-preview";
+const MODEL_NAME = process.env.GEMINI_MODEL_PRO || "gemini-3.1-pro-preview";
 const CHANGED_FILES = process.env.CHANGED_FILES || "";
 
 // 🔴 AI 규칙 폴더 경로
