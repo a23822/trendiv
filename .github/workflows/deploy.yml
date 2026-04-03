@@ -1,9 +1,8 @@
 name: Deploy Trendiv Web
 
 on:
-  # Production: develop 푸시 (v2 메인 브랜치)
   push:
-    branches: [develop]
+    branches: [master, develop]
     paths:
       - "trendiv-web/**"
       - "trendiv-pipeline-controller/**"
@@ -23,9 +22,51 @@ concurrency:
 
 jobs:
   # ============================================
-  # 🚀 Production 배포 (develop → trendiv.org)
+  # 🚀 Production 배포 (master → trendiv.org, v1)
   # ============================================
   deploy-production:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "pnpm"
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm --filter trendiv-web build
+        env:
+          PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
+          PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PUBLIC_SUPABASE_ANON_KEY }}
+          PUBLIC_API_URL: ${{ secrets.PUBLIC_API_URL_PROD }}
+
+      - name: Deploy to Cloudflare (Production)
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: trendiv-web
+          directory: trendiv-web/.svelte-kit/cloudflare
+          branch: master
+
+  # ============================================
+  # 🧪 Staging 배포 (develop → develop.trendiv-web.pages.dev, v2)
+  # ============================================
+  deploy-staging:
     if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
     runs-on: ubuntu-latest
 
@@ -55,7 +96,7 @@ jobs:
           PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PUBLIC_SUPABASE_ANON_KEY }}
           PUBLIC_API_URL: ${{ secrets.PUBLIC_API_URL }}
 
-      - name: Deploy to Cloudflare (Production)
+      - name: Deploy to Cloudflare (Staging)
         uses: cloudflare/pages-action@v1
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
