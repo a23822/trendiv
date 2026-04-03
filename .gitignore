@@ -60,3 +60,6 @@ Thumbs.db
 # 🐳 도커 관련 (로컬 설정 제외)
 # ------------------------------------------------
 docker-compose.override.yml
+
+
+.claude/
