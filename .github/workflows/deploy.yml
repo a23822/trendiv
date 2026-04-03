@@ -52,7 +52,7 @@ jobs:
         env:
           PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
           PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PUBLIC_SUPABASE_ANON_KEY }}
-          PUBLIC_API_URL: ${{ secrets.PUBLIC_API_URL_PROD }}
+          PUBLIC_API_URL: ${{ secrets.PUBLIC_API_URL }}
 
       - name: Deploy to Cloudflare (Production)
         uses: cloudflare/pages-action@v1
