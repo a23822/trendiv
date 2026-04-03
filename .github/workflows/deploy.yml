@@ -1,9 +1,9 @@
 name: Deploy Trendiv Web
 
 on:
-  # Production: master 푸시
+  # Production: develop 푸시 (v2 메인 브랜치)
   push:
-    branches: [master, develop]
+    branches: [develop]
     paths:
       - "trendiv-web/**"
       - ".github/workflows/deploy.yml"
@@ -19,10 +19,10 @@ concurrency:
 
 jobs:
   # ============================================
-  # 🚀 Production 배포 (master → trendiv.org)
+  # 🚀 Production 배포 (develop → trendiv.org)
   # ============================================
   deploy-production:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
     runs-on: ubuntu-latest
 
     steps:
@@ -58,7 +58,7 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           projectName: trendiv-web
           directory: trendiv-web/.svelte-kit/cloudflare
-          branch: master
+          branch: develop
 
   # ============================================
   # 👀 Preview 배포 (preview 라벨 → develop URL)

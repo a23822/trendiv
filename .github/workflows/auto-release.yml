@@ -3,7 +3,7 @@ name: 🚀 Auto Bump & Release
 on:
   push:
     branches:
-      - master
+      - develop
 
 jobs:
   bump-and-release:
