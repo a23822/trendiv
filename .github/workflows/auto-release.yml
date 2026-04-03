@@ -54,7 +54,7 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ steps.version_bump.outputs.newTag }} # 새로 만든 버전
+          tag_name: ${{ steps.version_bump.outputs.newTag }} # 새로 만든 버전 (v 포함)
           name: 🚀 Release ${{ steps.version_bump.outputs.newTag }}
           generate_release_notes: true # ✅ 여기가 핵심! GitHub이 PR 제목들을 모아서 요약해줍니다.
           draft: false
