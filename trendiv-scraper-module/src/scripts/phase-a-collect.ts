@@ -287,10 +287,11 @@ async function main() {
   console.log(`📋 수집 대상: ${rawDbItems.length}개\n`);
 
   // YouTube는 Phase A에서 스킵 (transcript/description은 분석 시 처리)
-  const webItems = rawDbItems.filter(
+  type RawDbItem = { id: number; title: string | null; link: string; category: string | null; status: string | null };
+  const webItems = (rawDbItems as RawDbItem[]).filter(
     (item) => !isYoutubeUrl(item.link) && !item.link.includes('x.com'),
   );
-  const youtubeItems = rawDbItems.filter((item) => isYoutubeUrl(item.link));
+  const youtubeItems = (rawDbItems as RawDbItem[]).filter((item) => isYoutubeUrl(item.link));
 
   console.log(`🌐 웹 페이지: ${webItems.length}개`);
   console.log(`📹 YouTube (스킵): ${youtubeItems.length}개\n`);
@@ -305,7 +306,7 @@ async function main() {
     console.log(`📹 YouTube ${youtubeItems.length}개 → SCRAPED 처리\n`);
   }
 
-  const xItems = rawDbItems.filter((item) => item.link.includes('x.com'));
+  const xItems = (rawDbItems as RawDbItem[]).filter((item) => item.link.includes('x.com'));
   if (xItems.length > 0 && !isDryRun) {
     const xIds = xItems.map((item) => item.id);
     await supabase.from('article').update({ status: 'SCRAPED' }).in('id', xIds);
