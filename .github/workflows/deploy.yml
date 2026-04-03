@@ -6,6 +6,10 @@ on:
     branches: [develop]
     paths:
       - "trendiv-web/**"
+      - "trendiv-pipeline-controller/**"
+      - "trendiv-analysis-module/**"
+      - "trendiv-scraper-module/**"
+      - "trendiv-result-module/**"
       - ".github/workflows/deploy.yml"
 
   # Preview: PR + preview 라벨
@@ -59,6 +63,43 @@ jobs:
           projectName: trendiv-web
           directory: trendiv-web/.svelte-kit/cloudflare
           branch: develop
+
+  # ============================================
+  # 🖥️ Oracle 백엔드 배포 (develop → Oracle VM)
+  # ============================================
+  deploy-oracle:
+    if: |
+      github.event_name == 'push' && github.ref == 'refs/heads/develop' && (
+        contains(toJson(github.event.commits.*.modified), 'trendiv-pipeline-controller') ||
+        contains(toJson(github.event.commits.*.modified), 'trendiv-analysis-module') ||
+        contains(toJson(github.event.commits.*.modified), 'trendiv-scraper-module') ||
+        contains(toJson(github.event.commits.*.modified), 'trendiv-result-module') ||
+        contains(toJson(github.event.commits.*.added), 'trendiv-pipeline-controller') ||
+        contains(toJson(github.event.commits.*.added), 'trendiv-analysis-module') ||
+        contains(toJson(github.event.commits.*.added), 'trendiv-scraper-module') ||
+        contains(toJson(github.event.commits.*.added), 'trendiv-result-module')
+      )
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to Oracle via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.ORACLE_HOST }}
+          username: ${{ secrets.ORACLE_USER }}
+          key: ${{ secrets.ORACLE_SSH_KEY }}
+          script: |
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+            cd ~/trendiv
+            git pull origin develop
+            pnpm install --frozen-lockfile
+            pnpm --filter trendiv-analysis-module build
+            pnpm --filter trendiv-result-module build
+            pnpm --filter trendiv-scraper-module build
+            pnpm --filter trendiv-pipeline-controller build
+            pm2 restart 0
+            echo "✅ Oracle 배포 완료"
 
   # ============================================
   # 👀 Preview 배포 (preview 라벨 → develop URL)
